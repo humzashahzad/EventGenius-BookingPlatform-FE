@@ -104,10 +104,10 @@ watch(() => authStore.user, (user) => {
     notifStore.requestBrowserPermission()
     notifStore.fetchUnread()
     notifStore.startSSE()
-    chatStore.connectSocket(user.id, authStore.token)
+    chatStore.connect()
   } else {
     notifStore.stopSSE()
-    chatStore.disconnectSocket()
+    chatStore.disconnect()
   }
 }, { immediate: true })
 </script>
