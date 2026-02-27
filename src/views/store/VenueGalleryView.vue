@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="page-header">
       <div class="flex items-center gap-3">
-        <router-link :to="{ name: 'store-venues' }" class="btn-ghost btn-icon">
+        <router-link :to="{ name: 'shop-venues' }" class="btn-ghost btn-icon">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>

@@ -1,9 +1,9 @@
 <template>
-  <div class="min-h-screen bg-surface-50 flex items-center justify-center py-12 px-4">
+  <div class="min-h-screen flex items-center justify-center py-12 px-4" style="background: var(--color-bg);">
     <div class="card card-body w-full max-w-md">
       <div class="text-center mb-8">
-        <h2 class="text-2xl font-bold text-surface-900">Set new password</h2>
-        <p class="mt-2 text-sm text-surface-500">
+        <h2 class="text-2xl font-bold" style="color: var(--color-text);">Set new password</h2>
+        <p class="mt-2 text-sm" style="color: var(--color-text-secondary);">
           Enter your new password below.
         </p>
       </div>
@@ -36,8 +36,8 @@
           {{ loading ? 'Updating…' : 'Update Password' }}
         </button>
 
-        <p class="text-center text-sm text-surface-500">
-          <RouterLink :to="loginBackLink" class="text-primary-600 hover:text-primary-700 font-medium">Back to Sign In</RouterLink>
+        <p class="text-center text-sm" style="color: var(--color-text-secondary);">
+          <RouterLink :to="loginBackLink" class="font-medium" style="color: var(--color-primary);">Back to Sign In</RouterLink>
         </p>
       </form>
 
@@ -66,10 +66,10 @@ const success = ref(false)
 const hasToken = ref(false)
 
 const loginBackLink = computed(() => {
-  const from = (route.query.from as string) || 'client'
-  if (from === 'store') return '/store/sign-in'
-  if (from === 'admin') return '/admin-panel/sign-in'
-  return '/client/sign-in'
+  const from = (route.query.from as string) || 'customer'
+  if (from === 'shop') return '/shop/sign-in'
+  if (from === 'support') return '/support/sign-in'
+  return '/customer/sign-in'
 })
 
 onMounted(() => {

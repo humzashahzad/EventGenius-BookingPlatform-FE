@@ -5,7 +5,7 @@
 
   <div v-else-if="venue" class="page-container">
     <!-- Venue gallery -->
-    <div class="venue-gallery mb-8 rounded-xl overflow-hidden border border-surface-200">
+    <div class="venue-gallery mb-8 rounded-xl overflow-hidden" style="border: 1px solid var(--color-border);">
       <div class="gallery-main">
         <img
           v-if="mainImage"
@@ -92,25 +92,25 @@
           <div class="card-body">
             <h2 class="section-title mb-4">Venue Details</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div class="text-center p-3 bg-surface-50 rounded-lg">
+              <div class="text-center p-3 rounded-lg" style="background: var(--color-bg-hover);">
                 <div class="text-2xl mb-1">👥</div>
-                <div class="text-sm font-medium text-surface-900">{{ venue.capacity_min }}-{{ venue.capacity_max }}</div>
-                <div class="text-xs text-surface-500">Guests</div>
+                <div class="text-sm font-medium" style="color: var(--color-text);">{{ venue.capacity_min }}-{{ venue.capacity_max }}</div>
+                <div class="text-xs" style="color: var(--color-text-secondary);">Guests</div>
               </div>
-              <div class="text-center p-3 bg-surface-50 rounded-lg">
+              <div class="text-center p-3 rounded-lg" style="background: var(--color-bg-hover);">
                 <div class="text-2xl mb-1">📐</div>
-                <div class="text-sm font-medium text-surface-900">{{ venue.area_sqft || 'N/A' }}</div>
-                <div class="text-xs text-surface-500">Sq. Ft.</div>
+                <div class="text-sm font-medium" style="color: var(--color-text);">{{ venue.area_sqft || 'N/A' }}</div>
+                <div class="text-xs" style="color: var(--color-text-secondary);">Sq. Ft.</div>
               </div>
-              <div class="text-center p-3 bg-surface-50 rounded-lg">
+              <div class="text-center p-3 rounded-lg" style="background: var(--color-bg-hover);">
                 <div class="text-2xl mb-1">🏢</div>
-                <div class="text-sm font-medium text-surface-900">{{ venue.floors }}</div>
-                <div class="text-xs text-surface-500">Floors</div>
+                <div class="text-sm font-medium" style="color: var(--color-text);">{{ venue.floors }}</div>
+                <div class="text-xs" style="color: var(--color-text-secondary);">Floors</div>
               </div>
-              <div class="text-center p-3 bg-surface-50 rounded-lg">
+              <div class="text-center p-3 rounded-lg" style="background: var(--color-bg-hover);">
                 <div class="text-2xl mb-1">📅</div>
-                <div class="text-sm font-medium text-surface-900">{{ venue.total_bookings }}</div>
-                <div class="text-xs text-surface-500">Bookings</div>
+                <div class="text-sm font-medium" style="color: var(--color-text);">{{ venue.total_bookings }}</div>
+                <div class="text-xs" style="color: var(--color-text-secondary);">Bookings</div>
               </div>
             </div>
           </div>
@@ -158,73 +158,26 @@
             <div class="text-2xl font-bold text-primary-600">
               PKR {{ formatPrice(venue) }}
             </div>
-            <div class="text-sm text-surface-500">per {{ venue.pricing_type?.replace('per_', '') }}</div>
+            <div class="text-sm text-surface-500">per head</div>
           </div>
 
           <div v-if="authStore.isLoggedIn && authStore.user?.role === 'client'">
-            <form @submit.prevent="submitBooking" class="space-y-3">
-              <div>
-                <label class="form-label">Event Name</label>
-                <input v-model="booking.event_name" required class="form-input" placeholder="My Wedding" />
-              </div>
-              <div>
-                <label class="form-label">Event Type</label>
-                <select v-model="booking.event_type" required class="form-input">
-                  <option value="">Select type</option>
-                  <option value="wedding">Wedding</option>
-                  <option value="corporate">Corporate</option>
-                  <option value="birthday">Birthday</option>
-                  <option value="film_shoot">Film Shoot</option>
-                  <option value="concert">Concert</option>
-                  <option value="exhibition">Exhibition</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label class="form-label">Event Date & Time</label>
-                <p class="text-xs text-surface-500 mb-2">Pick a date and available slot (booked slots are disabled).</p>
-                <BookingCalendar
-                  :venue-id="venue.id"
-                  @select="onCalendarSelect"
-                />
-              </div>
-              <div v-if="booking.event_date" class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="form-label">Start Time</label>
-                  <input v-model="booking.start_time" type="time" required class="form-input" />
-                </div>
-                <div>
-                  <label class="form-label">End Time</label>
-                  <input v-model="booking.end_time" type="time" required class="form-input" />
-                </div>
-              </div>
-              <div>
-                <label class="form-label">Expected Guests</label>
-                <input v-model.number="booking.expected_guests" type="number" required class="form-input"
-                  :min="venue.capacity_min" :max="venue.capacity_max" :placeholder="`${venue.capacity_min}-${venue.capacity_max}`" />
-              </div>
-              <div>
-                <label class="form-label">Special Requirements</label>
-                <textarea v-model="booking.special_requirements" class="form-input" rows="2" placeholder="Any special requests..."></textarea>
-              </div>
-
-              <div v-if="bookingError" class="alert alert-danger py-2">{{ bookingError }}</div>
-              <div v-if="bookingSuccess" class="alert alert-success py-2">Booking submitted! We'll confirm shortly.</div>
-
-              <button type="submit" :disabled="bookingLoading" class="btn-primary w-full">
-                <span v-if="bookingLoading">Submitting...</span>
-                <span v-else>Book Now</span>
-              </button>
-            </form>
+            <RouterLink :to="`/venues/${venue.id}/book`" class="btn-primary w-full text-center flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              Book This Venue
+            </RouterLink>
+            <p class="text-center text-xs mt-2" style="color: var(--color-text-muted)">Multi-day booking supported</p>
           </div>
 
-          <div v-else-if="authStore.isLoggedIn" class="text-center py-4 text-surface-500 text-sm">
-            Only clients can book venues.
+          <div v-else-if="authStore.isLoggedIn" class="text-center py-4 text-sm" style="color: var(--color-text-muted)">
+            Only customers can book venues.
           </div>
 
           <div v-else class="text-center py-4">
-            <p class="text-surface-600 text-sm mb-3">Sign in to book this venue</p>
-            <RouterLink to="/client/sign-in" class="btn-primary w-full block text-center">Sign In to Book</RouterLink>
+            <p class="text-sm mb-3" style="color: var(--color-text-secondary)">Sign in to book this venue</p>
+            <RouterLink to="/customer/sign-in" class="btn-primary w-full block text-center">Sign In to Book</RouterLink>
           </div>
         </div>
       </div>
@@ -248,26 +201,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
 import { getStorageUrl } from '@/lib/storageUrl'
-import BookingCalendar from '@/components/booking/BookingCalendar.vue'
 import ImageLightbox from '@/components/gallery/ImageLightbox.vue'
 import type { LightboxImage } from '@/components/gallery/ImageLightbox.vue'
 
 const route = useRoute()
-const router = useRouter()
 const authStore = useAuthStore()
 
 const venue = ref<any>(null)
 const loading = ref(true)
 const mainImage = ref<string | null>(null)
 const galleryIndex = ref(0)
-const bookingLoading = ref(false)
-const bookingError = ref('')
-const bookingSuccess = ref(false)
 
 const lightboxRef = ref<InstanceType<typeof ImageLightbox> | null>(null)
 
@@ -282,16 +230,6 @@ const lightboxImages = computed<LightboxImage[]>(() => {
 function openLightbox(index: number = 0) {
   lightboxRef.value?.open(index)
 }
-
-const booking = reactive({
-  event_name: '',
-  event_type: '',
-  event_date: '',
-  start_time: '',
-  end_time: '',
-  expected_guests: 1,
-  special_requirements: '',
-})
 
 const allImages = computed(() => {
   const imgs = venue.value?.images || []
@@ -311,12 +249,6 @@ watch(allImages, (imgs) => {
 watch(galleryIndex, (i) => {
   const imgs = allImages.value
   if (imgs[i]) mainImage.value = imgs[i].path
-})
-
-const minDate = computed(() => {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().split('T')[0]
 })
 
 async function loadVenue() {
@@ -348,33 +280,9 @@ function onImageError(e: Event) {
   (e.target as HTMLImageElement).style.display = 'none'
 }
 
-function onCalendarSelect(date: Date, time: string) {
-  booking.event_date = date.toISOString().split('T')[0]
-  booking.start_time = time
-  const [h, m] = time.split(':').map(Number)
-  const end = new Date(date)
-  end.setHours(h + 1, m, 0, 0)
-  booking.end_time = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
-}
-
 function formatPrice(v: any) {
-  const price = v.price_per_hour ?? v.price_per_day ?? v.price_per_event
+  const price = v.price_per_head
   return price ? Number(price).toLocaleString() : 'Contact'
-}
-
-async function submitBooking() {
-  bookingLoading.value = true
-  bookingError.value = ''
-  bookingSuccess.value = false
-  try {
-    await api.post('/client/bookings', { ...booking, venue_id: venue.value.id })
-    bookingSuccess.value = true
-    setTimeout(() => router.push('/client/bookings'), 2000)
-  } catch (e: any) {
-    bookingError.value = e.response?.data?.message || 'Booking failed. Please try again.'
-  } finally {
-    bookingLoading.value = false
-  }
 }
 
 onMounted(loadVenue)
@@ -382,13 +290,13 @@ onMounted(loadVenue)
 
 <style scoped>
 .venue-gallery {
-  background: var(--color-bg-elevated, #f8fafc);
+  background: var(--color-bg-elevated);
 }
 .gallery-main {
   position: relative;
   aspect-ratio: 16/9;
   max-height: 420px;
-  background: var(--color-surface-100, #f1f5f9);
+  background: var(--color-bg-hover);
 }
 .gallery-main-img {
   width: 100%;
@@ -402,7 +310,7 @@ onMounted(loadVenue)
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-muted, #64748b);
+  color: var(--color-text-muted);
 }
 .gallery-nav {
   position: absolute;
@@ -411,16 +319,18 @@ onMounted(loadVenue)
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.9);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   transition: background 0.2s;
 }
-.gallery-nav:hover { background: #fff; }
+.gallery-nav:hover { background: rgba(0,0,0,0.8); }
 .gallery-prev { left: 12px; }
 .gallery-next { right: 12px; }
 .gallery-thumbs {
@@ -428,7 +338,7 @@ onMounted(loadVenue)
   gap: 8px;
   padding: 12px;
   overflow-x: auto;
-  background: var(--color-bg, #fff);
+  background: var(--color-bg-card);
 }
 .gallery-thumb {
   flex-shrink: 0;
@@ -441,7 +351,7 @@ onMounted(loadVenue)
   cursor: pointer;
   transition: border-color 0.2s;
 }
-.gallery-thumb.active { border-color: var(--color-primary-500, #3b82f6); }
+.gallery-thumb.active { border-color: var(--color-primary); }
 .gallery-thumb img {
   width: 100%;
   height: 100%;

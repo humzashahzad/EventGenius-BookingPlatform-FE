@@ -1,5 +1,6 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
+import { getToken } from '@/lib/portalToken'
 
 // Make Pusher available globally (required by Laravel Echo)
 ;(window as any).Pusher = Pusher
@@ -13,7 +14,7 @@ let echoInstance: Echo<'reverb'> | null = null
 export function getEcho(): Echo<'reverb'> {
   if (echoInstance) return echoInstance
 
-  const token = localStorage.getItem('auth_token')
+  const token = getToken()
 
   echoInstance = new Echo({
     broadcaster: 'reverb',
@@ -42,7 +43,7 @@ export function getEcho(): Echo<'reverb'> {
  * Update the auth token on the Echo instance (e.g., after login).
  */
 export function updateEchoAuth(): void {
-  const token = localStorage.getItem('auth_token')
+  const token = getToken()
   if (echoInstance) {
     echoInstance.connector.options.auth = {
       headers: {

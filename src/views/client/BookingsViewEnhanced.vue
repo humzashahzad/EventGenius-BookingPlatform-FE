@@ -297,8 +297,8 @@ onMounted(loadBookings)
 <style scoped>
 /* Enhanced Booking Card Styles */
 .booking-card {
-  background: var(--color-surface-0);
-  border: 1px solid var(--color-surface-200);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 1rem;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -312,7 +312,7 @@ onMounted(loadBookings)
   left: 0;
   width: 4px;
   height: 100%;
-  background: var(--accent-color, var(--color-surface-300));
+  background: var(--accent-color, var(--color-text-muted));
   transition: width 0.3s;
 }
 
@@ -359,7 +359,7 @@ onMounted(loadBookings)
 .booking-number {
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
   font-size: 0.6875rem;
-  color: var(--color-surface-500);
+  color: var(--color-text-muted);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -369,7 +369,7 @@ onMounted(loadBookings)
 .booking-venue-name {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-surface-900);
+  color: var(--color-text);
   margin-top: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -388,11 +388,11 @@ onMounted(loadBookings)
   align-items: center;
   gap: 0.375rem;
   font-size: 0.8125rem;
-  color: var(--color-surface-600);
+  color: var(--color-text-secondary);
 }
 
 .booking-meta-item svg {
-  color: var(--color-surface-400);
+  color: var(--color-text-muted);
   flex-shrink: 0;
 }
 
@@ -401,8 +401,8 @@ onMounted(loadBookings)
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.25rem;
-  background: var(--color-surface-50);
-  border-top: 1px solid var(--color-surface-100);
+  background: var(--color-bg-elevated);
+  border-top: 1px solid var(--color-border);
 }
 
 .booking-amount {
@@ -413,7 +413,7 @@ onMounted(loadBookings)
 
 .booking-amount-label {
   font-size: 0.6875rem;
-  color: var(--color-surface-500);
+  color: var(--color-text-muted);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -422,7 +422,7 @@ onMounted(loadBookings)
 .booking-amount-value {
   font-size: 1.125rem;
   font-weight: 800;
-  color: var(--color-surface-900);
+  color: var(--color-text);
 }
 
 .booking-actions {
@@ -437,7 +437,7 @@ onMounted(loadBookings)
   padding: 0.75rem 1.25rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  border-top: 1px solid var(--color-surface-100);
+  border-top: 1px solid var(--color-border);
 }
 
 .booking-card-alert svg {
@@ -464,58 +464,11 @@ onMounted(loadBookings)
   font-size: 0.6875rem;
   font-weight: 700;
   border-radius: 0.5rem;
-  background: var(--color-surface-200);
-  color: var(--color-surface-700);
+  background: var(--color-border);
+  color: var(--color-text-secondary);
 }
 
 .filter-pill-active .status-count {
-  background: white;
-  color: var(--color-primary-700);
-}
-
-/* Dark mode support */
-:global(.dark) .booking-card {
-  background: var(--color-surface-800);
-  border-color: var(--color-surface-700);
-}
-
-:global(.dark) .booking-card:hover {
-  border-color: var(--color-primary-600);
-}
-
-:global(.dark) .booking-venue-name {
-  color: var(--color-surface-100);
-}
-
-:global(.dark) .booking-card-footer {
-  background: var(--color-surface-900);
-  border-top-color: var(--color-surface-700);
-}
-
-:global(.dark) .booking-amount-value {
-  color: var(--color-surface-100);
-}
-
-:global(.dark) .booking-card-alert {
-  border-top-color: var(--color-surface-700);
-}
-
-:global(.dark) .booking-card-alert-warning {
-  background: rgba(251, 191, 36, 0.1);
-  color: var(--color-warning-400);
-}
-
-:global(.dark) .booking-card-alert-success {
-  background: rgba(34, 197, 94, 0.1);
-  color: var(--color-success-400);
-}
-
-:global(.dark) .status-count {
-  background: var(--color-surface-700);
-  color: var(--color-surface-300);
-}
-
-:global(.dark) .filter-pill-active .status-count {
   background: rgba(255, 255, 255, 0.15);
   color: white;
 }

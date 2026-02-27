@@ -9,23 +9,23 @@
     <!-- Cancel Card -->
     <div class="card text-center py-10">
       <!-- X Icon -->
-      <div class="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
-        <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="mx-auto w-16 h-16 bg-danger-100 rounded-full flex items-center justify-center mb-6">
+        <svg class="w-8 h-8 text-danger-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </div>
 
-      <h1 class="text-2xl font-bold text-gray-900 mb-2">Payment Cancelled</h1>
-      <p class="text-gray-500 mb-6">
+      <h1 class="text-2xl font-bold text-surface-900 mb-2">Payment Cancelled</h1>
+      <p class="text-surface-500 mb-6">
         Your payment was cancelled. No charges were made.
         <br />
         You can try again from your booking details page.
       </p>
 
       <!-- Booking Reference -->
-      <div v-if="bookingId" class="bg-gray-50 rounded-lg p-4 max-w-sm mx-auto mb-6">
-        <p class="text-sm text-gray-500">
-          Booking ID: <span class="font-mono text-gray-700">#{{ bookingId }}</span>
+      <div v-if="bookingId" class="bg-[var(--color-bg-elevated)] rounded-lg p-4 max-w-sm mx-auto mb-6">
+        <p class="text-sm text-surface-500">
+          Booking ID: <span class="font-mono text-surface-700">#{{ bookingId }}</span>
         </p>
       </div>
 
@@ -33,14 +33,14 @@
       <div class="flex gap-3 justify-center">
         <RouterLink
           v-if="bookingId"
-          :to="`/client/bookings/${bookingId}`"
+          :to="`/customer/bookings/${bookingId}`"
           class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-5 rounded-lg transition-colors text-sm"
         >
           Back to Booking
         </RouterLink>
         <RouterLink
-          to="/client/bookings"
-          class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-5 rounded-lg transition-colors text-sm"
+          to="/customer/bookings"
+          class="bg-surface-100 hover:bg-surface-200 text-surface-700 font-medium py-2 px-5 rounded-lg transition-colors text-sm"
         >
           All Bookings
         </RouterLink>

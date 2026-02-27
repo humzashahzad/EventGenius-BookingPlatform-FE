@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { detectPortalFromPath, getToken, setToken, removeToken } from '@/lib/portalToken'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
@@ -9,40 +10,40 @@ const api = axios.create({
   },
 })
 
-// ── Request interceptor — attach JWT token ─────────────────────────────────
+// ── Request interceptor — attach JWT token for the active portal ────────────
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token')
+  const portal = detectPortalFromPath(window.location.pathname)
+  const token = getToken(portal)
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
 
-// ── Response interceptor — capture JWT from headers + handle 401 ───────────
+// ── Response interceptor — capture JWT from headers + handle 401 ────────────
 api.interceptors.response.use(
   (response) => {
-    // JWT is returned in X-Auth-Token header on login/register
     const newToken = response.headers['x-auth-token']
     if (newToken) {
-      localStorage.setItem('auth_token', newToken)
+      const portal = detectPortalFromPath(window.location.pathname)
+      setToken(newToken, portal)
     }
     return response
   },
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or session revoked — clear and redirect
-      localStorage.removeItem('auth_token')
-      // Emit event so Pinia stores can react before redirect
+      const portal = detectPortalFromPath(window.location.pathname)
+      removeToken(portal)
       window.dispatchEvent(new CustomEvent('auth:session-expired'))
       const path = window.location.pathname
       const isOnSignIn = path.includes('/sign-in')
       if (!isOnSignIn) {
-        if (path.startsWith('/admin-panel')) {
-          window.location.href = '/admin-panel/sign-in'
-        } else if (path.startsWith('/store')) {
-          window.location.href = '/store/sign-in'
+        if (path.startsWith('/support')) {
+          window.location.href = '/support/sign-in'
+        } else if (path.startsWith('/shop')) {
+          window.location.href = '/shop/sign-in'
         } else {
-          window.location.href = '/client/sign-in'
+          window.location.href = '/customer/sign-in'
         }
       }
     }

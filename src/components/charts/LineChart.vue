@@ -113,7 +113,7 @@ const props = withDefaults(
     height?: number
   }>(),
   {
-    color: '#8b5cf6',
+    color: '#f59e0b',
     showArea: true,
     showPoints: true,
     width: 600,

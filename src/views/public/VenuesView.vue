@@ -37,7 +37,7 @@
             <select v-model="filters.sort_by" @change="loadVenues" class="form-select">
               <option value="created_at">Newest</option>
               <option value="avg_rating">Top Rated</option>
-              <option value="price_per_hour">Price (Low-High)</option>
+              <option value="price_per_head">Price (Low-High)</option>
             </select>
           </div>
         </div>
@@ -97,7 +97,7 @@
           <p class="text-xs text-surface-400 mb-3 line-clamp-2">{{ venue.description }}</p>
           <div class="flex justify-between items-center mt-auto">
             <span class="venue-card-price">PKR {{ formatPrice(venue) }}</span>
-            <span class="text-xs text-surface-400">/ {{ venue.pricing_type?.replace('per_', '') }}</span>
+            <span class="text-xs text-surface-400">/ head</span>
           </div>
           <div class="mt-2 flex flex-wrap gap-1">
             <span v-for="type in (venue.event_types || []).slice(0, 3)" :key="type" class="badge badge-info text-xs capitalize">{{ type.replace('_', ' ') }}</span>
@@ -169,7 +169,7 @@ function changePage(page: number) {
 }
 
 function formatPrice(venue: any) {
-  const price = venue.price_per_hour ?? venue.price_per_day ?? venue.price_per_event
+  const price = venue.price_per_head
   return price ? Number(price).toLocaleString() : 'Contact'
 }
 
@@ -189,12 +189,12 @@ onMounted(loadVenues)
 </script>
 
 <style scoped>
-/* Purple gradient overlay on venue card image hover */
+/* Amber gradient overlay on venue card image hover */
 .venue-card:hover .venue-card-image::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(168, 85, 247, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.06) 100%);
   pointer-events: none;
   transition: opacity 0.3s ease;
 }

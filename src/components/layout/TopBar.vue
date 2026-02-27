@@ -239,23 +239,23 @@ const pageTitle = computed(() => {
 
 const profileLink = computed(() => {
   const role = authStore.user?.role
-  if (role === 'admin') return '/admin-panel/settings'
-  if (role === 'store_owner') return '/store/profile'
-  return '/client/profile'
+  if (role === 'admin') return '/support/settings'
+  if (role === 'store_owner') return '/shop/profile'
+  return '/customer/profile'
 })
 
 const dashboardLink = computed(() => {
   const role = authStore.user?.role
-  if (role === 'admin') return '/admin-panel/dashboard'
-  if (role === 'store_owner') return '/store/dashboard'
-  return '/client/dashboard'
+  if (role === 'admin') return '/support/dashboard'
+  if (role === 'store_owner') return '/shop/dashboard'
+  return '/customer/dashboard'
 })
 
 const notifPageLink = computed(() => {
   const role = authStore.user?.role
-  if (role === 'admin') return '/admin-panel/bookings'
-  if (role === 'store_owner') return '/store/bookings'
-  return '/client/bookings'
+  if (role === 'admin') return '/support/bookings'
+  if (role === 'store_owner') return '/shop/bookings'
+  return '/customer/bookings'
 })
 
 function toggleNotif() {
@@ -277,9 +277,9 @@ async function logout() {
   showProfile.value = false
   await authStore.logout()
   const role = authStore.user?.role
-  if (role === 'admin') router.push('/admin-panel/sign-in')
-  else if (role === 'store_owner') router.push('/store/sign-in')
-  else router.push('/client/sign-in')
+  if (role === 'admin') router.push('/support/sign-in')
+  else if (role === 'store_owner') router.push('/shop/sign-in')
+  else router.push('/customer/sign-in')
 }
 
 // Close dropdowns when clicking outside

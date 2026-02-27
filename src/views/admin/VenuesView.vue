@@ -4,7 +4,6 @@
       <div><h1 class="page-title">Venues</h1><p class="page-subtitle">Browse and manage all venues across the platform.</p></div>
     </div>
 
-
     <!-- Toolbar -->
     <div class="card">
       <div class="card-body py-3">
@@ -26,7 +25,7 @@
 
     <!-- Table -->
     <div class="table-wrapper">
-      <div v-if="loading" class="bg-white">
+      <div v-if="loading" class="bg-[var(--color-bg-card)]">
         <div v-for="i in 8" :key="i" class="flex gap-4 px-4 py-4 border-b border-surface-100">
           <div class="skeleton h-4 w-40 rounded"></div>
           <div class="skeleton h-4 w-28 rounded"></div>
@@ -35,7 +34,7 @@
           <div class="skeleton h-4 w-14 rounded ml-auto"></div>
         </div>
       </div>
-      <div v-else-if="venues.length === 0" class="empty-state bg-white rounded-xl">
+      <div v-else-if="venues.length === 0" class="empty-state bg-[var(--color-bg-card)] rounded-xl">
         <div class="empty-state-icon"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg></div>
         <p class="empty-state-title">No venues found</p>
         <p class="empty-state-desc">Try adjusting your filters.</p>
@@ -101,37 +100,31 @@
       </div>
     </div>
 
-    <!-- Toggle Status Modal -->
-    <Teleport to="body">
-      <div v-if="toggleTarget" class="modal-overlay" @click.self="toggleTarget = null">
-        <div class="modal">
-          <div class="modal-header">
-            <h3 class="modal-title">{{ toggleTarget.status === 'active' ? 'Deactivate' : 'Activate' }} Venue</h3>
-            <button @click="toggleTarget = null" class="btn-icon btn-ghost"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body">
-            <p class="text-sm text-surface-600">
-              Are you sure you want to <strong>{{ toggleTarget.status === 'active' ? 'deactivate' : 'activate' }}</strong> venue
-              <strong class="text-surface-900">{{ toggleTarget.name }}</strong>?
-              <span v-if="toggleTarget.status === 'active'"> It will no longer appear in public listings.</span>
-            </p>
-          </div>
-          <div class="modal-footer">
-            <button @click="toggleTarget = null" class="btn-ghost">Cancel</button>
-            <button @click="doToggle" :disabled="acting" :class="toggleTarget.status === 'active' ? 'btn-danger' : 'btn-primary'">
-              <svg v-if="acting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              {{ toggleTarget.status === 'active' ? 'Deactivate' : 'Activate' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Toggle Status Dialog -->
+    <Dialog v-model:visible="showToggleDialog" modal :header="(toggleTarget?.status === 'active' ? 'Deactivate' : 'Activate') + ' Venue'" :style="{ width: '28rem' }" :pt="dialogPt">
+      <p class="text-sm text-surface-600">
+        Are you sure you want to <strong>{{ toggleTarget?.status === 'active' ? 'deactivate' : 'activate' }}</strong> venue
+        <strong class="text-surface-900">{{ toggleTarget?.name }}</strong>?
+        <span v-if="toggleTarget?.status === 'active'"> It will no longer appear in public listings.</span>
+      </p>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" text @click="showToggleDialog = false" />
+        <Button
+          :label="toggleTarget?.status === 'active' ? 'Deactivate' : 'Activate'"
+          :severity="toggleTarget?.status === 'active' ? 'danger' : 'success'"
+          :loading="acting"
+          @click="doToggle"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import api from '@/lib/axios'
+import Dialog from 'primevue/dialog'
+import Button from 'primevue/button'
 
 const venues       = ref<any[]>([])
 const loading      = ref(false)
@@ -139,10 +132,18 @@ const acting       = ref(false)
 const search       = ref('')
 const statusFilter = ref('')
 const toggleTarget = ref<any>(null)
+const showToggleDialog = ref(false)
 const perPage      = 15
 const meta         = ref({ current_page: 1, last_page: 1, total: 0 })
 let page = 1
 let searchTimeout: ReturnType<typeof setTimeout>
+
+const dialogPt = {
+  root: { class: '!bg-[var(--color-bg-card)] !border-[var(--color-border)] !text-[var(--color-text)]' },
+  header: { class: '!bg-[var(--color-bg-card)] !text-[var(--color-text)] !border-b !border-[var(--color-border)]' },
+  content: { class: '!bg-[var(--color-bg-card)] !text-[var(--color-text)]' },
+  footer: { class: '!bg-[var(--color-bg-card)] !border-t !border-[var(--color-border)]' },
+}
 
 async function load() {
   loading.value = true
@@ -159,7 +160,11 @@ async function load() {
 function resetAndLoad() { page = 1; load() }
 function debouncedSearch() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => resetAndLoad(), 400) }
 function changePage(p: number) { page = p; load() }
-function openToggle(v: any) { toggleTarget.value = v }
+
+function openToggle(v: any) {
+  toggleTarget.value = v
+  showToggleDialog.value = true
+}
 
 async function doToggle() {
   if (!toggleTarget.value) return
@@ -167,6 +172,7 @@ async function doToggle() {
   try {
     const { data } = await api.patch(`/admin/venues/${toggleTarget.value.id}/toggle-status`)
     toggleTarget.value.status = data.data.status
+    showToggleDialog.value = false
     toggleTarget.value = null
   } finally { acting.value = false }
 }

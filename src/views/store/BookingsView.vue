@@ -6,7 +6,7 @@
 
     <!-- Loading skeleton -->
     <div v-if="loading" class="table-wrapper">
-      <div v-for="i in 6" :key="i" class="flex gap-4 px-4 py-4 border-b border-surface-100 bg-white">
+      <div v-for="i in 6" :key="i" class="flex gap-4 px-4 py-4 border-b border-surface-100 bg-[var(--color-bg-card)]">
         <div class="skeleton h-4 w-24 rounded"></div>
         <div class="skeleton h-4 w-32 rounded"></div>
         <div class="skeleton h-4 w-28 rounded"></div>
@@ -57,36 +57,25 @@
       </table>
     </div>
 
-    <!-- Reject Modal -->
-    <Teleport to="body">
-      <div v-if="rejectTarget" class="modal-overlay" @click.self="rejectTarget = null">
-        <div class="modal">
-          <div class="modal-header">
-            <h3 class="modal-title">Reject Booking</h3>
-            <button @click="rejectTarget = null" class="btn-icon btn-ghost"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body space-y-4">
-            <div class="bg-surface-50 rounded-lg p-3 border border-surface-200">
-              <p class="text-xs text-surface-500 mb-0.5">Booking</p>
-              <p class="text-sm font-semibold text-surface-800">{{ rejectTarget.event_name }}</p>
-              <p class="text-xs text-surface-400">{{ rejectTarget.client?.name }} · {{ formatDate(rejectTarget.event_date) }}</p>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Rejection Reason <span class="text-danger-500">*</span></label>
-              <textarea v-model="rejectReason" class="form-textarea" rows="3" placeholder="Explain why this booking is being rejected…"></textarea>
-              <p v-if="rejectError" class="form-error">{{ rejectError }}</p>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button @click="rejectTarget = null" class="btn-ghost">Cancel</button>
-            <button @click="submitReject" :disabled="acting" class="btn-danger">
-              <svg v-if="acting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              Confirm Rejection
-            </button>
-          </div>
+    <!-- Reject Dialog -->
+    <Dialog v-model:visible="showRejectDialog" modal header="Reject Booking" :style="{ width: '28rem' }" :pt="dialogPt">
+      <div class="space-y-4">
+        <div class="bg-[var(--color-bg-elevated)] rounded-lg p-3 border border-[var(--color-border)]">
+          <p class="text-xs text-surface-500 mb-0.5">Booking</p>
+          <p class="text-sm font-semibold text-surface-800">{{ rejectTarget?.event_name }}</p>
+          <p class="text-xs text-surface-400">{{ rejectTarget?.client?.name }} · {{ formatDate(rejectTarget?.event_date ?? '') }}</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rejection Reason <span class="text-danger-500">*</span></label>
+          <textarea v-model="rejectReason" class="form-textarea" rows="3" placeholder="Explain why this booking is being rejected…"></textarea>
+          <p v-if="rejectError" class="form-error">{{ rejectError }}</p>
         </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" text @click="showRejectDialog = false" />
+        <Button label="Confirm Rejection" severity="danger" :loading="acting" @click="submitReject" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -94,6 +83,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import api from '@/lib/axios'
 import { useTopBarActionsStore } from '@/stores/topBarActions'
+import Dialog from 'primevue/dialog'
+import Button from 'primevue/button'
 
 const bookings    = ref<any[]>([])
 const loading     = ref(false)
@@ -102,6 +93,7 @@ const filterStatus = ref('')
 const rejectTarget = ref<any>(null)
 const rejectReason = ref('')
 const rejectError  = ref('')
+const showRejectDialog = ref(false)
 
 const statuses = [
   { value: '', label: 'All' },
@@ -112,6 +104,13 @@ const statuses = [
 ]
 
 const topBarActions = useTopBarActionsStore()
+
+const dialogPt = {
+  root: { class: '!bg-[var(--color-bg-card)] !border-[var(--color-border)] !text-[var(--color-text)]' },
+  header: { class: '!bg-[var(--color-bg-card)] !text-[var(--color-text)] !border-b !border-[var(--color-border)]' },
+  content: { class: '!bg-[var(--color-bg-card)] !text-[var(--color-text)]' },
+  footer: { class: '!bg-[var(--color-bg-card)] !border-t !border-[var(--color-border)]' },
+}
 
 async function loadBookings() {
   loading.value = true
@@ -129,13 +128,19 @@ async function doConfirm(id: number) {
   finally { acting.value = false }
 }
 
-function openReject(b: any) { rejectTarget.value = b; rejectReason.value = ''; rejectError.value = '' }
+function openReject(b: any) {
+  rejectTarget.value = b
+  rejectReason.value = ''
+  rejectError.value = ''
+  showRejectDialog.value = true
+}
 
 async function submitReject() {
   if (!rejectReason.value.trim()) { rejectError.value = 'Reason is required.'; return }
   acting.value = true
   try {
     await api.patch(`/store/bookings/${rejectTarget.value.id}/reject`, { reason: rejectReason.value })
+    showRejectDialog.value = false
     rejectTarget.value = null
     await loadBookings()
   } finally { acting.value = false }

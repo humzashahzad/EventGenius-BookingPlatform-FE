@@ -87,7 +87,7 @@
             <p class="text-sm text-surface-500 mt-2">Loading conversations...</p>
           </div>
           <div v-else-if="conversations.length === 0" class="chat-empty">
-            <svg class="w-10 h-10 text-purple-200 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-10 h-10 text-amber-200 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
             </svg>
             <p class="text-sm text-surface-500">No conversations yet</p>
@@ -276,9 +276,9 @@ function getInitials(name: string): string {
 function getUserRole(user: any) {
   if (!user) return ''
   const roleMap: Record<string, string> = {
-    'admin': 'Administrator',
-    'store_owner': 'Store Owner',
-    'client': 'Client'
+    'admin': 'Support',
+    'store_owner': 'Shop Owner',
+    'client': 'Customer'
   }
   return roleMap[user.role] || user.role
 }
@@ -354,9 +354,9 @@ watch(messages, () => {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), #fbbf24);
   color: white;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -367,7 +367,7 @@ watch(messages, () => {
 
 .chat-toggle-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4), 0 3px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4), 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
 .chat-toggle-badge {
@@ -387,9 +387,9 @@ watch(messages, () => {
 .chat-window {
   width: 380px;
   height: 550px;
-  background: white;
+  background: var(--color-bg-card);
   border-radius: 12px 12px 0 0;
-  box-shadow: 0 -2px 20px rgba(124, 58, 237, 0.12), 0 -1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 -2px 20px rgba(245, 158, 11, 0.12), 0 -1px 4px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -401,7 +401,7 @@ watch(messages, () => {
 
 .chat-panel-header {
   padding: 16px;
-  background: linear-gradient(135deg, #6d28d9, #7c3aed);
+  background: linear-gradient(135deg, #d97706, var(--color-primary));
   color: white;
   display: flex;
   align-items: center;
@@ -439,8 +439,8 @@ watch(messages, () => {
 .cp-search-wrap {
   position: relative;
   padding: 10px 12px;
-  border-bottom: 1px solid #ede9fe;
-  background: #faf5ff;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-hover);
 }
 
 .cp-search-icon {
@@ -450,27 +450,27 @@ watch(messages, () => {
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: #a78bfa;
+  color: var(--color-text-muted);
   pointer-events: none;
 }
 
 .cp-search-input {
   width: 100%;
   padding: 8px 12px 8px 34px;
-  border: 1px solid #ddd6fe;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 13px;
-  background: white;
-  color: #1e293b;
+  background: var(--color-bg-card);
+  color: var(--color-text);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.cp-search-input::placeholder { color: #a78bfa; }
+.cp-search-input::placeholder { color: var(--color-text-muted); }
 
 .cp-search-input:focus {
   outline: none;
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
 }
 
 .cp-search-dropdown {
@@ -481,24 +481,24 @@ watch(messages, () => {
   margin-top: 4px;
   max-height: 240px;
   overflow-y: auto;
-  background: white;
-  border: 1px solid #ede9fe;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 10px 25px rgba(245, 158, 11, 0.1);
   z-index: 50;
 }
 
 .cp-search-loading {
   padding: 12px;
   text-align: center;
-  color: #a78bfa;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
 .cp-search-empty {
   padding: 8px 12px;
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-muted);
 }
 
 .cp-search-item {
@@ -512,11 +512,11 @@ watch(messages, () => {
   background: transparent;
   cursor: pointer;
   transition: background 0.15s;
-  border-bottom: 1px solid #f5f3ff;
+  border-bottom: 1px solid var(--color-bg-hover);
 }
 
 .cp-search-item:last-child { border-bottom: none; }
-.cp-search-item:hover { background: #f5f3ff; }
+.cp-search-item:hover { background: var(--color-bg-hover); }
 
 .cp-search-avatar {
   flex-shrink: 0;
@@ -524,7 +524,7 @@ watch(messages, () => {
   height: 36px;
   border-radius: 50%;
   overflow: hidden;
-  background: #ede9fe;
+  background: var(--color-bg-hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -539,7 +539,7 @@ watch(messages, () => {
 .cp-avatar-initials {
   font-weight: 600;
   font-size: 13px;
-  color: #7c3aed;
+  color: var(--color-primary);
 }
 
 .cp-search-info {
@@ -550,13 +550,13 @@ watch(messages, () => {
 
 .cp-search-name {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-text);
   font-size: 13px;
 }
 
 .cp-search-role {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-text-muted);
 }
 
 /* Conversations */
@@ -580,11 +580,11 @@ watch(messages, () => {
   padding: 12px 16px;
   cursor: pointer;
   transition: background 0.15s ease;
-  border-bottom: 1px solid #f5f3ff;
+  border-bottom: 1px solid var(--color-bg-hover);
 }
 
 .chat-conversation-item:hover {
-  background: #faf5ff;
+  background: var(--color-bg-hover);
 }
 
 .chat-avatar {
@@ -593,7 +593,7 @@ watch(messages, () => {
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  background: #ede9fe;
+  background: var(--color-bg-hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -608,18 +608,18 @@ watch(messages, () => {
 .chat-avatar-initials {
   font-size: 14px;
   font-weight: 600;
-  color: #7c3aed;
+  color: var(--color-primary);
 }
 
 .chat-avatar-initials-sm {
   font-size: 10px;
   font-weight: 600;
-  color: #7c3aed;
+  color: var(--color-primary);
 }
 
 .chat-conversation-name {
   font-size: 14px;
-  color: #1e293b;
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -627,20 +627,20 @@ watch(messages, () => {
 
 .chat-conversation-time {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   flex-shrink: 0;
 }
 
 .chat-conversation-preview {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .chat-unread-badge {
-  background: #7c3aed;
+  background: var(--color-primary);
   color: white;
   font-size: 11px;
   font-weight: 600;
@@ -654,9 +654,9 @@ watch(messages, () => {
 .chat-back-btn {
   padding: 10px 16px;
   background: transparent;
-  color: #7c3aed;
+  color: var(--color-primary);
   border: none;
-  border-bottom: 1px solid #ede9fe;
+  border-bottom: 1px solid var(--color-border);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -666,7 +666,7 @@ watch(messages, () => {
 }
 
 .chat-back-btn:hover {
-  background: #faf5ff;
+  background: var(--color-bg-hover);
 }
 
 .chat-messages-list {
@@ -694,7 +694,7 @@ watch(messages, () => {
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  background: #ede9fe;
+  background: var(--color-bg-hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -710,11 +710,11 @@ watch(messages, () => {
   max-width: 70%;
   padding: 10px 14px;
   border-radius: 16px;
-  background: #f5f3ff;
+  background: var(--color-bg-hover);
 }
 
 .chat-message-mine .chat-message-bubble {
-  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), #fbbf24);
   color: white;
 }
 
@@ -726,7 +726,7 @@ watch(messages, () => {
 
 .chat-message-time {
   font-size: 10px;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   display: block;
   margin-top: 4px;
 }
@@ -739,31 +739,31 @@ watch(messages, () => {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #ede9fe;
-  background: white;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-card);
 }
 
 .chat-input {
   flex: 1;
   padding: 10px 14px;
-  border: 1px solid #ddd6fe;
+  border: 1px solid var(--color-border);
   border-radius: 20px;
   font-size: 14px;
   outline: none;
   transition: border-color 0.15s ease;
-  background: white;
-  color: #1e293b;
+  background: var(--color-bg-card);
+  color: var(--color-text);
 }
 
 .chat-input:focus {
-  border-color: #8b5cf6;
+  border-color: #fbbf24;
 }
 
 .chat-send-btn {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #7c3aed;
+  background: var(--color-primary);
   color: white;
   border: none;
   cursor: pointer;
@@ -775,7 +775,7 @@ watch(messages, () => {
 }
 
 .chat-send-btn:hover:not(:disabled) {
-  background: #6d28d9;
+  background: #d97706;
 }
 
 .chat-send-btn:disabled {
@@ -797,8 +797,8 @@ watch(messages, () => {
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #ede9fe;
-  border-top-color: #7c3aed;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

@@ -16,7 +16,8 @@
     <!-- Public Layout -->
     <template v-if="layout === 'public'">
       <PublicNavbar />
-      <main><RouterView /></main>
+      <main class="public-main"><RouterView /></main>
+      <Footer />
     </template>
 
     <!-- Auth Layout -->
@@ -24,21 +25,19 @@
       <RouterView />
     </template>
 
-    <!-- Client Layout (collapsible sidebar + top bar) -->
-    <template v-else-if="layout === 'client'">
-      <div class="app-shell client-panel" :class="{ 'client-sidebar-is-collapsed': clientCollapsed }">
-        <ClientSidebar v-model:collapsed="clientCollapsed" />
-        <div class="app-body client-panel-body">
-          <ClientTopBar :sidebar-collapsed="clientCollapsed" @toggle-sidebar="clientCollapsed = !clientCollapsed" />
-          <main class="main-content client-main" :class="{ 'main-content--fullscreen': isMessagesRoute }">
-            <RouterView />
-          </main>
-        </div>
+    <!-- Customer Layout (website-style: navbar + content + footer) -->
+    <template v-else-if="layout === 'customer'">
+      <div class="customer-website">
+        <CustomerNavbar />
+        <main class="customer-main" :class="{ 'customer-main--fullscreen': isMessagesRoute }">
+          <RouterView />
+        </main>
+        <Footer />
       </div>
     </template>
 
-    <!-- Store Layout -->
-    <template v-else-if="layout === 'store'">
+    <!-- Shop Layout (was Store) -->
+    <template v-else-if="layout === 'shop'">
       <div class="app-shell" :class="{ 'sidebar-is-collapsed': storeCollapsed }">
         <StoreSidebar v-model:collapsed="storeCollapsed" />
         <div class="app-body">
@@ -50,8 +49,8 @@
       </div>
     </template>
 
-    <!-- Admin Layout -->
-    <template v-else-if="layout === 'admin'">
+    <!-- Support Layout (was Admin) -->
+    <template v-else-if="layout === 'support'">
       <div class="app-shell" :class="{ 'sidebar-is-collapsed': adminCollapsed }">
         <AdminSidebar v-model:collapsed="adminCollapsed" />
         <div class="app-body">
@@ -77,9 +76,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notifications'
 import PublicNavbar from '@/components/layout/PublicNavbar.vue'
+import CustomerNavbar from '@/components/layout/CustomerNavbar.vue'
+import Footer from '@/components/layout/Footer.vue'
 import TopBar from '@/components/layout/TopBar.vue'
-import ClientTopBar from '@/components/layout/ClientTopBar.vue'
-import ClientSidebar from '@/components/layout/ClientSidebar.vue'
 import StoreSidebar from '@/components/layout/StoreSidebar.vue'
 import AdminSidebar from '@/components/layout/AdminSidebar.vue'
 
@@ -89,13 +88,12 @@ const notifStore = useNotificationStore()
 const chatStore = useChatStore()
 const layout    = computed(() => route.meta.layout as string | undefined)
 
-const clientCollapsed = ref(false)
 const storeCollapsed  = ref(false)
 const adminCollapsed  = ref(false)
 
 const isMessagesRoute = computed(() => {
   const name = route.name as string
-  return name === 'client-messages' || name === 'store-messages' || name === 'admin-messages'
+  return name === 'customer-messages' || name === 'shop-messages' || name === 'support-messages'
 })
 
 // After sign-in: load notifications from API, then real-time via SSE + socket; request browser permission

@@ -22,45 +22,93 @@
           </span>
         </div>
 
-        <!-- User Search -->
+        <!-- User Search (role-aware) -->
         <div class="search-section">
-          <div class="search-box">
-            <component :is="Search" :size="16" class="search-icon" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search users to start a chat..."
-              class="search-input"
-              autocomplete="off"
-              @input="onSearchInput"
-            />
-            <button v-if="searchQuery" @click="clearSearch" class="search-clear">
-              <component :is="X" :size="14" />
-            </button>
-          </div>
-
-          <!-- Search Results Dropdown -->
-          <div v-if="searchQuery && (searchResults.length > 0 || searchLoading)" class="search-dropdown">
-            <div v-if="searchLoading" class="search-loading">
-              <component :is="Loader2" :size="16" class="animate-spin" /> Searching...
+          <!-- Support: full search (can chat with anyone) -->
+          <template v-if="userRole === 'admin'">
+            <div class="search-box">
+              <component :is="Search" :size="16" class="search-icon" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search users to start a chat..."
+                class="search-input"
+                autocomplete="off"
+                @input="onSearchInput"
+              />
+              <button v-if="searchQuery" @click="clearSearch" class="search-clear">
+                <component :is="X" :size="14" />
+              </button>
             </div>
-            <button
-              v-for="user in searchResults"
-              :key="user.id"
-              @click="startChat(user)"
-              class="search-result"
-            >
-              <div class="avatar-wrap">
-                <img v-if="user.avatar" :src="getStorageUrl(user.avatar)" :alt="user.name" class="avatar" />
-                <div v-else class="avatar-placeholder">{{ user.name.charAt(0) }}</div>
-                <span v-if="user.is_online" class="online-dot"></span>
+            <div v-if="searchQuery && (searchResults.length > 0 || searchLoading)" class="search-dropdown">
+              <div v-if="searchLoading" class="search-loading">
+                <component :is="Loader2" :size="16" class="animate-spin" /> Searching...
               </div>
-              <div class="search-result-info">
-                <span class="search-result-name">{{ user.name }}</span>
-                <span class="search-result-role">{{ formatRole(user.role) }}</span>
-              </div>
+              <button
+                v-for="user in searchResults"
+                :key="user.id"
+                @click="startChat(user)"
+                class="search-result"
+              >
+                <div class="avatar-wrap">
+                  <img v-if="user.avatar" :src="getStorageUrl(user.avatar)" :alt="user.name" class="avatar" />
+                  <div v-else class="avatar-placeholder">{{ user.name.charAt(0) }}</div>
+                  <span v-if="user.is_online" class="online-dot"></span>
+                </div>
+                <div class="search-result-info">
+                  <span class="search-result-name">{{ user.name }}</span>
+                  <span class="search-result-role">{{ formatRole(user.role) }}</span>
+                </div>
+              </button>
+            </div>
+          </template>
+
+          <!-- Customer / Shop: contact support + eligible contacts -->
+          <template v-else>
+            <button @click="contactSupport" class="contact-support-btn">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
+              </svg>
+              Contact Support
             </button>
-          </div>
+
+            <!-- Eligible contacts from bookings -->
+            <div v-if="eligibleContacts.length > 0" class="eligible-contacts">
+              <p class="eligible-contacts-label">
+                {{ userRole === 'client' ? 'Your Venues' : 'Your Customers' }}
+              </p>
+              <button
+                v-for="contact in eligibleContacts"
+                :key="contact.id"
+                @click="startChat(contact)"
+                class="search-result"
+              >
+                <div class="avatar-wrap">
+                  <img v-if="contact.avatar" :src="getStorageUrl(contact.avatar)" :alt="contact.name" class="avatar" />
+                  <div v-else class="avatar-placeholder">{{ contact.name.charAt(0) }}</div>
+                </div>
+                <div class="search-result-info">
+                  <span class="search-result-name">{{ contact.name }}</span>
+                  <span class="search-result-role">{{ formatRole(contact.role) }}</span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Search within eligible contacts -->
+            <div class="search-box mt-2">
+              <component :is="Search" :size="16" class="search-icon" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Filter conversations..."
+                class="search-input"
+                autocomplete="off"
+              />
+              <button v-if="searchQuery" @click="clearSearch" class="search-clear">
+                <component :is="X" :size="14" />
+              </button>
+            </div>
+          </template>
         </div>
 
         <!-- Chat List -->
@@ -413,6 +461,34 @@ import { formatDistanceToNow, format, isToday, isYesterday, isSameDay } from 'da
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 
+// ── Role-based chat restrictions ────────────────────────────────────────
+const userRole = computed(() => authStore.user?.role || 'client')
+const eligibleContacts = ref<ChatUser[]>([])
+
+async function fetchEligibleContacts() {
+  if (userRole.value === 'admin') return // Support can chat with anyone
+  try {
+    const { data } = await import('@/lib/axios').then(m => m.default.get('/nexus/eligible-contacts'))
+    eligibleContacts.value = data.data || []
+  } catch {
+    eligibleContacts.value = []
+  }
+}
+
+async function contactSupport() {
+  try {
+    const { data } = await import('@/lib/axios').then(m => m.default.get('/nexus/users/search', {
+      params: { q: '', role: 'admin', context: 'chat_initiation' }
+    }))
+    const supportUsers: ChatUser[] = data.data || []
+    if (supportUsers.length > 0) {
+      await startChat(supportUsers[0])
+    }
+  } catch {
+    // Silently fail
+  }
+}
+
 // ── Search ──────────────────────────────────────────────────────────────
 const searchQuery = ref('')
 const searchResults = ref<ChatUser[]>([])
@@ -711,7 +787,12 @@ function showAvatar(idx: number): boolean {
 
 function formatRole(role?: string): string {
   if (!role) return ''
-  return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+  const map: Record<string, string> = {
+    admin: 'Support',
+    store_owner: 'Shop Owner',
+    client: 'Customer',
+  }
+  return map[role] || role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
 // ── Lifecycle ───────────────────────────────────────────────────────────
@@ -719,6 +800,7 @@ onMounted(async () => {
   chatStore.requestNotificationPermission()
   chatStore.connect()
   await chatStore.fetchChats()
+  fetchEligibleContacts()
 })
 
 onBeforeUnmount(() => {
@@ -738,7 +820,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex: 1;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: 12px;
   margin: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,.08);
@@ -748,10 +830,10 @@ onBeforeUnmount(() => {
 .chat-sidebar {
   width: 340px;
   min-width: 340px;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  background: #faf8ff;
+  background: var(--color-bg-elevated);
 }
 
 .sidebar-header {
@@ -759,19 +841,19 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #f3f0ff;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .sidebar-title {
   font-size: 18px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--color-text);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.title-icon { color: var(--color-primary-600, #7c3aed); }
+.title-icon { color: var(--color-primary-600, var(--color-primary)); }
 
 .connection-badge {
   font-size: 11px;
@@ -804,39 +886,39 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px 12px;
   transition: border-color .2s;
 }
-.search-box:focus-within { border-color: var(--color-primary-500, #8b5cf6); }
+.search-box:focus-within { border-color: var(--color-primary-500, #fbbf24); }
 
-.search-icon { color: #9ca3af; flex-shrink: 0; }
+.search-icon { color: var(--color-text-muted); flex-shrink: 0; }
 .search-input {
   flex: 1;
   border: none;
   outline: none;
   font-size: 13px;
   background: transparent;
-  color: #374151;
+  color: var(--color-text);
 }
-.search-input::placeholder { color: #9ca3af; }
+.search-input::placeholder { color: var(--color-text-muted); }
 .search-clear {
-  color: #9ca3af;
+  color: var(--color-text-muted);
   cursor: pointer;
   padding: 2px;
   border-radius: 4px;
 }
-.search-clear:hover { background: #f3f4f6; }
+.search-clear:hover { background: var(--color-bg-elevated); }
 
 .search-dropdown {
   position: absolute;
   top: 100%;
   left: 16px;
   right: 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,.12);
   max-height: 260px;
@@ -845,7 +927,7 @@ onBeforeUnmount(() => {
 }
 .search-loading {
   padding: 12px 16px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 13px;
   display: flex; align-items: center; gap: 8px;
 }
@@ -859,10 +941,45 @@ onBeforeUnmount(() => {
   cursor: pointer;
   transition: background .15s;
 }
-.search-result:hover { background: #f5f3ff; }
+.search-result:hover { background: var(--color-bg-hover); }
 .search-result-info { flex: 1; min-width: 0; }
-.search-result-name { font-size: 13px; font-weight: 600; color: #1f2937; display: block; }
-.search-result-role { font-size: 11px; color: #6b7280; text-transform: capitalize; }
+.search-result-name { font-size: 13px; font-weight: 600; color: var(--color-text); display: block; }
+.search-result-role { font-size: 11px; color: var(--color-text-secondary); text-transform: capitalize; }
+
+/* ─── Contact Support Button ─────────────────────────────────────────── */
+.contact-support-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem;
+  border-radius: 8px;
+  border: 1px dashed var(--color-primary);
+  background: rgba(245, 158, 11, 0.05);
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.contact-support-btn:hover {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.eligible-contacts {
+  margin-top: 0.5rem;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.eligible-contacts-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  padding: 0.375rem 0.5rem;
+}
 
 /* ─── Avatar ─────────────────────────────────────────────────────────── */
 .avatar-wrap { position: relative; flex-shrink: 0; }
@@ -874,7 +991,7 @@ onBeforeUnmount(() => {
 .avatar-placeholder {
   width: 40px; height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary-500, #8b5cf6), var(--color-primary-600, #7c3aed));
+  background: linear-gradient(135deg, var(--color-primary-500, #fbbf24), var(--color-primary-600, var(--color-primary)));
   color: #fff;
   display: flex; align-items: center; justify-content: center;
   font-weight: 600;
@@ -899,10 +1016,10 @@ onBeforeUnmount(() => {
 .chat-list-loading, .chat-list-empty {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  padding: 40px 20px; color: #9ca3af; gap: 8px;
+  padding: 40px 20px; color: var(--color-text-muted); gap: 8px;
   font-size: 13px;
 }
-.empty-icon { color: #d1d5db; }
+.empty-icon { color: var(--color-text-muted); }
 .empty-hint { font-size: 12px; }
 
 .chat-item {
@@ -916,24 +1033,24 @@ onBeforeUnmount(() => {
   transition: background .15s;
   border-left: 3px solid transparent;
 }
-.chat-item:hover { background: #f5f3ff; }
+.chat-item:hover { background: var(--color-bg-hover); }
 .chat-item-active {
-  background: #ede9fe !important;
-  border-left-color: var(--color-primary-600, #7c3aed);
+  background: rgba(245, 158, 11, 0.1) !important;
+  border-left-color: var(--color-primary);
 }
 .chat-item-info { flex: 1; min-width: 0; }
 .chat-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
-.chat-item-name { font-size: 14px; font-weight: 600; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat-item-time { font-size: 11px; color: #9ca3af; flex-shrink: 0; }
+.chat-item-name { font-size: 14px; font-weight: 600; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-item-time { font-size: 11px; color: var(--color-text-muted); flex-shrink: 0; }
 .chat-item-bottom { display: flex; justify-content: space-between; align-items: center; }
 .chat-item-preview {
-  font-size: 12px; color: #6b7280;
+  font-size: 12px; color: var(--color-text-secondary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   flex: 1; min-width: 0;
 }
-.preview-unread { color: #374151; font-weight: 500; }
+.preview-unread { color: var(--color-text); font-weight: 500; }
 .unread-badge {
-  background: var(--color-primary-600, #7c3aed);
+  background: var(--color-primary-600, var(--color-primary));
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -950,17 +1067,17 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #fff;
+  background: var(--color-bg-card);
 }
 
 .no-chat-selected {
   flex: 1;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  color: #9ca3af; gap: 8px; text-align: center;
+  color: var(--color-text-muted); gap: 8px; text-align: center;
 }
-.no-chat-icon { color: #d1d5db; }
-.no-chat-selected h3 { font-size: 18px; font-weight: 600; color: #6b7280; }
+.no-chat-icon { color: var(--color-text-muted); }
+.no-chat-selected h3 { font-size: 18px; font-weight: 600; color: var(--color-text-secondary); }
 .no-chat-selected p { font-size: 13px; }
 
 /* ─── Chat Header ────────────────────────────────────────────────────── */
@@ -969,21 +1086,21 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #faf8ff;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
 }
 .back-btn {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   padding: 4px;
   border-radius: 6px;
 }
-.back-btn:hover { background: #f3f4f6; }
+.back-btn:hover { background: var(--color-bg-elevated); }
 .chat-header-info { flex: 1; min-width: 0; }
-.chat-header-name { font-size: 15px; font-weight: 600; color: #1f2937; }
-.chat-header-status { font-size: 12px; color: #6b7280; }
+.chat-header-name { font-size: 15px; font-weight: 600; color: var(--color-text); }
+.chat-header-status { font-size: 12px; color: var(--color-text-secondary); }
 .status-online { color: #10b981; font-weight: 500; }
-.status-offline { color: #9ca3af; }
-.typing-text { color: var(--color-primary-600, #7c3aed); font-weight: 500; }
+.status-offline { color: var(--color-text-muted); }
+.typing-text { color: var(--color-primary-600, var(--color-primary)); font-weight: 500; }
 
 .typing-dots span {
   animation: typingDot 1.4s infinite;
@@ -1009,19 +1126,19 @@ onBeforeUnmount(() => {
 
 .load-more { text-align: center; padding: 8px; }
 .load-more-btn {
-  font-size: 12px; color: var(--color-primary-600, #7c3aed);
+  font-size: 12px; color: var(--color-primary-600, var(--color-primary));
   display: inline-flex; align-items: center; gap: 4px;
   padding: 4px 12px; border-radius: 6px;
 }
-.load-more-btn:hover { background: #f5f3ff; }
+.load-more-btn:hover { background: var(--color-bg-hover); }
 
 .messages-loading, .messages-empty {
   flex: 1;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  color: #9ca3af; gap: 8px; font-size: 13px;
+  color: var(--color-text-muted); gap: 8px; font-size: 13px;
 }
-.empty-send-icon { color: #d1d5db; }
+.empty-send-icon { color: var(--color-text-muted); }
 
 /* ─── Date Separator ─────────────────────────────────────────────────── */
 .date-separator {
@@ -1029,8 +1146,8 @@ onBeforeUnmount(() => {
   padding: 12px 0;
 }
 .date-separator span {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
   font-size: 11px;
   font-weight: 500;
   padding: 4px 12px;
@@ -1062,18 +1179,18 @@ onBeforeUnmount(() => {
 .reply-preview {
   display: flex; align-items: stretch; gap: 8px;
   padding: 6px 10px; margin-bottom: 2px;
-  background: rgba(139,92,246,.08);
+  background: rgba(245,158,11,.08);
   border-radius: 8px 8px 0 0;
   cursor: pointer;
   font-size: 12px;
 }
-.reply-bar { width: 3px; background: var(--color-primary-500, #8b5cf6); border-radius: 2px; }
+.reply-bar { width: 3px; background: var(--color-primary-500, #fbbf24); border-radius: 2px; }
 .reply-content { min-width: 0; }
-.reply-name { font-weight: 600; color: var(--color-primary-700, #6d28d9); display: block; }
-.reply-text { color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.reply-name { font-weight: 600; color: var(--color-primary-700, #d97706); display: block; }
+.reply-text { color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
 .forwarded-label {
-  font-size: 11px; color: #6b7280;
+  font-size: 11px; color: var(--color-text-secondary);
   display: flex; align-items: center; gap: 4px;
   padding: 0 4px; margin-bottom: 2px;
   font-style: italic;
@@ -1088,19 +1205,19 @@ onBeforeUnmount(() => {
 }
 
 .message-own .message-bubble {
-  background: linear-gradient(135deg, var(--color-primary-500, #8b5cf6), var(--color-primary-600, #7c3aed));
+  background: linear-gradient(135deg, var(--color-primary-500, #fbbf24), var(--color-primary-600, var(--color-primary)));
   color: #fff;
   border-bottom-right-radius: 4px;
 }
 .message-other .message-bubble {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
   border-bottom-left-radius: 4px;
 }
 
 .bubble-deleted {
-  background: #f9fafb !important;
-  color: #9ca3af !important;
+  background: var(--color-bg-elevated) !important;
+  color: var(--color-text-muted) !important;
   font-style: italic;
 }
 .deleted-text { display: flex; align-items: center; gap: 6px; font-size: 13px; }
@@ -1123,7 +1240,7 @@ onBeforeUnmount(() => {
   text-decoration: none; color: inherit;
 }
 .message-own .attachment-file { background: rgba(255,255,255,.2); }
-.message-other .attachment-file { background: #e5e7eb; color: #374151; }
+.message-other .attachment-file { background: var(--color-bg-hover); color: var(--color-text); }
 
 /* ─── Message Meta ───────────────────────────────────────────────────── */
 .message-meta {
@@ -1151,13 +1268,13 @@ onBeforeUnmount(() => {
   display: inline-flex; align-items: center; gap: 2px;
   padding: 2px 6px; border-radius: 99px;
   font-size: 12px;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
   cursor: pointer;
   transition: all .15s;
 }
-.reaction-pill:hover { background: #ede9fe; border-color: var(--color-primary-300, #c4b5fd); }
-.reaction-own { background: #ede9fe; border-color: var(--color-primary-400, #a78bfa); }
+.reaction-pill:hover { background: var(--color-bg-hover); border-color: var(--color-primary-300, #fcd34d); }
+.reaction-own { background: rgba(245, 158, 11, 0.1); border-color: var(--color-primary-400, var(--color-text-muted)); }
 
 /* ─── Typing Indicator ───────────────────────────────────────────────── */
 .typing-indicator-row {
@@ -1166,13 +1283,13 @@ onBeforeUnmount(() => {
 }
 .typing-bubble {
   padding: 10px 14px;
-  background: #f3f4f6;
+  background: var(--color-bg-elevated);
   border-radius: 12px 12px 12px 4px;
 }
 .typing-animation { display: flex; gap: 4px; }
 .typing-animation span {
   width: 6px; height: 6px;
-  background: #9ca3af;
+  background: var(--color-text-muted);
   border-radius: 50%;
   animation: typingBounce 1.4s infinite;
 }
@@ -1188,23 +1305,23 @@ onBeforeUnmount(() => {
 .reply-bar-input {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 20px;
-  background: #f5f3ff;
-  border-top: 1px solid #ede9fe;
+  background: var(--color-bg-hover);
+  border-top: 1px solid var(--color-border);
 }
 .reply-bar-content {
   display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: #6b7280;
+  font-size: 12px; color: var(--color-text-secondary);
   min-width: 0;
 }
-.reply-bar-name { font-weight: 600; color: var(--color-primary-700, #6d28d9); }
+.reply-bar-name { font-weight: 600; color: var(--color-primary-700, #d97706); }
 .reply-bar-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.reply-bar-close { color: #9ca3af; padding: 2px; border-radius: 4px; }
-.reply-bar-close:hover { background: #e5e7eb; }
+.reply-bar-close { color: var(--color-text-muted); padding: 2px; border-radius: 4px; }
+.reply-bar-close:hover { background: var(--color-bg-hover); }
 
 /* ─── Message Input ──────────────────────────────────────────────────── */
 .message-input-area {
-  border-top: 1px solid #e5e7eb;
-  background: #faf8ff;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
 }
 
 .file-preview {
@@ -1214,14 +1331,14 @@ onBeforeUnmount(() => {
 .file-preview-item {
   display: flex; align-items: center; gap: 6px;
   padding: 4px 8px;
-  background: #f3f4f6;
+  background: var(--color-bg-elevated);
   border-radius: 6px;
-  font-size: 12px; color: #374151;
+  font-size: 12px; color: var(--color-text);
 }
 .file-preview-img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
 .file-preview-name { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-remove { color: #9ca3af; padding: 2px; border-radius: 4px; }
-.file-remove:hover { background: #e5e7eb; }
+.file-remove { color: var(--color-text-muted); padding: 2px; border-radius: 4px; }
+.file-remove:hover { background: var(--color-bg-hover); }
 
 .input-row {
   display: flex; align-items: flex-end; gap: 8px;
@@ -1229,49 +1346,49 @@ onBeforeUnmount(() => {
 }
 
 .input-action-btn {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   padding: 8px;
   border-radius: 8px;
   transition: all .15s;
   flex-shrink: 0;
 }
-.input-action-btn:hover { background: #f3f4f6; color: var(--color-primary-600, #7c3aed); }
+.input-action-btn:hover { background: var(--color-bg-elevated); color: var(--color-primary-600, var(--color-primary)); }
 
 .input-wrap { flex: 1; min-width: 0; }
 .message-input {
   width: 100%;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 14px;
   resize: none;
   outline: none;
-  background: #fff;
-  color: #1f2937;
+  background: var(--color-bg-card);
+  color: var(--color-text);
   line-height: 1.4;
   max-height: 120px;
   transition: border-color .2s;
 }
-.message-input:focus { border-color: var(--color-primary-500, #8b5cf6); }
-.message-input::placeholder { color: #9ca3af; }
+.message-input:focus { border-color: var(--color-primary-500, #fbbf24); }
+.message-input::placeholder { color: var(--color-text-muted); }
 
 .send-btn {
-  background: var(--color-primary-600, #7c3aed);
+  background: var(--color-primary-600, var(--color-primary));
   color: #fff;
   padding: 10px;
   border-radius: 10px;
   transition: all .15s;
   flex-shrink: 0;
 }
-.send-btn:hover:not(:disabled) { background: var(--color-primary-700, #6d28d9); }
+.send-btn:hover:not(:disabled) { background: var(--color-primary-700, #d97706); }
 .send-btn:disabled { opacity: .4; cursor: not-allowed; }
 
 /* ─── Context Menu ───────────────────────────────────────────────────── */
 .context-menu {
   position: fixed;
   z-index: 50;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   box-shadow: 0 8px 30px rgba(0,0,0,.15);
   min-width: 180px;
@@ -1279,24 +1396,24 @@ onBeforeUnmount(() => {
 }
 .context-reactions {
   display: flex; gap: 2px; padding: 8px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--color-bg-elevated);
 }
 .quick-reaction {
   font-size: 20px; padding: 4px 6px;
   border-radius: 6px; cursor: pointer;
   transition: background .15s;
 }
-.quick-reaction:hover { background: #f5f3ff; }
+.quick-reaction:hover { background: var(--color-bg-hover); }
 
 .context-actions { padding: 4px; }
 .context-action {
   display: flex; align-items: center; gap: 8px;
   width: 100%; text-align: left;
-  padding: 8px 12px; font-size: 13px; color: #374151;
+  padding: 8px 12px; font-size: 13px; color: var(--color-text);
   border-radius: 6px; cursor: pointer;
   transition: background .15s;
 }
-.context-action:hover { background: #f5f3ff; }
+.context-action:hover { background: var(--color-bg-hover); }
 .context-danger { color: #dc2626; }
 .context-danger:hover { background: #fef2f2; }
 

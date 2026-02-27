@@ -4,7 +4,7 @@
     <!-- Header -->
     <div class="page-header">
       <div class="flex items-center gap-3">
-        <RouterLink :to="{ name: 'store-venues' }" class="btn-ghost btn-icon">
+        <RouterLink :to="{ name: 'shop-venues' }" class="btn-ghost btn-icon">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>
@@ -85,6 +85,7 @@
             <label class="form-label">Street Address <span class="text-danger-500">*</span></label>
             <input v-model="form.address" required class="form-input" placeholder="123 Main Boulevard" />
           </div>
+          <LocationCascade v-model="form.location_id" />
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="form-group">
               <label class="form-label">City <span class="text-danger-500">*</span></label>
@@ -109,28 +110,9 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Pricing Type <span class="text-danger-500">*</span></label>
-            <select v-model="form.pricing_type" required class="form-input">
-              <option value="per_hour">Per Hour</option>
-              <option value="per_day">Per Day</option>
-              <option value="per_event">Per Event</option>
-              <option value="negotiable">Negotiable</option>
-            </select>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="form-group">
-              <label class="form-label">Per Hour (PKR)</label>
-              <input v-model.number="form.price_per_hour" type="number" min="0" class="form-input" placeholder="0" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Per Day (PKR)</label>
-              <input v-model.number="form.price_per_day" type="number" min="0" class="form-input" placeholder="0" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Per Event (PKR)</label>
-              <input v-model.number="form.price_per_event" type="number" min="0" class="form-input" placeholder="0" />
-            </div>
+            <label class="form-label">Price Per Head (PKR) <span class="text-danger-500">*</span></label>
+            <input v-model.number="form.price_per_head" type="number" min="0" step="0.01" required class="form-input" placeholder="e.g. 2500" />
+            <p class="text-xs text-surface-400 mt-1">Total = Price per head × Number of guests</p>
           </div>
         </div>
 
@@ -151,7 +133,7 @@
               class="flex items-center gap-2.5 p-3 rounded-lg border-2 cursor-pointer transition-all duration-150 select-none"
               :class="form.event_types.includes(et.value)
                 ? 'border-primary-500 bg-primary-50 text-primary-700'
-                : 'border-surface-200 bg-white text-surface-600 hover:border-primary-300'"
+                : 'border-surface-200 bg-[var(--color-bg-card)] text-surface-600 hover:border-primary-300'"
             >
               <input type="checkbox" :value="et.value" v-model="form.event_types" class="sr-only" />
               <span class="text-lg">{{ et.emoji }}</span>
@@ -216,7 +198,7 @@
         <div v-if="isEdit" class="card card-body">
           <p class="text-sm font-medium text-surface-700 mb-3">Venue Gallery</p>
           <p class="text-xs text-surface-500 mb-4">Upload and manage photos that showcase your venue to potential clients.</p>
-          <RouterLink :to="`/store/venues/${route.params.id}/gallery`" class="btn-primary-outline w-full gap-2">
+          <RouterLink :to="`/shop/venues/${route.params.id}/gallery`" class="btn-primary-outline w-full gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
@@ -233,31 +215,29 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
+import { useCategoriesStore } from '@/stores/categories'
+import LocationCascade from '@/components/locations/LocationCascade.vue'
 
 const route  = useRoute()
 const router = useRouter()
+const categoriesStore = useCategoriesStore()
 
 const saving     = ref(false)
 const successMsg = ref('')
 const errorMsg   = ref('')
 const isEdit     = computed(() => !!route.params.id)
 
-const eventTypes = [
-  { value: 'wedding',    label: 'Wedding',    emoji: '💍' },
-  { value: 'corporate',  label: 'Corporate',  emoji: '💼' },
-  { value: 'birthday',   label: 'Birthday',   emoji: '🎂' },
-  { value: 'film_shoot', label: 'Film Shoot', emoji: '🎬' },
-  { value: 'concert',    label: 'Concert',    emoji: '🎵' },
-  { value: 'exhibition', label: 'Exhibition', emoji: '🖼️' },
-  { value: 'outdoor',    label: 'Outdoor',    emoji: '🌿' },
-  { value: 'other',      label: 'Other',      emoji: '✨' },
-]
+const eventTypes = computed(() =>
+  categoriesStore.categories
+    .filter(c => c.is_active)
+    .map(c => ({ value: c.slug, label: c.name, emoji: c.emoji }))
+)
 
 const form = reactive({
   name: '', description: '', address: '', city: '', state: '',
+  location_id: null as number | null,
   capacity_min: 1, capacity_max: 100, area_sqft: null as number | null,
-  floors: 1, price_per_hour: null as number | null, price_per_day: null as number | null,
-  price_per_event: null as number | null, pricing_type: 'per_hour',
+  floors: 1, price_per_head: null as number | null,
   event_types: [] as string[], status: 'active',
 })
 
@@ -283,7 +263,7 @@ async function save() {
     } else {
       const { data } = await api.post('/store/venues', form)
       successMsg.value = 'Venue created! Redirecting to gallery…'
-      setTimeout(() => router.push(`/store/venues/${data.data.id}/gallery`), 1500)
+      setTimeout(() => router.push(`/shop/venues/${data.data.id}/gallery`), 1500)
     }
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || 'Save failed. Please check your inputs.'
@@ -293,7 +273,10 @@ async function save() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  categoriesStore.fetchCategories()
+})
 </script>
 
 <style scoped>

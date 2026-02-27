@@ -1,70 +1,70 @@
 <template>
   <div class="min-h-screen flex">
     <!-- Left Panel -->
-    <div class="hidden lg:flex lg:w-3/5 relative flex-col" style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 50%, #ede9fe 100%);">
+    <div class="hidden lg:flex lg:w-3/5 relative flex-col" style="background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-elevated) 50%, var(--color-bg-card) 100%);">
       <!-- Logo -->
       <div class="absolute top-8 left-10 flex items-center gap-2.5">
-        <div class="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center shadow-md">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center shadow-md" style="background: var(--color-primary);">
+          <svg class="w-5 h-5" style="color: #1a1a00;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
         </div>
         <div>
-          <p class="text-xs font-bold tracking-widest text-primary-500 uppercase leading-none">EventGenius</p>
-          <p class="text-base font-bold text-surface-800 leading-tight">Booking Platform</p>
+          <p class="text-xs font-bold tracking-widest uppercase leading-none" style="color: var(--color-primary);">EventGenius</p>
+          <p class="text-base font-bold leading-tight" style="color: var(--color-text);">Booking Platform</p>
         </div>
       </div>
 
       <!-- Center content -->
       <div class="flex-1 flex flex-col justify-center px-16 pb-16">
-        <p class="text-xs font-semibold tracking-widest text-primary-500 uppercase mb-4">Venue Booking Platform</p>
-        <h1 class="text-4xl font-bold text-surface-900 leading-tight mb-5">
+        <p class="text-xs font-semibold tracking-widest uppercase mb-4" style="color: var(--color-primary);">Venue Booking Platform</p>
+        <h1 class="text-4xl font-bold leading-tight mb-5" style="color: var(--color-text);">
           Discover, book, and<br>manage venues with ease.
         </h1>
-        <p class="text-surface-500 text-base leading-relaxed max-w-sm">
+        <p class="text-base leading-relaxed max-w-sm" style="color: var(--color-text-secondary);">
           EventGenius connects clients with top venues across Pakistan. Browse hundreds of spaces, check availability, and confirm bookings in minutes.
         </p>
 
         <!-- Feature bullets -->
         <div class="mt-10 space-y-3">
           <div v-for="f in features" :key="f" class="flex items-center gap-3">
-            <div class="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-              <svg class="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style="background: rgba(245,158,11,0.15);">
+              <svg class="w-3 h-3" style="color: var(--color-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
               </svg>
             </div>
-            <span class="text-sm text-surface-600">{{ f }}</span>
+            <span class="text-sm" style="color: var(--color-text-secondary);">{{ f }}</span>
           </div>
         </div>
       </div>
 
       <!-- Version -->
       <div class="absolute bottom-8 left-10 flex items-center gap-2">
-        <div class="w-7 h-7 rounded-full bg-surface-800 flex items-center justify-center">
-          <span class="text-2xs font-bold text-white">EG</span>
+        <div class="w-7 h-7 rounded-full flex items-center justify-center" style="background: var(--color-primary);">
+          <span class="text-2xs font-bold" style="color: #1a1a00;">EG</span>
         </div>
-        <span class="text-xs text-surface-400 font-mono tracking-wider uppercase">Version 1.0.0</span>
+        <span class="text-xs font-mono tracking-wider uppercase" style="color: var(--color-text-muted);">Version 1.0.0</span>
       </div>
     </div>
 
     <!-- Right Panel -->
-    <div class="w-full lg:w-2/5 bg-white flex flex-col items-center justify-center px-8 py-12">
+    <div class="w-full lg:w-2/5 flex flex-col items-center justify-center px-8 py-12" style="background: var(--color-bg-card);">
       <!-- Mobile logo -->
       <div class="lg:hidden flex items-center gap-2 mb-10">
-        <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--color-primary);">
+          <svg class="w-4 h-4" style="color: #1a1a00;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
         </div>
-        <span class="text-lg font-bold text-surface-800">EventGenius</span>
+        <span class="text-lg font-bold" style="color: var(--color-text);">EventGenius</span>
       </div>
 
       <!-- Login card -->
       <div class="w-full max-w-sm">
         <div class="login-card-theme">
           <div class="mb-7">
-            <h2 class="text-xl font-bold text-surface-900">Sign in to your account</h2>
-            <p class="text-sm text-surface-500 mt-1.5">Continue to manage your venues and bookings.</p>
+            <h2 class="text-xl font-bold" style="color: var(--color-text);">Sign in to your account</h2>
+            <p class="text-sm mt-1.5" style="color: var(--color-text-secondary);">Continue to manage your venues and bookings.</p>
           </div>
 
           <form @submit.prevent="handleLogin" class="space-y-5">
@@ -129,14 +129,14 @@
             </button>
           </form>
 
-          <p v-if="portal !== 'admin'" class="text-center text-sm text-surface-500 mt-6">
+          <p v-if="portal !== 'support'" class="text-center text-sm mt-6" style="color: var(--color-text-secondary);">
             Don't have an account?
-            <RouterLink :to="registerPath" class="text-primary-600 hover:text-primary-700 font-semibold">Register</RouterLink>
+            <RouterLink :to="registerPath" class="font-semibold" style="color: var(--color-primary);">Register</RouterLink>
           </p>
         </div>
 
         <!-- Footer -->
-        <p class="text-center text-xs text-surface-400 font-mono tracking-wider uppercase mt-6">
+        <p class="text-center text-xs font-mono tracking-wider uppercase mt-6" style="color: var(--color-text-muted);">
           &copy; {{ year }} EventGenius. All rights reserved.
         </p>
       </div>
@@ -153,15 +153,15 @@ const router    = useRouter()
 const route     = useRoute()
 const authStore = useAuthStore()
 
-const portal = computed(() => (route.meta.portal as string) ?? 'client')
+const portal = computed(() => (route.meta.portal as string) ?? 'customer')
 const registerPath = computed(() =>
-  portal.value === 'store' ? '/store/sign-up' : '/client/sign-up'
+  portal.value === 'shop' ? '/shop/sign-up' : '/customer/sign-up'
 )
 const forgotPasswordLink = computed(() => {
   const p = portal.value
-  if (p === 'store') return '/forgot-password?from=store'
-  if (p === 'admin') return '/forgot-password?from=admin'
-  return '/forgot-password?from=client'
+  if (p === 'shop') return '/forgot-password?from=shop'
+  if (p === 'support') return '/forgot-password?from=support'
+  return '/forgot-password?from=customer'
 })
 
 const form         = ref({ email: '', password: '' })

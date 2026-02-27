@@ -1,15 +1,15 @@
 <template>
   <div class="client-page">
     <nav class="client-breadcrumb">
-      <RouterLink to="/client/dashboard">Dashboard</RouterLink>
+      <RouterLink to="/customer/bookings">Dashboard</RouterLink>
       <span class="client-breadcrumb-sep">›</span>
       <span>My Profile</span>
     </nav>
 
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div>
-        <h1 class="text-xl font-bold text-slate-800">My Profile</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Manage your personal information and account security.</p>
+        <h1 class="text-xl font-bold text-surface-800">My Profile</h1>
+        <p class="text-sm text-surface-500 mt-0.5">Manage your personal information and account security.</p>
       </div>
       <button @click="saveProfile" :disabled="saving" class="client-btn-primary inline-flex items-center gap-2">
         <svg v-if="saving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -24,7 +24,7 @@
     </div>
 
     <transition name="fade">
-      <div v-if="successMsg" class="mb-4 p-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm flex items-center gap-2">
+      <div v-if="successMsg" class="mb-4 p-4 rounded-xl bg-success-50 text-success-700 text-sm flex items-center gap-2">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
@@ -32,7 +32,7 @@
       </div>
     </transition>
     <transition name="fade">
-      <div v-if="errorMsg" class="mb-4 p-4 rounded-xl bg-red-50 text-red-800 text-sm flex items-center gap-2">
+      <div v-if="errorMsg" class="mb-4 p-4 rounded-xl bg-danger-50 text-danger-700 text-sm flex items-center gap-2">
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
@@ -44,7 +44,7 @@
       <div class="space-y-5">
         <div class="client-card">
           <div class="client-card-body flex flex-col items-center text-center gap-4">
-          <div class="w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+          <div class="w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0 shadow-lg">
             <img
               v-if="avatarUrl"
               :src="avatarUrl"
@@ -58,21 +58,22 @@
             @update="onAvatarUpdate"
           />
           <div>
-            <p class="text-base font-semibold text-slate-800">{{ form.name || 'Your Name' }}</p>
-            <p class="text-sm text-slate-500 mt-0.5">{{ form.email || authStore.user?.email }}</p>
+            <p class="text-base font-semibold text-surface-800">{{ form.name || 'Your Name' }}</p>
+            <p class="text-sm text-surface-500 mt-0.5">{{ form.email || authStore.user?.email }}</p>
           </div>
-          <div class="w-full pt-3 border-t border-slate-200">
+          <div class="w-full pt-3 border-t border-surface-200">
             <div class="flex items-center justify-between text-sm">
-              <span class="text-slate-500">Account Type</span>
-              <span class="px-2.5 py-1 rounded-lg bg-violet-100 text-violet-700 text-xs font-medium capitalize">{{ authStore.user?.role?.replace('_', ' ') || 'Client' }}</span>
+              <span class="text-surface-500">Account Type</span>
+              <span class="px-2.5 py-1 rounded-lg bg-primary-100 text-primary-700 text-xs font-medium capitalize">{{ authStore.user?.role?.replace('_', ' ') || 'Client' }}</span>
             </div>
+          </div>
           </div>
         </div>
 
         <div class="client-card">
           <div class="client-card-body space-y-3">
-          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Quick Info</p>
-          <div class="flex items-center gap-3 text-sm text-slate-600">
+          <p class="text-xs font-semibold uppercase tracking-wider text-surface-400">Quick Info</p>
+          <div class="flex items-center gap-3 text-sm text-surface-600">
             <svg class="w-4 h-4 text-surface-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>
@@ -83,6 +84,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
             </svg>
             <span class="text-xs">{{ form.phone || 'No phone set' }}</span>
+          </div>
           </div>
         </div>
       </div>

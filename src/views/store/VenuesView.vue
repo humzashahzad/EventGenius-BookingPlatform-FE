@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="page-header">
       <div><h1 class="page-title">My Venues</h1><p class="page-subtitle">Manage your venue listings, edit details and upload galleries.</p></div>
-      <RouterLink to="/store/venues/create" class="btn-primary gap-1.5">
+      <RouterLink to="/shop/venues/create" class="btn-primary gap-1.5">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         Add Venue
       </RouterLink>
@@ -21,7 +21,7 @@
         </div>
         <h3 class="text-lg font-semibold text-surface-800">No venues yet</h3>
         <p class="text-surface-500 mt-1 max-w-xs">Add your first venue to start accepting bookings from clients.</p>
-        <RouterLink to="/store/venues/create" class="btn-primary mt-5">Add Your First Venue</RouterLink>
+        <RouterLink to="/shop/venues/create" class="btn-primary mt-5">Add Your First Venue</RouterLink>
       </div>
     </div>
 
@@ -51,19 +51,19 @@
           <div class="flex items-center justify-between mt-2 mb-4">
             <div>
               <span class="venue-card-price">PKR {{ formatPrice(venue) }}</span>
-              <span class="text-xs text-surface-400 ml-1">/ {{ venue.pricing_type?.replace('per_', '') }}</span>
+              <span class="text-xs text-surface-400 ml-1">/ head</span>
             </div>
             <span class="text-xs text-surface-400">{{ venue.capacity_min }}–{{ venue.capacity_max }} guests</span>
           </div>
 
           <!-- Actions -->
           <div class="flex gap-2 mt-auto">
-            <RouterLink :to="`/store/venues/${venue.id}/gallery`"
+            <RouterLink :to="`/shop/venues/${venue.id}/gallery`"
               class="btn btn-sm border border-surface-200 text-surface-600 hover:border-primary-300 hover:text-primary-700 flex-1 text-center gap-1.5">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               Gallery
             </RouterLink>
-            <RouterLink :to="`/store/venues/${venue.id}/edit`" class="btn-primary btn-sm flex-1 text-center">Edit</RouterLink>
+            <RouterLink :to="`/shop/venues/${venue.id}/edit`" class="btn-primary btn-sm flex-1 text-center">Edit</RouterLink>
             <button @click="confirmDelete(venue)" class="btn-danger btn-sm px-3">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
@@ -136,7 +136,7 @@ async function doDelete() {
 }
 
 function formatPrice(v: any) {
-  const p = v.price_per_hour ?? v.price_per_day ?? v.price_per_event
+  const p = v.price_per_head
   return p ? Number(p).toLocaleString() : 'N/A'
 }
 

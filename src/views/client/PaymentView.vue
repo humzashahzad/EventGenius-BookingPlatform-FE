@@ -15,18 +15,18 @@
   <div class="p-6 max-w-2xl">
     <!-- Back Link -->
     <div class="flex items-center gap-3 mb-6">
-      <RouterLink :to="`/client/bookings/${route.params.id}`" class="text-gray-500 hover:text-gray-700">
+      <RouterLink :to="`/client/bookings/${route.params.id}`" class="text-surface-500 hover:text-surface-700">
         ← Back to Booking
       </RouterLink>
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="text-center py-12 text-gray-400">Loading payment details...</div>
+    <div v-if="loading" class="text-center py-12 text-surface-400">Loading payment details...</div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="card border-red-200 bg-red-50 p-6">
-      <h2 class="text-lg font-semibold text-red-700 mb-2">Payment Error</h2>
-      <p class="text-red-600 text-sm">{{ error }}</p>
+    <div v-else-if="error" class="card border-danger-200 bg-danger-50 p-6">
+      <h2 class="text-lg font-semibold text-danger-700 mb-2">Payment Error</h2>
+      <p class="text-danger-600 text-sm">{{ error }}</p>
       <RouterLink :to="`/client/bookings/${route.params.id}`" class="inline-block mt-4 text-sm text-primary-600 hover:underline">
         ← Back to Booking
       </RouterLink>
@@ -43,41 +43,41 @@
 
       <!-- Booking Summary -->
       <div class="card mb-6">
-        <h1 class="text-xl font-bold text-gray-900 mb-4">Payment Summary</h1>
+        <h1 class="text-xl font-bold text-surface-900 mb-4">Payment Summary</h1>
 
         <div class="space-y-2 text-sm">
           <div class="flex justify-between">
-            <span class="text-gray-500">Booking</span>
-            <span class="font-mono text-gray-700">{{ booking?.booking_number }}</span>
+            <span class="text-surface-500">Booking</span>
+            <span class="font-mono text-surface-700">{{ booking?.booking_number }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500">Event</span>
-            <span class="text-gray-700">{{ booking?.event_name }}</span>
+            <span class="text-surface-500">Event</span>
+            <span class="text-surface-700">{{ booking?.event_name }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500">Venue</span>
-            <span class="text-gray-700">{{ booking?.venue?.name }}</span>
+            <span class="text-surface-500">Venue</span>
+            <span class="text-surface-700">{{ booking?.venue?.name }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500">Date</span>
-            <span class="text-gray-700">{{ formatDate(booking?.event_date) }}</span>
+            <span class="text-surface-500">Date</span>
+            <span class="text-surface-700">{{ formatDate(booking?.event_date) }}</span>
           </div>
           <div class="border-t pt-2 mt-2">
             <div class="flex justify-between">
-              <span class="text-gray-500">Base Price</span>
-              <span class="text-gray-700">PKR {{ Number(booking?.base_price).toLocaleString() }}</span>
+              <span class="text-surface-500">Base Price</span>
+              <span class="text-surface-700">PKR {{ Number(booking?.base_price).toLocaleString() }}</span>
             </div>
             <div v-if="booking?.amenities_price > 0" class="flex justify-between">
-              <span class="text-gray-500">Amenities</span>
-              <span class="text-gray-700">PKR {{ Number(booking?.amenities_price).toLocaleString() }}</span>
+              <span class="text-surface-500">Amenities</span>
+              <span class="text-surface-700">PKR {{ Number(booking?.amenities_price).toLocaleString() }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-500">Tax (5%)</span>
-              <span class="text-gray-700">PKR {{ Number(booking?.tax_amount).toLocaleString() }}</span>
+              <span class="text-surface-500">Tax (5%)</span>
+              <span class="text-surface-700">PKR {{ Number(booking?.tax_amount).toLocaleString() }}</span>
             </div>
           </div>
           <div class="border-t pt-2 flex justify-between font-semibold text-lg">
-            <span class="text-gray-900">Total Amount</span>
+            <span class="text-surface-900">Total Amount</span>
             <span class="text-primary-700">PKR {{ Number(booking?.total_amount).toLocaleString() }}</span>
           </div>
         </div>
@@ -109,9 +109,9 @@
       </form>
 
       <!-- Payment Details (for demo/debug) -->
-      <div v-if="paymentData.sandbox" class="mt-6 card bg-gray-50 border-gray-200">
-        <h3 class="text-sm font-semibold text-gray-600 mb-2">Sandbox Details (Debug)</h3>
-        <div class="text-xs text-gray-500 space-y-1 font-mono">
+      <div v-if="paymentData.sandbox" class="mt-6 card bg-[var(--color-bg-elevated)] border-surface-200">
+        <h3 class="text-sm font-semibold text-surface-600 mb-2">Sandbox Details (Debug)</h3>
+        <div class="text-xs text-surface-500 space-y-1 font-mono">
           <p>Payment ID: {{ paymentData.fields.m_payment_id }}</p>
           <p>Merchant ID: {{ paymentData.fields.merchant_id }}</p>
           <p>Amount: {{ paymentData.fields.amount }}</p>

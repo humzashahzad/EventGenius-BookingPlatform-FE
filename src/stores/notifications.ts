@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
+import { getToken } from '@/lib/portalToken'
 import { useChatStore } from '@/stores/chat'
 import { soundService } from '@/services/soundService'
 
@@ -77,7 +78,7 @@ export const useNotificationStore = defineStore('notifications', () => {
   // ── SSE real-time stream ───────────────────────────────────────────────────
   function startSSE() {
     const authStore = useAuthStore()
-    const token = localStorage.getItem('auth_token')
+    const token = getToken()
     if (!token || sseSource.value) return
 
     const url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/notifications/stream?token=${encodeURIComponent(token)}&lastId=${lastEventId.value}`

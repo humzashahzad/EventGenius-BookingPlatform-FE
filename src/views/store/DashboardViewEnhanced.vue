@@ -6,11 +6,11 @@
         <p class="page-subtitle">{{ data?.store?.name ? `Overview for ${data.store.name}` : 'Welcome to your store panel.' }}</p>
       </div>
       <div class="flex gap-3" v-if="data?.has_store && data?.store?.status === 'approved'">
-        <RouterLink to="/store/venues/create" class="btn-primary btn-sm gap-1.5">
+        <RouterLink to="/shop/venues/create" class="btn-primary btn-sm gap-1.5">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Add Venue
         </RouterLink>
-        <RouterLink to="/store/bookings" class="btn-white btn-sm">View Bookings</RouterLink>
+        <RouterLink to="/shop/bookings" class="btn-white btn-sm">View Bookings</RouterLink>
       </div>
     </div>
 
@@ -33,7 +33,7 @@
         </div>
         <h3 class="text-lg font-semibold text-surface-800">Set up your store</h3>
         <p class="text-surface-500 mt-1 max-w-sm">Complete your store profile to start listing venues and accepting bookings.</p>
-        <RouterLink to="/store/profile" class="btn-primary mt-5">Set Up Store</RouterLink>
+        <RouterLink to="/shop/profile" class="btn-primary mt-5">Set Up Store</RouterLink>
       </div>
     </div>
 
@@ -65,7 +65,7 @@
           <div class="kpi-value text-2xl">{{ data.stats?.active_venues || 0 }}</div>
           <div class="stat-label">Active</div>
         </div>
-        <div class="stat-card-gradient gradient-purple">
+        <div class="stat-card-gradient gradient-gold">
           <div class="stat-icon w-10 h-10 rounded-xl mb-3">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           </div>
@@ -119,7 +119,7 @@
         <div class="card-body">
           <div class="flex items-center justify-between mb-5">
             <h2 class="section-title">Recent Bookings</h2>
-            <RouterLink to="/store/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+            <RouterLink to="/shop/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
               View all <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </RouterLink>
           </div>
@@ -150,7 +150,7 @@
 
       <!-- Quick Actions (approved stores only) -->
       <div v-if="data.store?.status === 'approved'" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <RouterLink to="/store/venues" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-accent-200 border border-transparent transition-all group">
+        <RouterLink to="/shop/venues" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-accent-200 border border-transparent transition-all group">
           <div class="w-10 h-10 rounded-xl bg-accent-100 flex items-center justify-center group-hover:bg-accent-200 transition-colors flex-shrink-0">
             <svg class="w-5 h-5 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
@@ -162,7 +162,7 @@
           </div>
         </RouterLink>
 
-        <RouterLink to="/store/bookings" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
+        <RouterLink to="/shop/bookings" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
           <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center group-hover:bg-primary-200 transition-colors flex-shrink-0">
             <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -174,7 +174,7 @@
           </div>
         </RouterLink>
 
-        <RouterLink to="/store/profile" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-secondary-200 border border-transparent transition-all group">
+        <RouterLink to="/shop/profile" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-secondary-200 border border-transparent transition-all group">
           <div class="w-10 h-10 rounded-xl bg-secondary-100 flex items-center justify-center group-hover:bg-secondary-200 transition-colors flex-shrink-0">
             <svg class="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>

@@ -25,7 +25,7 @@
     <template v-else>
       <!-- KPI Stat Cards — Gradient -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="gradient-stat-card" style="background: linear-gradient(135deg, #7c3aed, #a78bfa);">
+        <div class="gradient-stat-card" style="background: linear-gradient(135deg, #d97706, #f59e0b);">
           <div class="gradient-stat-icon">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -35,7 +35,7 @@
           <div class="gradient-stat-label">Total Bookings</div>
         </div>
 
-        <div class="gradient-stat-card" style="background: linear-gradient(135deg, #6d28d9, #8b5cf6);">
+        <div class="gradient-stat-card" style="background: linear-gradient(135deg, #b45309, #d97706);">
           <div class="gradient-stat-icon">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -81,7 +81,7 @@
           <div class="card-body">
             <div class="flex items-center justify-between mb-4">
               <h2 class="section-title">Upcoming Events</h2>
-              <RouterLink to="/client/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+              <RouterLink to="/customer/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
                 View all
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -149,7 +149,7 @@
         <div class="card-body">
           <div class="flex items-center justify-between mb-5">
             <h2 class="section-title">Recent Bookings</h2>
-            <RouterLink to="/client/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+            <RouterLink to="/customer/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
               View all
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -184,7 +184,7 @@
               <tbody>
                 <tr v-for="b in recentBookings" :key="b.id" class="cursor-pointer hover:bg-primary-50/30 transition-colors">
                   <td>
-                    <RouterLink :to="`/client/bookings/${b.id}`" class="font-mono text-xs text-primary-600 font-semibold hover:text-primary-700">
+                    <RouterLink :to="`/customer/bookings/${b.id}`" class="font-mono text-xs text-primary-600 font-semibold hover:text-primary-700">
                       {{ b.booking_number }}
                     </RouterLink>
                   </td>
@@ -223,7 +223,7 @@
           </div>
         </RouterLink>
 
-        <RouterLink to="/client/bookings" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
+        <RouterLink to="/customer/bookings" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
           <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors flex-shrink-0">
             <svg class="w-5 h-5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
@@ -235,7 +235,7 @@
           </div>
         </RouterLink>
 
-        <RouterLink to="/client/profile" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
+        <RouterLink to="/customer/profile" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
           <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors flex-shrink-0">
             <svg class="w-5 h-5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
@@ -339,13 +339,13 @@ onMounted(load)
   color: white;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .gradient-stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 .gradient-stat-icon {
@@ -380,16 +380,16 @@ onMounted(load)
   gap: 1rem;
   padding: 1rem;
   border-radius: 0.75rem;
-  border: 1px solid var(--color-surface-200);
-  background: var(--color-surface-50);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
   transition: all 0.2s;
 }
 
 .event-card:hover {
-  border-color: var(--color-primary-300);
-  background: var(--color-surface-100);
+  border-color: rgba(245, 158, 11, 0.2);
+  background: var(--color-bg-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 .event-date {
@@ -427,7 +427,7 @@ onMounted(load)
 .event-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-surface-900);
+  color: var(--color-text);
   margin-bottom: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -436,28 +436,9 @@ onMounted(load)
 
 .event-venue {
   font-size: 0.75rem;
-  color: var(--color-surface-600);
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Dark mode support */
-:global(.dark) .event-card {
-  border-color: var(--color-surface-700);
-  background: var(--color-surface-800);
-}
-
-:global(.dark) .event-card:hover {
-  border-color: var(--color-primary-600);
-  background: var(--color-surface-700);
-}
-
-:global(.dark) .event-title {
-  color: var(--color-surface-100);
-}
-
-:global(.dark) .event-venue {
-  color: var(--color-surface-400);
 }
 </style>

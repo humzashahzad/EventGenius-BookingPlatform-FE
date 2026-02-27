@@ -8,7 +8,7 @@
 
     <!-- Table -->
     <div class="table-wrapper">
-      <div v-if="loading" class="bg-white">
+      <div v-if="loading" class="bg-[var(--color-bg-card)]">
         <div v-for="i in 8" :key="i" class="flex gap-4 px-4 py-4 border-b border-surface-100">
           <div class="skeleton h-4 w-24 rounded"></div>
           <div class="skeleton h-4 w-32 rounded"></div>
@@ -17,7 +17,7 @@
           <div class="skeleton h-4 w-16 rounded ml-auto"></div>
         </div>
       </div>
-      <div v-else-if="bookings.length === 0" class="empty-state bg-white rounded-xl">
+      <div v-else-if="bookings.length === 0" class="empty-state bg-[var(--color-bg-card)] rounded-xl">
         <div class="empty-state-icon"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
         <p class="empty-state-title">No bookings found</p>
         <p class="empty-state-desc">Try adjusting your filters.</p>

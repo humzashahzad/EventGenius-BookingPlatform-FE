@@ -8,7 +8,7 @@
       </div>
       <div class="flex items-center gap-3">
         <div class="text-sm text-surface-400 font-medium hidden sm:block">{{ today }}</div>
-        <RouterLink to="/admin-panel/stores" class="btn-white btn-sm gap-1.5">
+        <RouterLink to="/support/stores" class="btn-white btn-sm gap-1.5">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/></svg>
           Review Stores
         </RouterLink>
@@ -80,7 +80,7 @@
           <div class="card-body">
             <div class="flex items-center justify-between mb-5">
               <h2 class="section-title">Recent Bookings</h2>
-              <RouterLink to="/admin-panel/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+              <RouterLink to="/support/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
                 View all <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
               </RouterLink>
             </div>
@@ -118,7 +118,7 @@
           <div class="card-body">
             <div class="flex items-center justify-between mb-5">
               <h2 class="section-title">Recent Stores</h2>
-              <RouterLink to="/admin-panel/stores" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+              <RouterLink to="/support/stores" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
                 View all <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
               </RouterLink>
             </div>
@@ -146,7 +146,7 @@
 
       <!-- Quick Admin Actions -->
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <RouterLink to="/admin-panel/users" class="card card-body flex items-center gap-3 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
+        <RouterLink to="/support/users" class="card card-body flex items-center gap-3 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
           <div class="w-9 h-9 rounded-xl bg-primary-100 flex items-center justify-center group-hover:bg-primary-200 transition-colors flex-shrink-0">
             <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           </div>
@@ -156,7 +156,7 @@
           </div>
         </RouterLink>
 
-        <RouterLink to="/admin-panel/stores" class="card card-body flex items-center gap-3 hover:shadow-md hover:border-warning-200 border border-transparent transition-all group">
+        <RouterLink to="/support/stores" class="card card-body flex items-center gap-3 hover:shadow-md hover:border-warning-200 border border-transparent transition-all group">
           <div class="w-9 h-9 rounded-xl bg-warning-100 flex items-center justify-center group-hover:bg-warning-200 transition-colors flex-shrink-0 relative">
             <svg class="w-4 h-4 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/></svg>
             <span v-if="stats.pending_stores > 0" class="notification-dot">{{ stats.pending_stores }}</span>
@@ -167,7 +167,7 @@
           </div>
         </RouterLink>
 
-        <RouterLink to="/admin-panel/venues" class="card card-body flex items-center gap-3 hover:shadow-md hover:border-accent-200 border border-transparent transition-all group">
+        <RouterLink to="/support/venues" class="card card-body flex items-center gap-3 hover:shadow-md hover:border-accent-200 border border-transparent transition-all group">
           <div class="w-9 h-9 rounded-xl bg-accent-100 flex items-center justify-center group-hover:bg-accent-200 transition-colors flex-shrink-0">
             <svg class="w-4 h-4 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
           </div>
@@ -177,7 +177,7 @@
           </div>
         </RouterLink>
 
-        <RouterLink to="/admin-panel/bookings" class="card card-body flex items-center gap-3 hover:shadow-md hover:border-success-200 border border-transparent transition-all group">
+        <RouterLink to="/support/bookings" class="card card-body flex items-center gap-3 hover:shadow-md hover:border-success-200 border border-transparent transition-all group">
           <div class="w-9 h-9 rounded-xl bg-success-100 flex items-center justify-center group-hover:bg-success-200 transition-colors flex-shrink-0">
             <svg class="w-4 h-4 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           </div>

@@ -87,9 +87,9 @@
         </select>
         <select v-model="filters.role" class="form-select w-40" @change="loadSessions">
           <option value="">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="store_owner">Store Owner</option>
-          <option value="client">Client</option>
+          <option value="admin">Support</option>
+          <option value="store_owner">Shop Owner</option>
+          <option value="client">Customer</option>
         </select>
         <select v-model="filters.per_page" class="form-select w-24" @change="loadSessions">
           <option value="10">10</option>
@@ -451,9 +451,9 @@ function getRoleBadge(role?: string): string {
 
 function formatRole(role?: string): string {
   const map: Record<string, string> = {
-    admin: 'Admin',
-    store_owner: 'Store Owner',
-    client: 'Client',
+    admin: 'Support',
+    store_owner: 'Shop Owner',
+    client: 'Customer',
   }
   return map[role || ''] || role || '—'
 }

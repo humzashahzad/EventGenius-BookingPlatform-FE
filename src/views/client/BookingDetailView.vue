@@ -1,78 +1,78 @@
 <template>
   <div class="p-6 max-w-3xl">
     <div class="flex items-center gap-3 mb-6">
-      <RouterLink to="/client/bookings" class="text-gray-500 hover:text-gray-700">← Back to Bookings</RouterLink>
+      <RouterLink to="/customer/bookings" class="text-surface-500 hover:text-surface-700">← Back to Bookings</RouterLink>
     </div>
 
-    <div v-if="loading" class="text-center py-12 text-gray-400">Loading...</div>
+    <div v-if="loading" class="text-center py-12 text-surface-400">Loading...</div>
 
     <div v-else-if="booking">
       <div class="flex justify-between items-start mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">Booking Details</h1>
-          <p class="text-gray-500 font-mono text-sm">{{ booking.booking_number }}</p>
+          <h1 class="text-2xl font-bold text-surface-900">Booking Details</h1>
+          <p class="text-surface-500 font-mono text-sm">{{ booking.booking_number }}</p>
         </div>
         <span :class="statusClass(booking.status)" class="capitalize text-sm px-3 py-1">{{ booking.status }}</span>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div class="card">
-          <h2 class="font-semibold text-gray-900 mb-3">Venue</h2>
-          <h3 class="text-lg font-medium text-gray-900">{{ booking.venue?.name }}</h3>
-          <p class="text-sm text-gray-500">{{ booking.venue?.city }}</p>
+          <h2 class="font-semibold text-surface-900 mb-3">Venue</h2>
+          <h3 class="text-lg font-medium text-surface-900">{{ booking.venue?.name }}</h3>
+          <p class="text-sm text-surface-500">{{ booking.venue?.city }}</p>
         </div>
         <div class="card">
-          <h2 class="font-semibold text-gray-900 mb-3">Event Details</h2>
-          <p class="text-sm text-gray-700"><span class="font-medium">Name:</span> {{ booking.event_name }}</p>
-          <p class="text-sm text-gray-700 capitalize"><span class="font-medium">Type:</span> {{ booking.event_type?.replace('_', ' ') }}</p>
-          <p class="text-sm text-gray-700"><span class="font-medium">Guests:</span> {{ booking.expected_guests }}</p>
+          <h2 class="font-semibold text-surface-900 mb-3">Event Details</h2>
+          <p class="text-sm text-surface-700"><span class="font-medium">Name:</span> {{ booking.event_name }}</p>
+          <p class="text-sm text-surface-700 capitalize"><span class="font-medium">Type:</span> {{ booking.event_type?.replace('_', ' ') }}</p>
+          <p class="text-sm text-surface-700"><span class="font-medium">Guests:</span> {{ booking.expected_guests }}</p>
         </div>
         <div class="card">
-          <h2 class="font-semibold text-gray-900 mb-3">Date & Time</h2>
-          <p class="text-sm text-gray-700"><span class="font-medium">Date:</span> {{ formatDate(booking.event_date) }}</p>
-          <p class="text-sm text-gray-700"><span class="font-medium">Time:</span> {{ booking.start_time }} – {{ booking.end_time }}</p>
-          <p class="text-sm text-gray-700"><span class="font-medium">Duration:</span> {{ booking.duration_hours }}h</p>
+          <h2 class="font-semibold text-surface-900 mb-3">Date & Time</h2>
+          <p class="text-sm text-surface-700"><span class="font-medium">Date:</span> {{ formatDate(booking.event_date) }}</p>
+          <p class="text-sm text-surface-700"><span class="font-medium">Time:</span> {{ booking.start_time }} – {{ booking.end_time }}</p>
+          <p class="text-sm text-surface-700"><span class="font-medium">Duration:</span> {{ booking.duration_hours }}h</p>
         </div>
         <div class="card">
-          <h2 class="font-semibold text-gray-900 mb-3">Pricing</h2>
+          <h2 class="font-semibold text-surface-900 mb-3">Pricing</h2>
           <div class="space-y-1 text-sm">
-            <div class="flex justify-between text-gray-600"><span>Base Price</span><span>PKR {{ Number(booking.base_price).toLocaleString() }}</span></div>
-            <div class="flex justify-between text-gray-600"><span>Tax (5%)</span><span>PKR {{ Number(booking.tax_amount).toLocaleString() }}</span></div>
-            <div class="flex justify-between font-semibold text-gray-900 border-t pt-1"><span>Total</span><span>PKR {{ Number(booking.total_amount).toLocaleString() }}</span></div>
+            <div class="flex justify-between text-surface-600"><span>Base Price</span><span>PKR {{ Number(booking.base_price).toLocaleString() }}</span></div>
+            <div class="flex justify-between text-surface-600"><span>Tax (5%)</span><span>PKR {{ Number(booking.tax_amount).toLocaleString() }}</span></div>
+            <div class="flex justify-between font-semibold text-surface-900 border-t pt-1"><span>Total</span><span>PKR {{ Number(booking.total_amount).toLocaleString() }}</span></div>
           </div>
         </div>
       </div>
 
       <div v-if="booking.special_requirements" class="card mb-6">
-        <h2 class="font-semibold text-gray-900 mb-2">Special Requirements</h2>
-        <p class="text-sm text-gray-600">{{ booking.special_requirements }}</p>
+        <h2 class="font-semibold text-surface-900 mb-2">Special Requirements</h2>
+        <p class="text-sm text-surface-600">{{ booking.special_requirements }}</p>
       </div>
 
-      <div v-if="booking.cancellation_reason" class="card mb-6 border-red-100">
-        <h2 class="font-semibold text-red-700 mb-2">Cancellation Reason</h2>
-        <p class="text-sm text-red-600">{{ booking.cancellation_reason }}</p>
+      <div v-if="booking.cancellation_reason" class="card mb-6 border-danger-200">
+        <h2 class="font-semibold text-danger-700 mb-2">Cancellation Reason</h2>
+        <p class="text-sm text-danger-600">{{ booking.cancellation_reason }}</p>
       </div>
 
       <!-- Pay Now Button — shows for confirmed bookings without payment -->
       <div v-if="booking.status === 'confirmed' && !booking.payment?.paid_at" class="mb-4">
         <RouterLink
-          :to="`/client/bookings/${booking.id}/pay`"
+          :to="`/customer/bookings/${booking.id}/pay`"
           class="inline-block bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors text-sm"
         >
           Pay Now — PKR {{ Number(booking.total_amount).toLocaleString() }}
         </RouterLink>
-        <p class="text-xs text-gray-400 mt-1">Pay via PayFast (Sandbox Demo)</p>
+        <p class="text-xs text-surface-400 mt-1">Pay via PayFast (Sandbox Demo)</p>
       </div>
 
       <!-- Payment Completed Badge -->
-      <div v-if="booking.payment?.paid_at" class="mb-4 card bg-green-50 border-green-200">
+      <div v-if="booking.payment?.paid_at" class="mb-4 card bg-success-50 border-success-200">
         <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          <span class="text-green-700 font-medium text-sm">Payment Completed</span>
+          <span class="text-success-700 font-medium text-sm">Payment Completed</span>
         </div>
-        <p v-if="booking.payment?.transaction_id" class="text-xs text-green-600 mt-1 font-mono">
+        <p v-if="booking.payment?.transaction_id" class="text-xs text-success-600 mt-1 font-mono">
           Transaction: {{ booking.payment.transaction_id }}
         </p>
       </div>
@@ -80,8 +80,8 @@
       <!-- Cancel -->
       <div v-if="['pending', 'confirmed'].includes(booking.status)">
         <button @click="showCancel = true" class="btn-danger text-sm">Cancel Booking</button>
-        <div v-if="showCancel" class="mt-4 card border-red-100">
-          <h3 class="font-semibold text-gray-900 mb-3">Cancel this booking?</h3>
+        <div v-if="showCancel" class="mt-4 card border-danger-200">
+          <h3 class="font-semibold text-surface-900 mb-3">Cancel this booking?</h3>
           <textarea v-model="cancelReason" class="form-input mb-3" rows="2" placeholder="Reason for cancellation (optional)"></textarea>
           <div class="flex gap-3">
             <button @click="cancelBooking" :disabled="cancelling" class="btn-danger text-sm">

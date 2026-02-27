@@ -1,6 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/lib/axios'
+import {
+  currentPortal,
+  detectPortalFromPath,
+  getToken,
+  setToken,
+  removeToken,
+  type Portal,
+} from '@/lib/portalToken'
 
 export interface User {
   id: number
@@ -15,22 +23,54 @@ export interface User {
 
 export const useAuthStore = defineStore('auth', () => {
   const user        = ref<User | null>(null)
-  const token       = ref<string | null>(localStorage.getItem('auth_token'))
   const loading     = ref(false)
   const initialized = ref(false)
+
+  /** Reactive token — reads from the current portal's localStorage key. */
+  const token = computed(() => getToken(currentPortal.value))
 
   const isLoggedIn = computed(() => !!token.value && !!user.value)
 
   // Where to send the user after login based on their role
   const defaultRoute = computed(() => {
-    if (!user.value) return { name: 'client-login' }
+    if (!user.value) return { name: 'customer-login' }
     switch (user.value.role) {
-      case 'admin':       return { name: 'admin-dashboard' }
-      case 'store_owner': return { name: 'store-dashboard' }
+      case 'admin':       return { name: 'support-dashboard' }
+      case 'store_owner': return { name: 'shop-dashboard' }
       case 'client':
-      default:            return { name: 'client-dashboard' }
+      default:            return { name: 'customer-bookings' }
     }
   })
+
+  /**
+   * Switch the active portal. Called by the router guard on every navigation.
+   * If the new portal has a token, fetches the user. Otherwise clears user state.
+   */
+  async function switchPortal(portal: Portal) {
+    currentPortal.value = portal
+    const portalToken = getToken(portal)
+
+    if (portalToken && (!user.value || !_roleMatchesPortal(user.value.role, portal))) {
+      // Token exists for this portal but user is not loaded or mismatched — fetch
+      try {
+        const { data } = await api.get('/auth/me')
+        user.value = data.data
+      } catch {
+        removeToken(portal)
+        user.value = null
+      }
+    } else if (!portalToken) {
+      user.value = null
+    }
+  }
+
+  /** Check if a backend role matches the expected portal. */
+  function _roleMatchesPortal(role: string, portal: Portal): boolean {
+    if (portal === 'support'  && role === 'admin')       return true
+    if (portal === 'shop'     && role === 'store_owner') return true
+    if (portal === 'customer' && role === 'client')      return true
+    return false
+  }
 
   // ── Fetch current user ─────────────────────────────────────────────────
   async function fetchUser() {
@@ -50,8 +90,8 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const response = await api.post('/auth/login', { email, password })
-      token.value = localStorage.getItem('auth_token')
-      user.value  = response.data.data.user
+      // Token was stored by the axios response interceptor under the current portal key
+      user.value = response.data.data.user
       return { success: true }
     } catch (error: any) {
       return {
@@ -69,8 +109,8 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const response = await api.post('/auth/register', payload)
-      token.value = localStorage.getItem('auth_token')
-      user.value  = response.data.data.user
+      // Token was stored by the axios response interceptor under the current portal key
+      user.value = response.data.data.user
       return { success: true }
     } catch (error: any) {
       return {
@@ -99,11 +139,10 @@ export const useAuthStore = defineStore('auth', () => {
     _clearAuth()
   }
 
-  // ── Internal: clear auth state ─────────────────────────────────────────
+  // ── Internal: clear auth state for the current portal ─────────────────
   function _clearAuth() {
-    token.value = null
-    user.value  = null
-    localStorage.removeItem('auth_token')
+    user.value = null
+    removeToken(currentPortal.value)
   }
 
   // ── Listen for session-expired event from axios interceptor ───────────
@@ -113,7 +152,8 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
-  // Initialize user on app load — returns a promise the router guard can await
+  // Initialize: detect portal from current URL, then fetch user if token exists
+  currentPortal.value = detectPortalFromPath(window.location.pathname)
   const initPromise = fetchUser()
 
   return {
@@ -129,5 +169,6 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     logoutAll,
+    switchPortal,
   }
 })

@@ -16,7 +16,7 @@
     <!-- Table -->
     <div class="table-wrapper">
       <!-- Skeleton rows -->
-      <div v-if="loading" class="bg-white">
+      <div v-if="loading" class="bg-[var(--color-bg-card)]">
         <div v-for="i in 8" :key="i" class="flex gap-4 px-4 py-3.5 border-b border-surface-100">
           <div class="skeleton h-4 w-32 rounded"></div>
           <div class="skeleton h-4 w-48 rounded"></div>
@@ -26,7 +26,7 @@
         </div>
       </div>
 
-      <div v-else-if="users.length === 0" class="empty-state bg-white rounded-xl">
+      <div v-else-if="users.length === 0" class="empty-state bg-[var(--color-bg-card)] rounded-xl">
         <div class="empty-state-icon">
           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         </div>
@@ -58,7 +58,7 @@
               </div>
             </td>
             <td class="text-surface-500">{{ u.email }}</td>
-            <td><span class="badge-info capitalize">{{ u.role?.replace('_', ' ') }}</span></td>
+            <td><span class="badge-info capitalize">{{ { admin: 'Support', store_owner: 'Shop Owner', client: 'Customer' }[u.role] || u.role?.replace('_', ' ') }}</span></td>
             <td><span :class="u.is_active ? 'badge-success' : 'badge-danger'">{{ u.is_active ? 'Active' : 'Inactive' }}</span></td>
             <td class="text-surface-400 text-xs whitespace-nowrap">{{ formatDate(u.created_at) }}</td>
             <td class="text-right">
@@ -100,67 +100,48 @@
       </div>
     </div>
 
-    <!-- Delete Confirm Modal -->
-    <Teleport to="body">
-      <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
-        <div class="modal">
-          <div class="modal-header">
-            <h3 class="modal-title">Delete User</h3>
-            <button @click="deleteTarget = null" class="btn-icon btn-ghost"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body">
-            <div class="flex items-start gap-4">
-              <div class="w-10 h-10 rounded-full bg-danger-100 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-danger-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-surface-800">Are you sure you want to delete <strong>{{ deleteTarget.name }}</strong>?</p>
-                <p class="text-sm text-surface-500 mt-1">This action cannot be undone. All their data will be permanently removed.</p>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button @click="deleteTarget = null" class="btn-ghost">Cancel</button>
-            <button @click="doDelete" :disabled="acting" class="btn-danger">
-              <svg v-if="acting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              Delete User
-            </button>
-          </div>
+    <!-- Delete Confirm Dialog -->
+    <Dialog v-model:visible="showDeleteDialog" modal header="Delete User" :style="{ width: '28rem' }" :pt="dialogPt">
+      <div class="flex items-start gap-4">
+        <div class="w-10 h-10 rounded-full bg-danger-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-danger-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-surface-800">Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>?</p>
+          <p class="text-sm text-surface-500 mt-1">This action cannot be undone. All their data will be permanently removed.</p>
         </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" text @click="showDeleteDialog = false" />
+        <Button label="Delete User" severity="danger" :loading="acting" @click="doDelete" />
+      </template>
+    </Dialog>
 
-    <!-- Toggle Status Confirm Modal -->
-    <Teleport to="body">
-      <div v-if="toggleTarget" class="modal-overlay" @click.self="toggleTarget = null">
-        <div class="modal">
-          <div class="modal-header">
-            <h3 class="modal-title">{{ toggleTarget.is_active ? 'Deactivate' : 'Activate' }} User</h3>
-            <button @click="toggleTarget = null" class="btn-icon btn-ghost"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body">
-            <p class="text-sm text-surface-600">
-              Are you sure you want to <strong>{{ toggleTarget.is_active ? 'deactivate' : 'activate' }}</strong> user <strong>{{ toggleTarget.name }}</strong>?
-              <span v-if="toggleTarget.is_active"> They will be unable to log in until re-activated.</span>
-            </p>
-          </div>
-          <div class="modal-footer">
-            <button @click="toggleTarget = null" class="btn-ghost">Cancel</button>
-            <button @click="doToggle" :disabled="acting" :class="toggleTarget.is_active ? 'btn-danger' : 'btn-primary'">
-              <svg v-if="acting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              {{ toggleTarget.is_active ? 'Deactivate' : 'Activate' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Toggle Status Confirm Dialog -->
+    <Dialog v-model:visible="showToggleDialog" modal :header="(toggleTarget?.is_active ? 'Deactivate' : 'Activate') + ' User'" :style="{ width: '28rem' }" :pt="dialogPt">
+      <p class="text-sm text-surface-600">
+        Are you sure you want to <strong>{{ toggleTarget?.is_active ? 'deactivate' : 'activate' }}</strong> user <strong>{{ toggleTarget?.name }}</strong>?
+        <span v-if="toggleTarget?.is_active"> They will be unable to log in until re-activated.</span>
+      </p>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" text @click="showToggleDialog = false" />
+        <Button
+          :label="toggleTarget?.is_active ? 'Deactivate' : 'Activate'"
+          :severity="toggleTarget?.is_active ? 'danger' : 'success'"
+          :loading="acting"
+          @click="doToggle"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/lib/axios'
 import { useTopBarActionsStore } from '@/stores/topBarActions'
+import Dialog from 'primevue/dialog'
+import Button from 'primevue/button'
 
 const users      = ref<any[]>([])
 const loading    = ref(false)
@@ -170,11 +151,21 @@ const roleFilter = ref('')
 const statusFilter = ref('')
 const deleteTarget = ref<any>(null)
 const toggleTarget = ref<any>(null)
+const showDeleteDialog = ref(false)
+const showToggleDialog = ref(false)
 const perPage    = 15
 const meta       = ref({ current_page: 1, last_page: 1, total: 0 })
 let page = 1
 let searchTimeout: ReturnType<typeof setTimeout>
 const topBarActions = useTopBarActionsStore()
+
+// PrimeVue Dialog pass-through for dark theme
+const dialogPt = {
+  root: { class: '!bg-[var(--color-bg-card)] !border-[var(--color-border)] !text-[var(--color-text)]' },
+  header: { class: '!bg-[var(--color-bg-card)] !text-[var(--color-text)] !border-b !border-[var(--color-border)]' },
+  content: { class: '!bg-[var(--color-bg-card)] !text-[var(--color-text)]' },
+  footer: { class: '!bg-[var(--color-bg-card)] !border-t !border-[var(--color-border)]' },
+}
 
 async function load() {
   loading.value = true
@@ -191,15 +182,17 @@ async function load() {
 
 function resetAndLoad() { page = 1; load() }
 
-function debouncedSearch() {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => resetAndLoad(), 400)
-}
-
 function changePage(p: number) { page = p; load() }
 
-function confirmDelete(u: any)  { deleteTarget.value = u }
-function confirmToggle(u: any)  { toggleTarget.value = u }
+function confirmDelete(u: any) {
+  deleteTarget.value = u
+  showDeleteDialog.value = true
+}
+
+function confirmToggle(u: any) {
+  toggleTarget.value = u
+  showToggleDialog.value = true
+}
 
 async function doDelete() {
   if (!deleteTarget.value) return
@@ -207,6 +200,7 @@ async function doDelete() {
   try {
     await api.delete(`/admin/users/${deleteTarget.value.id}`)
     users.value = users.value.filter(u => u.id !== deleteTarget.value.id)
+    showDeleteDialog.value = false
     deleteTarget.value = null
   } finally { acting.value = false }
 }
@@ -217,6 +211,7 @@ async function doToggle() {
   try {
     await api.patch(`/admin/users/${toggleTarget.value.id}/toggle-status`)
     toggleTarget.value.is_active = !toggleTarget.value.is_active
+    showToggleDialog.value = false
     toggleTarget.value = null
   } finally { acting.value = false }
 }
@@ -248,9 +243,9 @@ onMounted(() => {
     searchValue: search.value,
     filterOptions: [
       { key: 'role', label: 'All Roles', options: [
-        { value: 'client', label: 'Client' },
-        { value: 'store_owner', label: 'Store Owner' },
-        { value: 'admin', label: 'Admin' },
+        { value: 'client', label: 'Customer' },
+        { value: 'store_owner', label: 'Shop Owner' },
+        { value: 'admin', label: 'Support' },
       ]},
       { key: 'status', label: 'All Status', options: [
         { value: 'active', label: 'Active' },

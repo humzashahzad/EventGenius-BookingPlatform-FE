@@ -8,7 +8,7 @@
 
     <!-- Table -->
     <div class="table-wrapper">
-      <div v-if="loading" class="bg-white">
+      <div v-if="loading" class="bg-[var(--color-bg-card)]">
         <div v-for="i in 8" :key="i" class="flex gap-4 px-4 py-4 border-b border-surface-100">
           <div class="skeleton h-4 w-36 rounded"></div>
           <div class="skeleton h-4 w-40 rounded"></div>
@@ -17,7 +17,7 @@
           <div class="skeleton h-4 w-16 rounded ml-auto"></div>
         </div>
       </div>
-      <div v-else-if="stores.length === 0" class="empty-state bg-white rounded-xl">
+      <div v-else-if="stores.length === 0" class="empty-state bg-[var(--color-bg-card)] rounded-xl">
         <div class="empty-state-icon"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg></div>
         <p class="empty-state-title">No stores found</p>
         <p class="empty-state-desc">Try adjusting your filters.</p>
@@ -77,37 +77,29 @@
       </div>
     </div>
 
-    <!-- Action Confirm Modal -->
-    <Teleport to="body">
-      <div v-if="actionTarget" class="modal-overlay" @click.self="actionTarget = null">
-        <div class="modal">
-          <div class="modal-header">
-            <h3 class="modal-title">{{ actionType === 'delete' ? 'Delete Store' : actionType === 'approve' ? 'Approve Store' : 'Suspend Store' }}</h3>
-            <button @click="actionTarget = null" class="btn-icon btn-ghost"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body">
-            <div class="flex items-start gap-4">
-              <div :class="actionType === 'approve' ? 'bg-success-100' : 'bg-danger-100'" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg v-if="actionType === 'approve'" class="w-5 h-5 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                <svg v-else class="w-5 h-5 text-danger-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-              </div>
-              <p class="text-sm text-surface-700 leading-relaxed">
-                <template v-if="actionType === 'delete'">Permanently delete store <strong class="text-surface-900">{{ actionTarget.name }}</strong>? This cannot be undone.</template>
-                <template v-else-if="actionType === 'approve'">Approve store <strong class="text-surface-900">{{ actionTarget.name }}</strong>? The owner will be able to add and manage venues.</template>
-                <template v-else>Suspend store <strong class="text-surface-900">{{ actionTarget.name }}</strong>? Their venues will be hidden from public listings.</template>
-              </p>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button @click="actionTarget = null" class="btn-ghost">Cancel</button>
-            <button @click="doAction" :disabled="acting" :class="actionType === 'approve' ? 'btn-primary' : 'btn-danger'">
-              <svg v-if="acting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              {{ actionType === 'delete' ? 'Delete' : actionType === 'approve' ? 'Approve' : 'Suspend' }}
-            </button>
-          </div>
+    <!-- Action Confirm Dialog -->
+    <Dialog v-model:visible="showActionDialog" modal :header="actionDialogTitle" :style="{ width: '28rem' }" :pt="dialogPt">
+      <div class="flex items-start gap-4">
+        <div :class="actionType === 'approve' ? 'bg-success-100' : 'bg-danger-100'" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+          <svg v-if="actionType === 'approve'" class="w-5 h-5 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <svg v-else class="w-5 h-5 text-danger-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
+        <p class="text-sm text-surface-700 leading-relaxed">
+          <template v-if="actionType === 'delete'">Permanently delete store <strong class="text-surface-900">{{ actionTarget?.name }}</strong>? This cannot be undone.</template>
+          <template v-else-if="actionType === 'approve'">Approve store <strong class="text-surface-900">{{ actionTarget?.name }}</strong>? The owner will be able to add and manage venues.</template>
+          <template v-else>Suspend store <strong class="text-surface-900">{{ actionTarget?.name }}</strong>? Their venues will be hidden from public listings.</template>
+        </p>
       </div>
-    </Teleport>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" text @click="showActionDialog = false" />
+        <Button
+          :label="actionType === 'delete' ? 'Delete' : actionType === 'approve' ? 'Approve' : 'Suspend'"
+          :severity="actionType === 'approve' ? undefined : 'danger'"
+          :loading="acting"
+          @click="doAction"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -115,6 +107,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/lib/axios'
 import { useTopBarActionsStore } from '@/stores/topBarActions'
+import Dialog from 'primevue/dialog'
+import Button from 'primevue/button'
 
 const stores       = ref<any[]>([])
 const loading      = ref(false)
@@ -123,11 +117,25 @@ const search       = ref('')
 const statusFilter = ref('')
 const actionTarget = ref<any>(null)
 const actionType   = ref<'approve' | 'suspend' | 'delete'>('approve')
+const showActionDialog = ref(false)
 const perPage      = 15
 const meta         = ref({ current_page: 1, last_page: 1, total: 0 })
 let page = 1
 let searchTimeout: ReturnType<typeof setTimeout>
 const topBarActions = useTopBarActionsStore()
+
+const dialogPt = {
+  root: { class: '!bg-[var(--color-bg-card)] !border-[var(--color-border)] !text-[var(--color-text)]' },
+  header: { class: '!bg-[var(--color-bg-card)] !text-[var(--color-text)] !border-b !border-[var(--color-border)]' },
+  content: { class: '!bg-[var(--color-bg-card)] !text-[var(--color-text)]' },
+  footer: { class: '!bg-[var(--color-bg-card)] !border-t !border-[var(--color-border)]' },
+}
+
+const actionDialogTitle = computed(() => {
+  if (actionType.value === 'delete') return 'Delete Store'
+  if (actionType.value === 'approve') return 'Approve Store'
+  return 'Suspend Store'
+})
 
 async function load() {
   loading.value = true
@@ -145,7 +153,9 @@ function resetAndLoad() { page = 1; load() }
 function changePage(p: number) { page = p; load() }
 
 function openAction(store: any, type: 'approve' | 'suspend' | 'delete') {
-  actionTarget.value = store; actionType.value = type
+  actionTarget.value = store
+  actionType.value = type
+  showActionDialog.value = true
 }
 
 async function doAction() {
@@ -162,6 +172,7 @@ async function doAction() {
       await api.patch(`/admin/stores/${actionTarget.value.id}/suspend`)
       actionTarget.value.status = 'suspended'
     }
+    showActionDialog.value = false
     actionTarget.value = null
   } finally { acting.value = false }
 }

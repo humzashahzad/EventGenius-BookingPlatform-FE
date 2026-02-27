@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { detectPortalFromPath } from '@/lib/portalToken'
 
 const router = createRouter({
   history: createWebHistory('/'),
@@ -23,199 +24,217 @@ const router = createRouter({
       component: () => import('@/views/public/VenueDetailView.vue'),
       meta: { layout: 'public' },
     },
-
-    // ── Client ────────────────────────────────────────────────────────────
     {
-      path: '/client/sign-in',
-      name: 'client-login',
+      path: '/venues/:id/book',
+      name: 'venue-booking',
+      component: () => import('@/views/public/VenueBookingView.vue'),
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
+    },
+
+    // ── Customer (was Client) ────────────────────────────────────────────
+    {
+      path: '/customer/sign-in',
+      name: 'customer-login',
       component: () => import('@/views/auth/LoginView.vue'),
-      meta: { layout: 'auth', guestOnly: true, portal: 'client' },
+      meta: { layout: 'auth', guestOnly: true, portal: 'customer' },
     },
     {
-      path: '/client/sign-up',
-      name: 'client-register',
+      path: '/customer/sign-up',
+      name: 'customer-register',
       component: () => import('@/views/auth/RegisterView.vue'),
-      meta: { layout: 'auth', guestOnly: true, portal: 'client' },
+      meta: { layout: 'auth', guestOnly: true, portal: 'customer' },
     },
     {
       path: '/forgot-password',
       name: 'forgot-password',
       component: () => import('@/views/auth/ForgotPasswordView.vue'),
-      meta: { layout: 'auth', guestOnly: true, portal: 'client' },
+      meta: { layout: 'auth', guestOnly: true, portal: 'customer' },
     },
     {
       path: '/reset-password',
       name: 'reset-password',
       component: () => import('@/views/auth/ResetPasswordView.vue'),
-      meta: { layout: 'auth', guestOnly: true, portal: 'client' },
+      meta: { layout: 'auth', guestOnly: true, portal: 'customer' },
     },
     {
-      path: '/client/dashboard',
-      name: 'client-dashboard',
-      component: () => import('@/views/client/DashboardViewEnhanced.vue'),
-      meta: { layout: 'client', requiresAuth: true, role: 'client' },
-    },
-    {
-      path: '/client/bookings',
-      name: 'client-bookings',
+      path: '/customer/bookings',
+      name: 'customer-bookings',
       component: () => import('@/views/client/BookingsViewEnhanced.vue'),
-      meta: { layout: 'client', requiresAuth: true, role: 'client' },
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
     {
-      path: '/client/bookings/:id',
-      name: 'client-booking-detail',
+      path: '/customer/bookings/:id',
+      name: 'customer-booking-detail',
       component: () => import('@/views/client/BookingDetailView.vue'),
-      meta: { layout: 'client', requiresAuth: true, role: 'client' },
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
     {
-      path: '/client/profile',
-      name: 'client-profile',
+      path: '/customer/profile',
+      name: 'customer-profile',
       component: () => import('@/views/client/ProfileView.vue'),
-      meta: { layout: 'client', requiresAuth: true, role: 'client' },
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
     {
-      path: '/client/messages',
-      name: 'client-messages',
+      path: '/customer/messages',
+      name: 'customer-messages',
       component: () => import('@/views/MessagesView.vue'),
-      meta: { layout: 'client', requiresAuth: true, role: 'client' },
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
 
     // ── PayFast Payment (SANDBOX) ─────────────────────────────────────────
     {
-      path: '/client/bookings/:id/pay',
-      name: 'client-payment',
+      path: '/customer/bookings/:id/pay',
+      name: 'customer-payment',
       component: () => import('@/views/client/PaymentView.vue'),
-      meta: { layout: 'client', requiresAuth: true, role: 'client' },
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
     {
-      path: '/client/payment-success',
-      name: 'client-payment-success',
+      path: '/customer/payment-success',
+      name: 'customer-payment-success',
       component: () => import('@/views/client/PaymentSuccessView.vue'),
-      meta: { layout: 'client', requiresAuth: true, role: 'client' },
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
     {
-      path: '/client/payment-cancel',
-      name: 'client-payment-cancel',
+      path: '/customer/payment-cancel',
+      name: 'customer-payment-cancel',
       component: () => import('@/views/client/PaymentCancelView.vue'),
-      meta: { layout: 'client', requiresAuth: true, role: 'client' },
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
 
-    // ── Store Owner ───────────────────────────────────────────────────────
+    // ── Shop (was Store Owner) ───────────────────────────────────────────
     {
-      path: '/store/sign-in',
-      name: 'store-login',
+      path: '/shop/sign-in',
+      name: 'shop-login',
       component: () => import('@/views/auth/LoginView.vue'),
-      meta: { layout: 'auth', guestOnly: true, portal: 'store' },
+      meta: { layout: 'auth', guestOnly: true, portal: 'shop' },
     },
     {
-      path: '/store/sign-up',
-      name: 'store-register',
+      path: '/shop/sign-up',
+      name: 'shop-register',
       component: () => import('@/views/auth/RegisterView.vue'),
-      meta: { layout: 'auth', guestOnly: true, portal: 'store' },
+      meta: { layout: 'auth', guestOnly: true, portal: 'shop' },
     },
     {
-      path: '/store/dashboard',
-      name: 'store-dashboard',
+      path: '/shop/dashboard',
+      name: 'shop-dashboard',
       component: () => import('@/views/store/DashboardViewEnhanced.vue'),
-      meta: { layout: 'store', requiresAuth: true, role: 'store_owner' },
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
-      path: '/store/venues',
-      name: 'store-venues',
+      path: '/shop/venues',
+      name: 'shop-venues',
       component: () => import('@/views/store/VenuesView.vue'),
-      meta: { layout: 'store', requiresAuth: true, role: 'store_owner' },
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
-      path: '/store/venues/create',
-      name: 'store-venue-create',
+      path: '/shop/venues/create',
+      name: 'shop-venue-create',
       component: () => import('@/views/store/VenueFormView.vue'),
-      meta: { layout: 'store', requiresAuth: true, role: 'store_owner' },
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
-      path: '/store/venues/:id/edit',
-      name: 'store-venue-edit',
+      path: '/shop/venues/:id/edit',
+      name: 'shop-venue-edit',
       component: () => import('@/views/store/VenueFormView.vue'),
-      meta: { layout: 'store', requiresAuth: true, role: 'store_owner' },
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
-      path: '/store/venues/:id/gallery',
-      name: 'store-venue-gallery',
+      path: '/shop/venues/:id/gallery',
+      name: 'shop-venue-gallery',
       component: () => import('@/views/store/VenueGalleryView.vue'),
-      meta: { layout: 'store', requiresAuth: true, role: 'store_owner' },
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
-      path: '/store/bookings',
-      name: 'store-bookings',
+      path: '/shop/bookings',
+      name: 'shop-bookings',
       component: () => import('@/views/store/BookingsView.vue'),
-      meta: { layout: 'store', requiresAuth: true, role: 'store_owner' },
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
-      path: '/store/profile',
-      name: 'store-profile',
+      path: '/shop/landing',
+      name: 'shop-landing',
+      component: () => import('@/views/store/ShopLandingEditor.vue'),
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
+    },
+    {
+      path: '/shop/profile',
+      name: 'shop-profile',
       component: () => import('@/views/store/ProfileView.vue'),
-      meta: { layout: 'store', requiresAuth: true, role: 'store_owner' },
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
-      path: '/store/messages',
-      name: 'store-messages',
+      path: '/shop/messages',
+      name: 'shop-messages',
       component: () => import('@/views/MessagesView.vue'),
-      meta: { layout: 'store', requiresAuth: true, role: 'store_owner' },
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
 
-    // ── Admin Panel ───────────────────────────────────────────────────────
+    // ── Support (was Admin Panel) ────────────────────────────────────────
     {
-      path: '/admin-panel/sign-in',
-      name: 'admin-login',
+      path: '/support/sign-in',
+      name: 'support-login',
       component: () => import('@/views/auth/LoginView.vue'),
-      meta: { layout: 'auth', guestOnly: true, portal: 'admin' },
+      meta: { layout: 'auth', guestOnly: true, portal: 'support' },
     },
     {
-      path: '/admin-panel/dashboard',
-      name: 'admin-dashboard',
+      path: '/support/dashboard',
+      name: 'support-dashboard',
       component: () => import('@/views/admin/DashboardViewNew.vue'),
-      meta: { layout: 'admin', requiresAuth: true, role: 'admin' },
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
     {
-      path: '/admin-panel/users',
-      name: 'admin-users',
+      path: '/support/users',
+      name: 'support-users',
       component: () => import('@/views/admin/UsersView.vue'),
-      meta: { layout: 'admin', requiresAuth: true, role: 'admin' },
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
     {
-      path: '/admin-panel/stores',
-      name: 'admin-stores',
+      path: '/support/stores',
+      name: 'support-stores',
       component: () => import('@/views/admin/StoresView.vue'),
-      meta: { layout: 'admin', requiresAuth: true, role: 'admin' },
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
     {
-      path: '/admin-panel/venues',
-      name: 'admin-venues',
+      path: '/support/venues',
+      name: 'support-venues',
       component: () => import('@/views/admin/VenuesView.vue'),
-      meta: { layout: 'admin', requiresAuth: true, role: 'admin' },
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
     {
-      path: '/admin-panel/bookings',
-      name: 'admin-bookings',
+      path: '/support/bookings',
+      name: 'support-bookings',
       component: () => import('@/views/admin/BookingsView.vue'),
-      meta: { layout: 'admin', requiresAuth: true, role: 'admin' },
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
     {
-      path: '/admin-panel/sessions',
-      name: 'admin-sessions',
+      path: '/support/sessions',
+      name: 'support-sessions',
       component: () => import('@/views/admin/SessionsView.vue'),
-      meta: { layout: 'admin', requiresAuth: true, role: 'admin' },
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
     {
-      path: '/admin-panel/settings',
-      name: 'admin-settings',
+      path: '/support/settings',
+      name: 'support-settings',
       component: () => import('@/views/admin/SettingsView.vue'),
-      meta: { layout: 'admin', requiresAuth: true, role: 'admin' },
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
     {
-      path: '/admin-panel/messages',
-      name: 'admin-messages',
+      path: '/support/messages',
+      name: 'support-messages',
       component: () => import('@/views/MessagesView.vue'),
-      meta: { layout: 'admin', requiresAuth: true, role: 'admin' },
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
+    },
+    {
+      path: '/support/categories',
+      name: 'support-categories',
+      component: () => import('@/views/admin/CategoriesView.vue'),
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
+    },
+    {
+      path: '/support/locations',
+      name: 'support-locations',
+      component: () => import('@/views/admin/LocationsView.vue'),
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
 
     // ── Catch-all ─────────────────────────────────────────────────────────
@@ -229,18 +248,23 @@ const router = createRouter({
 
 // Determine the correct login route based on the path being accessed
 function loginRouteForPath(path: string): { name: string } {
-  if (path.startsWith('/admin-panel')) return { name: 'admin-login' }
-  if (path.startsWith('/store'))       return { name: 'store-login' }
-  return { name: 'client-login' }
+  if (path.startsWith('/support')) return { name: 'support-login' }
+  if (path.startsWith('/shop'))    return { name: 'shop-login' }
+  return { name: 'customer-login' }
 }
 
 // ── Navigation Guard ───────────────────────────────────────────────────────────
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
+  // Wait for initial auth check to complete
   if (!authStore.initialized) {
     await authStore.initPromise
   }
+
+  // Switch to the target portal — this loads the correct token/user for the destination
+  const targetPortal = detectPortalFromPath(to.path)
+  await authStore.switchPortal(targetPortal)
 
   // Not logged in trying to access a protected route → send to the right login page
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
