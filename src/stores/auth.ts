@@ -90,8 +90,9 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const response = await api.post('/auth/login', { email, password })
-      // Token was stored by the axios response interceptor under the current portal key
-      user.value = response.data.data.user
+      const { user: userData, token: jwt } = response.data.data
+      if (jwt) setToken(jwt, currentPortal.value)
+      user.value = userData
       return { success: true }
     } catch (error: any) {
       return {
@@ -109,7 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const response = await api.post('/auth/register', payload)
-      // Token was stored by the axios response interceptor under the current portal key
+      // Token is stored by the axios response interceptor from X-Auth-Token header
       user.value = response.data.data.user
       return { success: true }
     } catch (error: any) {
