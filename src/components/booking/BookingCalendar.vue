@@ -268,13 +268,16 @@ const dayBuffers = computed<Record<string, { start: string; end: string }[]>>(()
     const bookings = dayBookings.value[dateStr] || []
     const buffers: { start: string; end: string }[] = []
     for (const bk of bookings) {
-      const beforeStart = subtractHour(bk.start_time)
+      const bkStart = bk.start_time.substring(0, 5)
+      const bkEnd = bk.end_time.substring(0, 5)
+
+      const beforeStart = subtractHour(bkStart)
       if (beforeStart >= '00:00') {
-        buffers.push({ start: beforeStart, end: bk.start_time })
+        buffers.push({ start: beforeStart, end: bkStart })
       }
-      const afterEnd = addHour(bk.end_time)
+      const afterEnd = addHour(bkEnd)
       if (afterEnd <= '24:00') {
-        buffers.push({ start: bk.end_time, end: afterEnd })
+        buffers.push({ start: bkEnd, end: afterEnd })
       }
     }
     result[dateStr] = buffers
