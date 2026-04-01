@@ -101,6 +101,7 @@ import {
   MessageSquareOff,
   Zap,
   Ban,
+  Map,
 } from 'lucide-vue-next'
 
 const iconMap: Record<string, Component> = {
@@ -159,9 +160,9 @@ const iconMap: Record<string, Component> = {
   'copy': Copy,
   'filter': Filter,
   'sliders': SlidersHorizontal,
+  'printer': Printer,
   'refresh': RefreshCw,
   'more-vertical': MoreVertical,
-  'printer': Printer,
 
   // Content
   'calendar-event': CalendarDays,
@@ -169,6 +170,7 @@ const iconMap: Record<string, Component> = {
   'calendar': Calendar,
   'map-pin': MapPin,
   'map-pin-off': MapPinOff,
+  'map': Map,
   'building': Building2,
   'building-store': Store,
   'star-filled': Star,

@@ -65,19 +65,42 @@
             </div>
             <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Location</h2>
           </div>
-          <div class="p-5 sm:p-6 space-y-4">
-            <div>
-              <label class="form-label">Street Address <span class="text-coral">*</span></label>
-              <input v-model="form.address" required class="form-input" placeholder="123 Main Boulevard" />
-            </div>
+          <div class="p-5 sm:p-6 space-y-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="form-label">City <span class="text-coral">*</span></label>
-                <input v-model="form.city" required class="form-input" placeholder="Lahore" />
+                <label class="form-label">Country <span class="text-coral">*</span></label>
+                <select v-model="form.country" @change="onCountryChange" class="form-select" required>
+                  <option value="" disabled>Select Country</option>
+                  <option v-for="c in countriesList" :key="c.code" :value="c.name">{{ c.name }}</option>
+                </select>
               </div>
               <div>
-                <label class="form-label">State / Province</label>
-                <input v-model="form.state" class="form-input" placeholder="Punjab" />
+                <label class="form-label">City <span class="text-coral">*</span></label>
+                <select v-model="form.city" class="form-select" required :disabled="!form.country || loadingCities">
+                  <option value="" disabled>{{ loadingCities ? 'Loading cities...' : 'Select City' }}</option>
+                  <option v-for="city in citiesList" :key="city" :value="city">{{ city }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <label class="form-label">Venue Location <span class="text-coral">*</span></label>
+              <div class="flex flex-col gap-3">
+                <button type="button" @click="openMapModal" class="btn-outline w-full gap-2 justify-center py-3 border-dashed border-2 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all duration-300">
+                  <AppIcon icon="map" class="w-5 h-5 text-primary-600" />
+                  <span class="font-semibold">{{ form.latitude ? 'Change Location on Map' : 'Select Location on Map' }}</span>
+                </button>
+                
+                <div v-if="form.address || (form.latitude && form.longitude)" class="p-4 rounded-xl bg-warm-50 dark:bg-warm-800/50 border border-warm-200 dark:border-warm-700 space-y-2">
+                  <div v-if="form.address" class="flex gap-2">
+                    <AppIcon icon="map-pin" class="w-4 h-4 text-warm-400 mt-0.5 flex-shrink-0" />
+                    <span class="text-sm text-warm-700 dark:text-warm-300 font-medium">{{ form.address }}</span>
+                  </div>
+                  <div class="flex gap-4 text-[10px] text-warm-500 font-mono uppercase tracking-wider">
+                    <span>Lat: {{ form.latitude?.toFixed(6) }}</span>
+                    <span>Long: {{ form.longitude?.toFixed(6) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -214,6 +237,56 @@
 
       </div>
     </form>
+
+    <!-- Map Modal -->
+    <div v-if="showMapModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div class="bg-white dark:bg-warm-900 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-5 border-b border-warm-200 dark:border-warm-800 flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-warm-900 dark:text-warm-50">Select Venue Location</h3>
+            <p class="text-xs text-warm-500 mt-1">Click on the map to pin your venue's exact location.</p>
+          </div>
+          <button @click="closeMapModal" class="p-2 hover:bg-warm-100 dark:hover:bg-warm-800 rounded-xl transition-colors">
+            <AppIcon icon="x" class="w-6 h-6" />
+          </button>
+        </div>
+        
+        <div class="flex-1 relative min-h-[400px]">
+          <div id="location-map" class="absolute inset-0"></div>
+          
+          <!-- Search in map overlay -->
+          <div class="absolute top-4 left-4 z-[1000] w-full max-w-sm">
+            <div class="relative">
+              <input 
+                type="text" 
+                placeholder="Search for address or landmark..." 
+                class="form-input !pl-10 !bg-white/90 backdrop-blur shadow-lg"
+                @keyup.enter="searchLocation(($event.target as HTMLInputElement).value)"
+              />
+              <AppIcon icon="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400" />
+            </div>
+          </div>
+        </div>
+        
+        <div class="p-5 border-t border-warm-200 dark:border-warm-800 bg-warm-50 dark:bg-warm-800/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <p v-if="selectedAddress" class="text-sm font-semibold text-warm-900 dark:text-warm-50 flex items-center gap-1.5">
+              <AppIcon icon="map-pin" class="w-4 h-4 text-primary-500" />
+              {{ selectedAddress }}
+            </p>
+            <p v-else class="text-sm text-warm-400 italic">No location selected yet</p>
+            <div class="flex gap-3 text-[10px] text-warm-500 font-mono" v-if="tempCoords">
+              <span>LAT: {{ tempCoords.lat.toFixed(6) }}</span>
+              <span>LONG: {{ tempCoords.lng.toFixed(6) }}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button @click="closeMapModal" class="btn-ghost">Cancel</button>
+            <button @click="confirmLocation" :disabled="!tempCoords" class="btn-primary px-8">Confirm Location</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -245,7 +318,170 @@ const form = reactive({
   floors: 1, price_per_head: null as number | null,
   event_types: [] as string[], status: 'active',
   operating_start: '00:00', operating_end: '23:00',
+  country: 'Pakistan', latitude: null as number | null, longitude: null as number | null,
 })
+
+const countriesList = ref<any[]>([])
+const citiesList = ref<string[]>([])
+const loadingCountries = ref(false)
+const loadingCities = ref(false)
+const showMapModal = ref(false)
+const selectedAddress = ref('')
+const tempCoords = ref<{ lat: number; lng: number } | null>(null)
+let map: any = null
+let marker: any = null
+
+async function openMapModal() {
+  showMapModal.value = true
+  selectedAddress.value = form.address || ''
+  if (form.latitude && form.longitude) {
+    tempCoords.value = { lat: form.latitude, lng: form.longitude }
+  } else {
+    tempCoords.value = null
+  }
+  
+  // Wait for DOM to update
+  setTimeout(() => {
+    initMap()
+  }, 100)
+}
+
+function closeMapModal() {
+  showMapModal.value = false
+  if (map) {
+    map.remove()
+    map = null
+  }
+}
+
+async function initMap() {
+  if (typeof (window as any).L === 'undefined') {
+    setTimeout(initMap, 100)
+    return
+  }
+
+  const L = (window as any).L
+  
+  // Default to city or country center if no coordinates
+  let center: [number, number] = [31.5204, 74.3587] // Lahore default
+  if (tempCoords.value) {
+    center = [tempCoords.value.lat, tempCoords.value.lng]
+  } else if (form.city || form.country) {
+    const searchStr = `${form.city}, ${form.country}`.trim()
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchStr)}`)
+      const data = await res.json()
+      if (data && data[0]) {
+        center = [parseFloat(data[0].lat), parseFloat(data[0].lon)]
+      }
+    } catch (e) {
+      console.error('City search failed', e)
+    }
+  }
+
+  map = L.map('location-map').setView(center, 13)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map)
+
+  if (tempCoords.value) {
+    marker = L.marker([tempCoords.value.lat, tempCoords.value.lng], { draggable: true }).addTo(map)
+  }
+
+  map.on('click', async (e: any) => {
+    const { lat, lng } = e.latlng
+    setMarker(lat, lng)
+  })
+}
+
+function setMarker(lat: number, lng: number) {
+  const L = (window as any).L
+  if (marker) {
+    marker.setLatLng([lat, lng])
+  } else {
+    marker = L.marker([lat, lng], { draggable: true }).addTo(map)
+    marker.on('dragend', () => {
+      const pos = marker.getLatLng()
+      tempCoords.value = { lat: pos.lat, lng: pos.lng }
+      reverseGeocode(pos.lat, pos.lng)
+    })
+  }
+  tempCoords.value = { lat, lng }
+  reverseGeocode(lat, lng)
+}
+
+async function reverseGeocode(lat: number, lng: number) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+    const data = await res.json()
+    if (data && data.display_name) {
+      selectedAddress.value = data.display_name
+    }
+  } catch (e) {
+    console.error('Reverse geocode failed', e)
+  }
+}
+
+async function searchLocation(query: string) {
+  if (!query) return
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+    const data = await res.json()
+    if (data && data[0]) {
+      const lat = parseFloat(data[0].lat)
+      const lon = parseFloat(data[0].lon)
+      map.setView([lat, lon], 16)
+      setMarker(lat, lon)
+    }
+  } catch (e) {
+    console.error('Search failed', e)
+  }
+}
+
+function confirmLocation() {
+  if (tempCoords.value) {
+    form.latitude = tempCoords.value.lat
+    form.longitude = tempCoords.value.lng
+    form.address = selectedAddress.value
+  }
+  closeMapModal()
+}
+
+async function fetchCountries() {
+  loadingCountries.value = true
+  try {
+    const { data } = await api.get('https://restcountries.com/v3.1/all?fields=name,cca2')
+    countriesList.value = data.map((c: any) => ({
+      name: c.name.common,
+      code: c.cca2
+    })).sort((a: any, b: any) => a.name.localeCompare(b.name))
+  } catch (error) {
+    console.error('Failed to fetch countries:', error)
+  } finally {
+    loadingCountries.value = false
+  }
+}
+
+async function fetchCities(countryName: string) {
+  if (!countryName) return
+  loadingCities.value = true
+  citiesList.value = []
+  try {
+    const { data } = await api.post('https://countriesnow.space/api/v0.1/countries/cities', {
+      country: countryName
+    })
+    citiesList.value = data.data || []
+  } catch (error) {
+    console.error('Failed to fetch cities:', error)
+  } finally {
+    loadingCities.value = false
+  }
+}
+
+function onCountryChange() {
+  form.city = ''
+  fetchCities(form.country)
+}
 
 const timeSlots = computed(() => {
   const slots = []
@@ -261,6 +497,7 @@ async function load() {
   try {
     const { data } = await api.get(`/store/venues/${route.params.id}`)
     Object.assign(form, data.data)
+    if (form.country) fetchCities(form.country)
   } catch {
     errorMsg.value = 'Failed to load venue data.'
   }
@@ -310,6 +547,23 @@ function extractErrorMessage(error: any): string {
 onMounted(() => {
   load()
   categoriesStore.fetchCategories()
+  fetchCountries()
+  if (form.country) fetchCities(form.country)
+
+  // Load Leaflet
+  if (!document.getElementById('leaflet-css')) {
+    const link = document.createElement('link')
+    link.id = 'leaflet-css'
+    link.rel = 'stylesheet'
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    document.head.appendChild(link)
+  }
+  if (!document.getElementById('leaflet-js')) {
+    const script = document.createElement('script')
+    script.id = 'leaflet-js'
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    document.head.appendChild(script)
+  }
 })
 </script>
 
