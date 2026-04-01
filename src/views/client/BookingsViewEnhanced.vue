@@ -89,7 +89,7 @@
             <span class="text-xs text-warm-500 uppercase font-semibold tracking-wide">Total Amount</span>
             <p class="font-bold text-lg text-warm-900">PKR {{ Number(b.total_amount).toLocaleString() }}</p>
           </div>
-          <RouterLink :to="`/client/bookings/${b.id}`" class="btn-outline text-sm inline-flex items-center gap-1">
+          <RouterLink :to="`/customer/bookings/${b.id}`" class="btn-outline text-sm inline-flex items-center gap-1">
             View Details
             <AppIcon icon="chevron-right" class="w-4 h-4" />
           </RouterLink>

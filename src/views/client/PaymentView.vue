@@ -2,7 +2,7 @@
   <div class="content-container">
     <!-- Back -->
     <div class="mb-6">
-      <RouterLink :to="`/client/bookings/${route.params.id}`" class="btn-ghost inline-flex items-center gap-1.5 text-sm">
+      <RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-ghost inline-flex items-center gap-1.5 text-sm">
         <AppIcon icon="chevron-left" class="w-4 h-4" />
         Back to Booking
       </RouterLink>
@@ -18,7 +18,7 @@
       <div class="p-6">
         <h2 class="text-lg font-semibold text-coral mb-2">Payment Error</h2>
         <p class="text-sm text-coral/80 mb-4">{{ error }}</p>
-        <RouterLink :to="`/client/bookings/${route.params.id}`" class="btn-outline inline-flex items-center gap-1.5 text-sm">
+        <RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-outline inline-flex items-center gap-1.5 text-sm">
           <AppIcon icon="chevron-left" class="w-4 h-4" />
           Back to Booking
         </RouterLink>

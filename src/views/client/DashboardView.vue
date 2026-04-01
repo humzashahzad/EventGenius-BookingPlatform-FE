@@ -111,7 +111,7 @@
               <RouterLink
                 v-for="b in recentBookings"
                 :key="b.id"
-                :to="`/client/bookings/${b.id}`"
+                :to="`/customer/bookings/${b.id}`"
                 class="flex items-center gap-3 p-3 rounded-xl hover:bg-warm-50 transition-colors border border-transparent hover:border-warm-200"
               >
                 <div class="w-10 h-10 rounded-xl bg-warm-100 flex items-center justify-center overflow-hidden flex-shrink-0">
