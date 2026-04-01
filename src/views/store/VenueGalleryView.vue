@@ -1,149 +1,120 @@
 <template>
-  <div class="page-container">
+  <div class="content-container">
     <!-- Header -->
     <div class="page-header">
       <div class="flex items-center gap-3">
-        <router-link :to="{ name: 'shop-venues' }" class="btn-ghost btn-icon">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-          </svg>
+        <router-link :to="{ name: 'shop-venues' }" class="btn-ghost !p-2 rounded-xl">
+          <AppIcon icon="chevron-left" class="w-5 h-5 text-warm-600 dark:text-warm-400" />
         </router-link>
         <div>
-          <h1 class="page-title">Gallery — {{ venue?.name || '...' }}</h1>
-          <p class="page-subtitle">Manage photos for this venue. First image is set as cover.</p>
+          <h1 class="text-2xl font-bold text-warm-900 dark:text-warm-50 tracking-tight">Gallery — {{ venue?.name || '...' }}</h1>
+          <p class="text-sm text-warm-500 dark:text-warm-400 mt-1">Manage photos for this venue. First image is set as cover.</p>
         </div>
       </div>
-      <label class="btn-primary gap-2 cursor-pointer">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-        </svg>
+      <label class="btn-primary gap-1.5 cursor-pointer">
+        <AppIcon icon="upload" class="w-4 h-4" />
         Upload Images
-        <input
-          ref="fileInput"
-          type="file"
-          multiple
-          accept="image/*"
-          class="hidden"
-          @change="handleUpload"
-        />
+        <input ref="fileInput" type="file" multiple accept="image/*" class="hidden" @change="handleUpload" />
       </label>
     </div>
 
     <!-- Upload Progress -->
-    <div v-if="uploading" class="alert alert-info">
-      <svg class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-      </svg>
-      <span>Uploading {{ uploadCount }} image(s)... please wait</span>
-    </div>
+    <transition name="fade">
+      <div v-if="uploading" class="flex items-center gap-3 p-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 mb-6">
+        <AppIcon icon="loader" class="w-5 h-5 animate-spin flex-shrink-0" />
+        <p class="text-sm font-medium">Uploading {{ uploadCount }} image(s)... please wait</p>
+      </div>
+    </transition>
 
     <!-- Success/Error alerts -->
-    <div v-if="successMsg" class="alert alert-success">
-      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      {{ successMsg }}
-    </div>
-    <div v-if="errorMsg" class="alert alert-danger">
-      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      {{ errorMsg }}
-    </div>
+    <transition name="fade">
+      <div v-if="successMsg" class="flex items-center gap-3 p-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 mb-6">
+        <AppIcon icon="circle-check" class="w-5 h-5 flex-shrink-0" />
+        <p class="text-sm font-medium">{{ successMsg }}</p>
+      </div>
+    </transition>
+    <transition name="fade">
+      <div v-if="errorMsg" class="flex items-center gap-3 p-4 rounded-2xl bg-coral/10 dark:bg-coral/20 border border-coral/30 text-coral dark:text-red-300 mb-6">
+        <AppIcon icon="alert-circle" class="w-5 h-5 flex-shrink-0" />
+        <p class="text-sm font-medium">{{ errorMsg }}</p>
+      </div>
+    </transition>
 
     <!-- Loading skeleton -->
-    <div v-if="loading" class="gallery-grid">
-      <div v-for="i in 8" :key="i" class="skeleton" style="aspect-ratio:1;border-radius:0.75rem;"></div>
+    <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div v-for="i in 8" :key="i" class="skeleton aspect-square rounded-2xl"></div>
     </div>
 
     <!-- Gallery Grid -->
-    <div v-else-if="images.length" class="card card-body">
-      <div class="flex items-center justify-between mb-4">
-        <p class="text-sm text-surface-500">{{ images.length }} photo{{ images.length !== 1 ? 's' : '' }}</p>
-        <div class="flex items-center gap-2 text-xs text-surface-400">
-          <span class="w-3 h-3 rounded-full bg-primary-500 inline-block"></span> Primary (cover)
-        </div>
-      </div>
-
-      <div class="gallery-grid">
-        <div
-          v-for="image in images"
-          :key="image.id"
-          class="gallery-item"
-          :class="{ 'primary-img': image.is_primary }"
-        >
-          <img :src="imageUrl(image.path)" :alt="image.alt_text || venue?.name" loading="lazy" />
-
-          <!-- Primary badge -->
-          <div v-if="image.is_primary" class="absolute top-2 left-2 z-10">
-            <span class="badge badge-primary text-2xs">Cover</span>
-          </div>
-
-          <!-- Actions overlay -->
-          <div class="gallery-item-overlay">
-            <button
-              v-if="!image.is_primary"
-              @click="setPrimary(image)"
-              :disabled="actionId === image.id"
-              class="btn-white btn-sm text-xs gap-1"
-              title="Set as cover"
-            >
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-              </svg>
-              Cover
-            </button>
-            <button
-              @click="deleteImage(image)"
-              :disabled="actionId === image.id"
-              class="btn-danger btn-sm text-xs gap-1"
-              title="Delete image"
-            >
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-              </svg>
-              Delete
-            </button>
+    <div v-else-if="images.length" class="card">
+      <div class="p-5 sm:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-warm-500 dark:text-warm-400 text-xs">{{ images.length }} photo{{ images.length !== 1 ? 's' : '' }}</p>
+          <div class="flex items-center gap-2 text-xs text-warm-500 dark:text-warm-400">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-primary-500"></span> Primary (cover)
           </div>
         </div>
 
-        <!-- Upload drop zone -->
-        <label
-          class="relative rounded-xl border-2 border-dashed border-surface-300 hover:border-primary-400
-                 flex flex-col items-center justify-center gap-2 cursor-pointer
-                 transition-colors duration-200 hover:bg-primary-50 text-surface-400 hover:text-primary-500"
-          style="aspect-ratio:1;"
-        >
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M12 4v16m8-8H4"/>
-          </svg>
-          <span class="text-xs font-medium">Add Photos</span>
-          <input type="file" multiple accept="image/*" class="hidden" @change="handleUpload" />
-        </label>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <div
+            v-for="image in images"
+            :key="image.id"
+            class="group relative aspect-square rounded-2xl overflow-hidden"
+            :class="image.is_primary ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-warm-50 dark:ring-offset-warm-900' : ''"
+          >
+            <img :src="imageUrl(image.path)" :alt="image.alt_text || venue?.name" loading="lazy" class="w-full h-full object-cover" />
+
+            <!-- Primary badge -->
+            <div v-if="image.is_primary" class="absolute top-2 left-2 z-10">
+              <span class="badge-primary text-[10px]">Cover</span>
+            </div>
+
+            <!-- Actions overlay -->
+            <div class="absolute inset-0 bg-warm-950/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
+              <button
+                v-if="!image.is_primary"
+                @click="setPrimary(image)"
+                :disabled="actionId === image.id"
+                class="btn-secondary btn-sm !text-xs gap-1"
+                title="Set as cover"
+              >
+                <AppIcon icon="star" class="w-3 h-3" />
+                Cover
+              </button>
+              <button
+                @click="deleteImage(image)"
+                :disabled="actionId === image.id"
+                class="btn-danger btn-sm !text-xs gap-1"
+                title="Delete image"
+              >
+                <AppIcon icon="trash" class="w-3 h-3" />
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <!-- Upload drop zone -->
+          <label
+            class="aspect-square rounded-2xl border-2 border-dashed border-warm-300 dark:border-warm-600 hover:border-primary-400 dark:hover:border-primary-500 flex flex-col items-center justify-center gap-2 cursor-pointer text-warm-400 dark:text-warm-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
+          >
+            <AppIcon icon="plus" class="w-8 h-8" />
+            <span class="text-xs font-medium">Add Photos</span>
+            <input type="file" multiple accept="image/*" class="hidden" @change="handleUpload" />
+          </label>
+        </div>
       </div>
     </div>
 
     <!-- Empty state -->
-    <div v-else class="card card-body">
-      <div class="empty-state">
-        <div class="empty-state-icon">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-          </svg>
+    <div v-else class="card">
+      <div class="flex flex-col items-center py-16 text-center px-6">
+        <div class="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-2xl flex items-center justify-center mb-4">
+          <AppIcon icon="image" class="w-8 h-8 text-primary-600 dark:text-primary-400" />
         </div>
-        <p class="empty-state-title">No photos yet</p>
-        <p class="empty-state-desc">Upload photos to showcase your venue to potential clients</p>
-        <label class="btn-primary mt-4 gap-2 cursor-pointer">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-          </svg>
+        <h3 class="text-lg font-semibold text-warm-800 dark:text-warm-100">No photos yet</h3>
+        <p class="text-warm-500 dark:text-warm-400 mt-1 max-w-xs text-sm">Upload photos to showcase your venue to potential clients.</p>
+        <label class="btn-primary mt-5 cursor-pointer gap-1.5">
+          <AppIcon icon="upload" class="w-4 h-4" />
           Upload Photos
           <input type="file" multiple accept="image/*" class="hidden" @change="handleUpload" />
         </label>
@@ -151,38 +122,19 @@
     </div>
 
     <!-- Delete Confirm Modal -->
-    <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
-      <div class="modal max-w-sm">
-        <div class="modal-header">
-          <h3 class="modal-title">Delete Image</h3>
-          <button @click="deleteTarget = null" class="btn-ghost btn-icon">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body">
-          <img
-            :src="imageUrl(deleteTarget.path)"
-            class="w-full h-40 object-cover rounded-lg mb-4"
-            :alt="deleteTarget.alt_text ?? undefined"
-          />
-          <p class="text-sm text-surface-600">
-            Are you sure you want to delete this image? This action cannot be undone.
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button @click="deleteTarget = null" class="btn-ghost">Cancel</button>
-          <button @click="confirmDelete" :disabled="deleting" class="btn-danger gap-2">
-            <svg v-if="deleting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            {{ deleting ? 'Deleting...' : 'Delete' }}
-          </button>
-        </div>
+    <VuexyModal v-model:visible="showDeleteModal" title="Delete Image" width="28rem">
+      <div v-if="deleteTarget">
+        <img :src="imageUrl(deleteTarget.path)" class="w-full rounded-2xl mb-4 h-40 object-cover" :alt="deleteTarget.alt_text ?? undefined" />
+        <p class="text-warm-500 dark:text-warm-400 text-sm">Are you sure you want to delete this image? This action cannot be undone.</p>
       </div>
-    </div>
+      <template #footer>
+        <button class="btn-ghost" @click="showDeleteModal = false">Cancel</button>
+        <button class="btn-danger gap-1.5" :disabled="deleting" @click="confirmDelete">
+          <AppIcon v-if="deleting" icon="loader" class="w-4 h-4 animate-spin" />
+          {{ deleting ? 'Deleting...' : 'Delete' }}
+        </button>
+      </template>
+    </VuexyModal>
   </div>
 </template>
 
@@ -191,6 +143,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
+import VuexyModal from '@/components/ui/VuexyModal.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 interface VenueImage {
   id: number
@@ -217,6 +171,7 @@ const uploadCount = ref(0)
 const actionId    = ref<number | null>(null)
 const deleting    = ref(false)
 const deleteTarget = ref<VenueImage | null>(null)
+const showDeleteModal = ref(false)
 const successMsg  = ref('')
 const errorMsg    = ref('')
 
@@ -287,6 +242,7 @@ function setPrimary(image: VenueImage) {
 
 function deleteImage(image: VenueImage) {
   deleteTarget.value = image
+  showDeleteModal.value = true
 }
 
 async function confirmDelete() {
@@ -296,6 +252,7 @@ async function confirmDelete() {
     await api.delete(`/store/venues/${venueId}/images/${deleteTarget.value.id}`)
     showSuccess('Image deleted.')
     deleteTarget.value = null
+    showDeleteModal.value = false
     await loadVenue()
   } catch {
     showError('Failed to delete image.')
@@ -306,3 +263,8 @@ async function confirmDelete() {
 
 onMounted(loadVenue)
 </script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>

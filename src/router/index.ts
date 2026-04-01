@@ -80,6 +80,12 @@ const router = createRouter({
       component: () => import('@/views/MessagesView.vue'),
       meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
+    {
+      path: '/customer/notifications',
+      name: 'customer-notifications',
+      component: () => import('@/views/NotificationsView.vue'),
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
+    },
 
     // ── PayFast Payment (SANDBOX) ─────────────────────────────────────────
     {
@@ -168,6 +174,12 @@ const router = createRouter({
       component: () => import('@/views/MessagesView.vue'),
       meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
+    {
+      path: '/shop/notifications',
+      name: 'shop-notifications',
+      component: () => import('@/views/NotificationsView.vue'),
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
+    },
 
     // ── Support (was Admin Panel) ────────────────────────────────────────
     {
@@ -225,18 +237,17 @@ const router = createRouter({
       meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
     {
+      path: '/support/notifications',
+      name: 'support-notifications',
+      component: () => import('@/views/NotificationsView.vue'),
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
+    },
+    {
       path: '/support/categories',
       name: 'support-categories',
       component: () => import('@/views/admin/CategoriesView.vue'),
       meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
-    {
-      path: '/support/locations',
-      name: 'support-locations',
-      component: () => import('@/views/admin/LocationsView.vue'),
-      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
-    },
-
     // ── Catch-all ─────────────────────────────────────────────────────────
     {
       path: '/:pathMatch(.*)*',

@@ -2,8 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/lib/axios'
 import { getEcho, updateEchoAuth, disconnectEcho, isEchoConnected } from '@/lib/echo'
-import { soundService } from '@/services/soundService'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notifications'
 import type { Channel } from 'laravel-echo'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -99,17 +99,22 @@ export const useChatStore = defineStore('chat', () => {
   const connectionStatus = ref<'disconnected' | 'connecting' | 'connected'>('disconnected')
   const typingUsers = ref<Map<number, { userId: number; userName: string; timeout: ReturnType<typeof setTimeout> }>>(new Map())
   const onlineUserIds = ref<Set<number>>(new Set())
+  const connectedUserId = ref<number | null>(null)
 
   // Deduplication
   const processedMessageIds = ref<Set<number>>(new Set())
 
   // Echo channel references
   const subscribedChatChannels = ref<Set<number>>(new Set())
+  const chatChannels = ref<Map<number, Channel>>(new Map())
   let userChannel: Channel | null = null
   let onlineChannel: Channel | null = null
+  let connectionWatchdog: ReturnType<typeof setTimeout> | null = null
 
   // ── Computed ─────────────────────────────────────────────────────────
   const currentChat = computed(() => chats.value.find(c => c.id === currentChatId.value) || null)
+  const currentConversation = computed(() => currentChat.value)
+  const currentConversationId = computed(() => currentChatId.value)
 
   const sortedChats = computed(() => {
     return [...chats.value].sort((a, b) => {
@@ -124,6 +129,8 @@ export const useChatStore = defineStore('chat', () => {
   })
 
   const totalUnread = computed(() => chats.value.reduce((sum, c) => sum + c.unread_count, 0))
+  const totalUnreadCount = computed(() => totalUnread.value)
+  const conversations = computed(() => sortedChats.value)
 
   const currentTypingUsers = computed(() => {
     const result: { userId: number; userName: string }[] = []
@@ -139,23 +146,55 @@ export const useChatStore = defineStore('chat', () => {
     const auth = useAuthStore()
     if (!auth.user || !auth.token) return
 
+    // Avoid duplicate listeners and channel subscriptions for the same user session.
+    if (connectedUserId.value === auth.user.id && userChannel && (connectionStatus.value === 'connected' || connectionStatus.value === 'connecting')) {
+      return
+    }
+
+    // If user changed, reset old connection fully first.
+    if (connectedUserId.value && connectedUserId.value !== auth.user.id) {
+      disconnect()
+    }
+
     connectionStatus.value = 'connecting'
+    connectedUserId.value = auth.user.id
     updateEchoAuth()
 
     const echo = getEcho()
 
-    // Monitor connection state
+    if (connectionWatchdog) clearTimeout(connectionWatchdog)
+    connectionWatchdog = setTimeout(() => {
+      if (connectionStatus.value === 'connecting') {
+        connectionStatus.value = 'disconnected'
+      }
+    }, 10000)
+
+    // Monitor connection state via Pusher
     const pusher = (echo.connector as any).pusher
     if (pusher) {
-      pusher.connection.bind('connected', () => {
+      // Use state_change to catch ALL transitions including ones already fired
+      pusher.connection.bind('state_change', (states: { current: string; previous: string }) => {
+        if (states.current === 'connected') {
+          connectionStatus.value = 'connected'
+          if (connectionWatchdog) {
+            clearTimeout(connectionWatchdog)
+            connectionWatchdog = null
+          }
+        } else if (states.current === 'disconnected' || states.current === 'failed' || states.current === 'unavailable') {
+          connectionStatus.value = 'disconnected'
+        } else if (states.current === 'connecting') {
+          connectionStatus.value = 'connecting'
+        }
+      })
+
+      // Check if ALREADY connected (event may have fired before bind)
+      if (pusher.connection?.state === 'connected') {
         connectionStatus.value = 'connected'
-      })
-      pusher.connection.bind('disconnected', () => {
-        connectionStatus.value = 'disconnected'
-      })
-      pusher.connection.bind('error', () => {
-        connectionStatus.value = 'disconnected'
-      })
+        if (connectionWatchdog) {
+          clearTimeout(connectionWatchdog)
+          connectionWatchdog = null
+        }
+      }
     }
 
     // Subscribe to user's private channel (for personal notifications)
@@ -178,34 +217,19 @@ export const useChatStore = defineStore('chat', () => {
         onlineUserIds.value.delete(user.id)
         updateOnlineStatus()
       })
-
-    // Start heartbeat
-    startHeartbeat()
   }
 
   function disconnect() {
     disconnectEcho()
     subscribedChatChannels.value.clear()
+    chatChannels.value.clear()
     userChannel = null
     onlineChannel = null
     connectionStatus.value = 'disconnected'
-    stopHeartbeat()
-  }
-
-  // ── Heartbeat ────────────────────────────────────────────────────────
-  let heartbeatInterval: ReturnType<typeof setInterval> | null = null
-
-  function startHeartbeat() {
-    stopHeartbeat()
-    heartbeatInterval = setInterval(() => {
-      api.post('/nexus/heartbeat').catch(() => {})
-    }, 60000) // Every 60 seconds
-  }
-
-  function stopHeartbeat() {
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval)
-      heartbeatInterval = null
+    connectedUserId.value = null
+    if (connectionWatchdog) {
+      clearTimeout(connectionWatchdog)
+      connectionWatchdog = null
     }
   }
 
@@ -230,11 +254,13 @@ export const useChatStore = defineStore('chat', () => {
       .listen('.message.updated', (e: any) => {
         handleMessageUpdate(e)
       })
-      .listen('.user.typing', (e: any) => {
-        handleTypingEvent(e)
-      })
+
+    ;(channel as any).listenForWhisper?.('typing', (payload: any) => {
+      handleTypingEvent(payload)
+    })
 
     subscribedChatChannels.value.add(chatId)
+    chatChannels.value.set(chatId, channel)
   }
 
   function unsubscribeFromChatChannel(chatId: number) {
@@ -242,6 +268,7 @@ export const useChatStore = defineStore('chat', () => {
     const echo = getEcho()
     echo.leave(`chat.${chatId}`)
     subscribedChatChannels.value.delete(chatId)
+    chatChannels.value.delete(chatId)
   }
 
   // ── Online status ────────────────────────────────────────────────────
@@ -260,19 +287,34 @@ export const useChatStore = defineStore('chat', () => {
 
   // ── Fetch Chats ──────────────────────────────────────────────────────
 
-  async function fetchChats() {
-    loading.value = true
+  async function fetchChats(options?: { silent?: boolean }) {
+    if (!options?.silent) loading.value = true
     try {
       const { data } = await api.get('/nexus/chats')
       chats.value = data.data
 
       // Subscribe to all chat channels
       chats.value.forEach(chat => subscribeToChatChannel(chat.id))
+      updateOnlineStatus()
     } catch (err) {
       console.error('Failed to fetch chats:', err)
     } finally {
-      loading.value = false
+      if (!options?.silent) loading.value = false
     }
+  }
+
+  // Backward-compatible aliases (older components/composables still call these names).
+  async function fetchConversations() {
+    await fetchChats()
+  }
+
+  async function getOrCreateConversation(userId: number): Promise<number | null> {
+    const chat = await getOrCreateChat(userId)
+    return chat?.id ?? null
+  }
+
+  function clearCurrentConversation() {
+    deselectChat()
   }
 
   // ── Create / Get Chat ────────────────────────────────────────────────
@@ -323,8 +365,8 @@ export const useChatStore = defineStore('chat', () => {
 
   // ── Fetch Messages ───────────────────────────────────────────────────
 
-  async function fetchMessages(chatId: number, before?: number) {
-    messagesLoading.value = true
+  async function fetchMessages(chatId: number, before?: number, options?: { silent?: boolean }) {
+    if (!options?.silent) messagesLoading.value = true
     try {
       const params: any = { limit: 50 }
       if (before) params.before = before
@@ -344,7 +386,7 @@ export const useChatStore = defineStore('chat', () => {
     } catch (err) {
       console.error('Failed to fetch messages:', err)
     } finally {
-      messagesLoading.value = false
+      if (!options?.silent) messagesLoading.value = false
     }
   }
 
@@ -523,18 +565,36 @@ export const useChatStore = defineStore('chat', () => {
   let typingTimeout: ReturnType<typeof setTimeout> | null = null
 
   function emitTyping(chatId: number) {
-    api.post(`/nexus/chats/${chatId}/typing`, { is_typing: true }).catch(() => {})
+    const auth = useAuthStore()
+    const channel = chatChannels.value.get(chatId) as any
+    if (!auth.user || !channel?.whisper) return
+
+    channel.whisper('typing', {
+      chat_id: chatId,
+      user_id: auth.user.id,
+      user_name: auth.user.name,
+      is_typing: true,
+    })
 
     // Auto-stop after 3 seconds
     if (typingTimeout) clearTimeout(typingTimeout)
     typingTimeout = setTimeout(() => {
-      api.post(`/nexus/chats/${chatId}/typing`, { is_typing: false }).catch(() => {})
+      stopTyping(chatId)
     }, 3000)
   }
 
   function stopTyping(chatId: number) {
     if (typingTimeout) clearTimeout(typingTimeout)
-    api.post(`/nexus/chats/${chatId}/typing`, { is_typing: false }).catch(() => {})
+    const auth = useAuthStore()
+    const channel = chatChannels.value.get(chatId) as any
+    if (!auth.user || !channel?.whisper) return
+
+    channel.whisper('typing', {
+      chat_id: chatId,
+      user_id: auth.user.id,
+      user_name: auth.user.name,
+      is_typing: false,
+    })
   }
 
   // ── Search Users ─────────────────────────────────────────────────────
@@ -571,10 +631,9 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function handleChatNotification(event: any) {
-    const auth = useAuthStore()
-
     if (event.type === 'new_message') {
       const data = event.data
+      const notificationStore = useNotificationStore()
 
       // Update unread count (if not viewing that chat)
       if (data.chat_id !== currentChatId.value) {
@@ -595,8 +654,16 @@ export const useChatStore = defineStore('chat', () => {
 
         // Play sound + browser notification
         if (!chat?.is_muted) {
-          soundService.playMessage()
-          showBrowserNotification(data.sender_name, data.body || '[Attachment]', data.chat_id)
+          notificationStore.showChatMessageNotification(
+            data.sender_name,
+            data.body || '[Attachment]',
+            data.chat_id,
+          )
+        }
+
+        // If this chat is not in memory yet, refresh list in background.
+        if (!chat) {
+          void fetchChats({ silent: true })
         }
       }
     } else if (event.type === 'chat_created') {
@@ -700,30 +767,8 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // ── Browser Notifications ────────────────────────────────────────────
-
-  function showBrowserNotification(title: string, body: string, chatId: number) {
-    if (!('Notification' in window)) return
-    if (Notification.permission !== 'granted') return
-    if (document.hasFocus() && currentChatId.value === chatId) return
-
-    const notification = new Notification(title, {
-      body,
-      icon: '/favicon.ico',
-      tag: `chat-${chatId}`,
-    })
-
-    notification.onclick = () => {
-      window.focus()
-      selectChat(chatId)
-      notification.close()
-    }
-  }
-
   function requestNotificationPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
+    useNotificationStore().requestBrowserPermission()
   }
 
   // ── Reset ────────────────────────────────────────────────────────────
@@ -755,17 +800,24 @@ export const useChatStore = defineStore('chat', () => {
 
     // Computed
     currentChat,
+    currentConversation,
     sortedChats,
+    conversations,
     totalUnread,
+    totalUnreadCount,
     currentTypingUsers,
+    currentConversationId,
 
     // Methods
     connect,
     disconnect,
     fetchChats,
+    fetchConversations,
     getOrCreateChat,
+    getOrCreateConversation,
     selectChat,
     deselectChat,
+    clearCurrentConversation,
     fetchMessages,
     loadOlderMessages,
     sendMessage,

@@ -3,7 +3,9 @@ import { detectPortalFromPath, getToken, setToken, removeToken } from '@/lib/por
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
-  withCredentials: true,
+  // JWT is sent via Authorization header; cookies are not required.
+  // Keeping credentials disabled prevents stricter CORS credential checks.
+  withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -14,7 +16,11 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const portal = detectPortalFromPath(window.location.pathname)
   const token = getToken(portal)
-  if (token) {
+  const url = String(config.url || '')
+  const isPublicAuthEndpoint = /^\/?auth\/(login|register|forgot-password|reset-password)/.test(url)
+
+  // Do not attach stale Authorization headers to public auth endpoints.
+  if (token && !isPublicAuthEndpoint) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config

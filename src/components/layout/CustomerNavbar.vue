@@ -19,7 +19,11 @@
         </RouterLink>
         <RouterLink to="/customer/messages" class="customer-nav-link" :class="{ active: route.path.startsWith('/customer/messages') }">
           Messages
-          <span v-if="notifStore.unreadCount > 0" class="customer-nav-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
+          <span v-if="chatUnreadCount > 0" class="customer-nav-badge">{{ chatUnreadCount > 99 ? '99+' : chatUnreadCount }}</span>
+        </RouterLink>
+        <RouterLink to="/customer/notifications" class="customer-nav-link" :class="{ active: route.path.startsWith('/customer/notifications') }">
+          Notifications
+          <span v-if="generalNotifUnreadCount > 0" class="customer-nav-badge">{{ generalNotifUnreadCount > 99 ? '99+' : generalNotifUnreadCount }}</span>
         </RouterLink>
       </div>
 
@@ -27,24 +31,20 @@
       <div class="customer-navbar-actions">
         <!-- Theme toggle -->
         <button @click="showThemeCustomizer = true" class="customer-navbar-icon-btn" title="Theme">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-          </svg>
+          <AppIcon icon="sun" class="w-5 h-5" />
         </button>
 
         <!-- Notifications -->
         <div class="relative" ref="notifRef">
           <button @click="toggleNotif" class="customer-navbar-icon-btn" aria-label="Notifications">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-            </svg>
-            <span v-if="notifStore.unreadCount > 0" class="customer-navbar-notif-badge">{{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}</span>
+            <AppIcon icon="bell" class="w-5 h-5" />
+            <span v-if="generalNotifUnreadCount > 0" class="customer-navbar-notif-badge">{{ generalNotifUnreadCount > 99 ? '99+' : generalNotifUnreadCount }}</span>
           </button>
           <Transition name="dropdown">
             <div v-if="showNotif" class="customer-navbar-dropdown notif-dropdown">
-              <div class="flex items-center justify-between p-3" style="border-bottom: 1px solid var(--color-border)">
+              <div class="flex items-center justify-between p-3" style="border-bottom: 1px solid var(--color-border-light)">
                 <span class="font-semibold text-sm" style="color: var(--color-text)">Notifications</span>
-                <button v-if="notifStore.unreadCount > 0" @click="notifStore.markAllRead()" class="text-xs font-medium" style="color: var(--color-primary)">Mark all read</button>
+                <button v-if="generalNotifUnreadCount > 0" @click="notifStore.markAllRead()" class="text-xs font-medium" style="color: var(--color-primary)">Mark all read</button>
               </div>
               <div class="max-h-80 overflow-y-auto">
                 <div v-if="!notifStore.notifications.length" class="p-6 text-center text-sm" style="color: var(--color-text-muted)">No notifications yet</div>
@@ -53,17 +53,23 @@
                   :key="n.id"
                   @click="handleNotifClick(n)"
                   class="flex gap-3 p-3 cursor-pointer transition-colors"
-                  :style="{ borderBottom: '1px solid var(--color-border-light)', background: !n.is_read ? 'rgba(245,158,11,0.04)' : 'transparent' }"
+                  :style="{ borderBottom: '1px solid var(--color-border-light)', background: !n.is_read ? 'rgba(16,185,129,0.06)' : 'transparent' }"
                   @mouseenter="($event.currentTarget as HTMLElement).style.background = 'var(--color-bg-hover)'"
-                  @mouseleave="($event.currentTarget as HTMLElement).style.background = !n.is_read ? 'rgba(245,158,11,0.04)' : 'transparent'"
+                  @mouseleave="($event.currentTarget as HTMLElement).style.background = !n.is_read ? 'rgba(16,185,129,0.06)' : 'transparent'"
                 >
-                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-lg flex-shrink-0" style="background: rgba(245,158,11,0.1)">{{ notifStore.iconForType(n.type) }}</div>
+                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-lg flex-shrink-0" style="background: rgba(16,185,129,0.12)">{{ notifStore.iconForType(n.type) }}</div>
                   <div class="min-w-0 flex-1">
                     <p class="text-sm" :style="{ fontWeight: !n.is_read ? '600' : '400', color: 'var(--color-text)' }">{{ n.title }}</p>
                     <p class="text-xs truncate" style="color: var(--color-text-secondary)">{{ n.body }}</p>
                     <p class="text-xs mt-0.5" style="color: var(--color-text-muted)">{{ notifStore.timeAgo(n.created_at) }}</p>
                   </div>
                 </div>
+              </div>
+              <div class="p-3" style="border-top: 1px solid var(--color-border-light)">
+                <RouterLink to="/customer/notifications" @click="showNotif = false" class="customer-dropdown-item">
+                  <AppIcon icon="bell" class="w-4 h-4" />
+                  View all notifications
+                </RouterLink>
               </div>
             </div>
           </Transition>
@@ -77,14 +83,12 @@
               <span v-else>{{ userInitials }}</span>
             </div>
             <span class="customer-navbar-profile-name hidden sm:inline">{{ authStore.user?.name?.split(' ')[0] }}</span>
-            <svg class="w-4 h-4 hidden sm:block" style="color: var(--color-text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
+            <AppIcon icon="chevron-down" class="w-4 h-4 hidden sm:block" style="color: var(--color-text-muted)" />
           </button>
           <Transition name="dropdown">
             <div v-if="showProfile" class="customer-navbar-dropdown profile-dropdown">
-              <div class="p-4 flex items-center gap-3" style="border-bottom: 1px solid var(--color-border)">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center font-semibold overflow-hidden" style="background: rgba(245,158,11,0.1); color: var(--color-primary)">
+              <div class="p-4 flex items-center gap-3" style="border-bottom: 1px solid var(--color-border-light)">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center font-semibold overflow-hidden" style="background: rgba(16,185,129,0.12); color: var(--color-primary)">
                   <img v-if="avatarUrl" :src="avatarUrl" alt="" class="w-full h-full object-cover" />
                   <span v-else>{{ userInitials }}</span>
                 </div>
@@ -95,29 +99,25 @@
               </div>
               <div class="p-1.5">
                 <RouterLink to="/customer/profile" @click="showProfile = false" class="customer-dropdown-item">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                  </svg>
+                  <AppIcon icon="user" class="w-4 h-4" />
                   My Profile
                 </RouterLink>
                 <RouterLink to="/customer/bookings" @click="showProfile = false" class="customer-dropdown-item">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                  </svg>
+                  <AppIcon icon="calendar-event" class="w-4 h-4" />
                   My Bookings
                 </RouterLink>
                 <RouterLink to="/customer/messages" @click="showProfile = false" class="customer-dropdown-item">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                  </svg>
+                  <AppIcon icon="message" class="w-4 h-4" />
                   Messages
                 </RouterLink>
+                <RouterLink to="/customer/notifications" @click="showProfile = false" class="customer-dropdown-item">
+                  <AppIcon icon="bell" class="w-4 h-4" />
+                  Notifications
+                </RouterLink>
               </div>
-              <div class="p-1.5" style="border-top: 1px solid var(--color-border)">
+              <div class="p-1.5" style="border-top: 1px solid var(--color-border-light)">
                 <button @click="logout" class="customer-dropdown-item customer-dropdown-logout w-full text-left">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                  </svg>
+                  <AppIcon icon="logout" class="w-4 h-4" />
                   Sign Out
                 </button>
               </div>
@@ -127,12 +127,8 @@
 
         <!-- Mobile menu toggle -->
         <button @click="mobileOpen = !mobileOpen" class="customer-navbar-icon-btn sm:hidden" aria-label="Menu">
-          <svg v-if="!mobileOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-          </svg>
-          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
+          <AppIcon v-if="!mobileOpen" icon="menu-2" class="w-5 h-5" />
+          <AppIcon v-else icon="x" class="w-5 h-5" />
         </button>
       </div>
     </div>
@@ -145,7 +141,11 @@
         <RouterLink to="/customer/bookings" @click="mobileOpen = false" class="customer-mobile-link" :class="{ active: route.path.startsWith('/customer/bookings') }">My Bookings</RouterLink>
         <RouterLink to="/customer/messages" @click="mobileOpen = false" class="customer-mobile-link" :class="{ active: route.path.startsWith('/customer/messages') }">
           Messages
-          <span v-if="notifStore.unreadCount > 0" class="customer-nav-badge ml-auto">{{ notifStore.unreadCount }}</span>
+          <span v-if="chatUnreadCount > 0" class="customer-nav-badge ml-auto">{{ chatUnreadCount }}</span>
+        </RouterLink>
+        <RouterLink to="/customer/notifications" @click="mobileOpen = false" class="customer-mobile-link" :class="{ active: route.path.startsWith('/customer/notifications') }">
+          Notifications
+          <span v-if="generalNotifUnreadCount > 0" class="customer-nav-badge ml-auto">{{ generalNotifUnreadCount }}</span>
         </RouterLink>
         <RouterLink to="/customer/profile" @click="mobileOpen = false" class="customer-mobile-link" :class="{ active: route.path.startsWith('/customer/profile') }">Profile</RouterLink>
       </div>
@@ -160,12 +160,15 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
+import { useChatStore } from '@/stores/chat'
 import ThemeCustomizer from '@/components/theme/ThemeCustomizer.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
+const chatStore = useChatStore()
 
 const showNotif = ref(false)
 const showProfile = ref(false)
@@ -186,6 +189,8 @@ function getAvatarUrl(path: string | undefined): string | null {
   return p.startsWith('storage/') ? `${base}/${p}` : `${base}/storage/${p}`
 }
 const avatarUrl = computed(() => getAvatarUrl(authStore.user?.avatar))
+const chatUnreadCount = computed(() => chatStore.totalUnreadCount)
+const generalNotifUnreadCount = computed(() => notifStore.unreadCount)
 
 function toggleNotif() {
   showNotif.value = !showNotif.value
@@ -228,9 +233,11 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--color-bg-elevated);
-  border-bottom: 1px solid var(--color-border);
-  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--color-bg-elevated) 88%, transparent);
+  border-bottom: 1px solid var(--color-border-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.05);
 }
 
 .customer-navbar-inner {
@@ -243,7 +250,13 @@ onUnmounted(() => {
   padding: 0 1.5rem;
 }
 
-/* Logo */
+@media (max-width: 640px) {
+  .customer-navbar-inner {
+    height: 56px;
+    padding: 0 1rem;
+  }
+}
+
 .customer-navbar-logo {
   display: flex;
   align-items: center;
@@ -256,8 +269,8 @@ onUnmounted(() => {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-primary-dark, #d97706), var(--color-primary, #f59e0b));
-  color: #1a1a00;
+  background: linear-gradient(135deg, #10B981, #34D399);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -270,7 +283,6 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-/* Nav links */
 .customer-navbar-links {
   display: none;
   align-items: center;
@@ -289,7 +301,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.375rem;
   padding: 0.5rem 0.875rem;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-secondary);
@@ -304,7 +316,7 @@ onUnmounted(() => {
 
 .customer-nav-link.active {
   color: var(--color-primary);
-  background: rgba(245, 158, 11, 0.08);
+  background: rgba(16, 185, 129, 0.1);
   font-weight: 600;
 }
 
@@ -315,14 +327,13 @@ onUnmounted(() => {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  background: #ef4444;
+  background: #F97066;
   color: white;
   font-size: 0.625rem;
   font-weight: 700;
   border-radius: 9px;
 }
 
-/* Actions */
 .customer-navbar-actions {
   display: flex;
   align-items: center;
@@ -333,7 +344,7 @@ onUnmounted(() => {
   position: relative;
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 0.75rem;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
@@ -356,7 +367,7 @@ onUnmounted(() => {
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  background: #ef4444;
+  background: #F97066;
   color: white;
   font-size: 0.5625rem;
   font-weight: 700;
@@ -366,7 +377,6 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-/* Profile button */
 .customer-navbar-profile-btn {
   display: flex;
   align-items: center;
@@ -374,14 +384,14 @@ onUnmounted(() => {
   padding: 0.25rem;
   padding-right: 0.625rem;
   border-radius: 2rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-light);
   background: var(--color-bg-card);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .customer-navbar-profile-btn:hover {
-  border-color: rgba(245, 158, 11, 0.3);
+  border-color: rgba(16, 185, 129, 0.3);
   background: var(--color-bg-hover);
 }
 
@@ -389,13 +399,13 @@ onUnmounted(() => {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #d97706, #f59e0b);
+  background: linear-gradient(135deg, #10B981, #34D399);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 0.6875rem;
-  color: #1a1a00;
+  color: white;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -406,22 +416,29 @@ onUnmounted(() => {
   color: var(--color-text);
 }
 
-/* Dropdowns */
 .customer-navbar-dropdown {
   position: absolute;
   top: calc(100% + 8px);
+  left: auto;
   right: 0;
-  min-width: 300px;
+  width: min(340px, calc(100vw - 1rem));
+  max-width: calc(100vw - 1rem);
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--color-border-light);
+  border-radius: 1rem;
+  box-shadow: 0 20px 48px rgba(28, 25, 23, 0.1), 0 8px 16px rgba(28, 25, 23, 0.06);
   z-index: 100;
   overflow: hidden;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.notif-dropdown {
+  width: min(340px, calc(100vw - 1rem));
 }
 
 .profile-dropdown {
-  min-width: 240px;
+  width: min(260px, calc(100vw - 1rem));
 }
 
 .customer-dropdown-item {
@@ -429,7 +446,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.625rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 8px;
+  border-radius: 0.75rem;
   color: var(--color-text-secondary);
   text-decoration: none;
   font-size: 0.8125rem;
@@ -445,21 +462,22 @@ onUnmounted(() => {
 }
 
 .customer-dropdown-logout {
-  color: var(--danger-text);
+  color: #F97066;
 }
 
 .customer-dropdown-logout:hover {
-  background: var(--danger-bg);
-  color: var(--danger-text);
+  background: rgba(249, 112, 102, 0.08);
+  color: #F97066;
 }
 
-/* Mobile nav */
 .customer-navbar-mobile {
   display: flex;
   flex-direction: column;
   padding: 0.5rem;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-light);
   background: var(--color-bg-elevated);
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 @media (min-width: 768px) {
@@ -472,7 +490,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text-secondary);
@@ -487,11 +505,10 @@ onUnmounted(() => {
 
 .customer-mobile-link.active {
   color: var(--color-primary);
-  background: rgba(245, 158, 11, 0.08);
+  background: rgba(16, 185, 129, 0.1);
   font-weight: 600;
 }
 
-/* Transitions */
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;

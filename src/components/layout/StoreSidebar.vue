@@ -1,123 +1,75 @@
 <template>
-  <aside class="sidebar" :class="{ 'sidebar-collapsed': collapsed }">
-    <!-- Logo -->
-    <div class="sidebar-logo">
-      <div class="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center shadow-glow-sm flex-shrink-0">
-        <span class="text-white font-bold text-sm">EG</span>
-      </div>
-      <Transition name="label">
-        <div v-if="!collapsed" class="sidebar-logo-text">
-          <span class="text-base font-bold leading-none">EventGenius</span>
-          <p class="text-2xs mt-0.5 uppercase tracking-wider opacity-80">Shop Panel</p>
+  <aside
+    class="fixed top-3 left-3 bottom-3 z-40 flex flex-col bg-white dark:bg-warm-800 border border-warm-200 dark:border-warm-700 rounded-2xl shadow-float transition-all duration-300 ease-out lg:translate-x-0 overflow-hidden"
+    :class="[
+      collapsed ? 'w-[4.5rem]' : 'w-64',
+      sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+1rem)]'
+    ]"
+  >
+    <div class="flex items-center h-14 px-3 border-b border-warm-200 dark:border-warm-700 shrink-0">
+      <RouterLink to="/shop/dashboard" class="flex items-center gap-2 min-w-0 flex-1">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center shadow-md shadow-primary-500/20 shrink-0">
+          <span class="text-white font-extrabold text-xs">EG</span>
         </div>
-      </Transition>
+        <span v-show="!collapsed" class="font-bold text-warm-800 dark:text-white truncate">EventGenius</span>
+      </RouterLink>
     </div>
 
-    <!-- Navigation -->
-    <nav class="sidebar-nav">
-      <p v-if="!collapsed" class="sidebar-section-label">Main</p>
-
+    <nav class="flex-1 overflow-y-auto scrollbar-thin py-3">
+      <p v-show="!collapsed" class="px-3 text-xs font-semibold uppercase tracking-wider text-warm-400 dark:text-warm-500 mb-1">Main</p>
       <RouterLink
         v-for="item in mainNav"
         :key="item.to"
         :to="item.to"
-        class="sidebar-link"
-        :class="{ active: isActive(item.to) }"
-        :title="collapsed ? item.label : undefined"
+        class="flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl text-warm-600 dark:text-warm-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors duration-150"
+        :class="{ 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium': isActive(item.to) }"
       >
-        <span class="sidebar-link-icon" v-html="item.icon"></span>
-        <Transition name="label">
-          <span v-if="!collapsed" class="sidebar-link-label">{{ item.label }}</span>
-        </Transition>
-        <Transition name="label">
-          <span v-if="!collapsed && item.badge" class="sidebar-badge">{{ item.badge }}</span>
-        </Transition>
-        <span v-if="collapsed && item.badge" class="sidebar-badge-dot"></span>
+        <span class="relative shrink-0">
+          <AppIcon :icon="item.icon" class="w-5 h-5" />
+          <span v-if="item.badge && collapsed" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[10px] font-bold rounded-full bg-red-500 text-white">{{ item.badge }}</span>
+        </span>
+        <span v-show="!collapsed" class="flex-1 truncate">{{ item.label }}</span>
+        <span v-if="item.badge && !collapsed" class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-500 text-white">{{ item.badge }}</span>
       </RouterLink>
-
-      <!-- CTA when expanded -->
-      <Transition name="label">
-        <div v-if="!collapsed" class="mt-4 px-2">
-          <RouterLink to="/shop/venues/create" class="sidebar-cta-btn">
-            <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Add Venue
-          </RouterLink>
-        </div>
-      </Transition>
+      <RouterLink
+        to="/shop/venues/create"
+        class="flex items-center gap-3 px-3 py-2.5 mx-2 mt-2 rounded-xl text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors duration-150"
+      >
+        <AppIcon icon="plus" class="w-5 h-5 shrink-0" />
+        <span v-show="!collapsed">Add Venue</span>
+      </RouterLink>
     </nav>
-
-    <!-- Footer -->
-    <div class="sidebar-footer">
-      <button @click="logout" class="sidebar-logout" :title="collapsed ? 'Sign Out' : undefined">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-        </svg>
-        <Transition name="label">
-          <span v-if="!collapsed">Sign Out</span>
-        </Transition>
-      </button>
-    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
+import { useChatStore } from '@/stores/chat'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 const props = defineProps<{ collapsed?: boolean }>()
-const emit  = defineEmits<{ 'update:collapsed': [value: boolean] }>()
+const emit = defineEmits<{ 'update:collapsed': [value: boolean] }>()
 
-const authStore  = useAuthStore()
 const notifStore = useNotificationStore()
-const route      = useRoute()
-const router     = useRouter()
+const chatStore = useChatStore()
+const route = useRoute()
 
-const mainNav = [
-  {
-    to: '/shop/dashboard', label: 'Dashboard',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>`,
-    badge: undefined as number | undefined,
-  },
-  {
-    to: '/shop/venues', label: 'My Venues',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-    badge: undefined as number | undefined,
-  },
-  {
-    to: '/shop/bookings', label: 'Bookings',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
-    get badge() { return notifStore.unreadCount > 0 ? notifStore.unreadCount : undefined },
-  },
-  {
-    to: '/shop/messages', label: 'Messages',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`,
-    badge: undefined as number | undefined,
-  },
-  {
-    to: '/shop/landing', label: 'Landing Page',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>`,
-    badge: undefined as number | undefined,
-  },
-  {
-    to: '/shop/profile', label: 'My Profile',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`,
-    badge: undefined as number | undefined,
-  },
-]
+const sidebarOpen = computed(() => !props.collapsed)
 
-function isActive(path: string) { return route.path.startsWith(path) }
+const mainNav = computed(() => [
+  { to: '/shop/dashboard', label: 'Dashboard', icon: 'layout-grid', badge: undefined },
+  { to: '/shop/venues', label: 'My Venues', icon: 'map-pin', badge: undefined },
+  { to: '/shop/bookings', label: 'Bookings', icon: 'calendar-event', badge: notifStore.bookingUnreadCount > 0 ? notifStore.bookingUnreadCount : undefined },
+  { to: '/shop/messages', label: 'Messages', icon: 'message', badge: chatStore.totalUnreadCount > 0 ? chatStore.totalUnreadCount : undefined },
+  { to: '/shop/notifications', label: 'Notifications', icon: 'bell', badge: notifStore.unreadCount > 0 ? notifStore.unreadCount : undefined },
+  { to: '/shop/landing', label: 'Landing Page', icon: 'layout-kanban', badge: undefined },
+  { to: '/shop/profile', label: 'My Profile', icon: 'user', badge: undefined },
+])
 
-async function logout() {
-  await authStore.logout()
-  router.push('/shop/sign-in')
+function isActive(path: string) {
+  return route.path.startsWith(path)
 }
 </script>
-
-<style scoped>
-.label-enter-active, .label-leave-active { transition: opacity 0.15s ease, width 0.2s ease; overflow: hidden; white-space: nowrap; }
-.label-enter-from, .label-leave-to { opacity: 0; }
-</style>

@@ -1,19 +1,19 @@
 <template>
-  <div class="store-profile-page">
+  <div class="store-profile-page font-['DM_Sans']">
     <!-- Loading -->
     <div v-if="loading" class="loading-container">
-      <div class="spinner-lg"></div>
-      <p class="text-sm text-surface-500 mt-4">Loading store profile...</p>
+      <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin"></div>
+      <p class="text-sm text-warm-500 mt-4">Loading store profile...</p>
     </div>
 
     <!-- Error -->
     <div v-else-if="error" class="error-container">
-      <svg class="w-16 h-16 text-danger-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      <h2 class="text-xl font-semibold text-surface-800 mb-2">Store Not Found</h2>
-      <p class="text-surface-600">{{ error }}</p>
-      <RouterLink to="/venues" class="btn-primary mt-6">Browse All Venues</RouterLink>
+      <div class="w-16 h-16 rounded-full bg-coral/10 flex items-center justify-center mx-auto mb-4">
+        <AppIcon icon="alert-circle" class="w-8 h-8 text-coral" />
+      </div>
+      <h5 class="font-semibold text-warm-800 dark:text-warm-200 mb-2">Store Not Found</h5>
+      <p class="text-warm-500">{{ error }}</p>
+      <RouterLink to="/venues" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-soft hover:shadow-elevated">Browse All Venues</RouterLink>
     </div>
 
     <!-- Store Landing Page -->
@@ -29,10 +29,8 @@
           <h1 class="store-hero-name">{{ store.user?.name || store.name }}</h1>
           <p v-if="landing?.tagline" class="store-hero-tagline">{{ landing.tagline }}</p>
           <div class="store-hero-actions">
-            <button @click="startChat" class="hero-btn-primary gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-              </svg>
+            <button @click="startChat" class="store-hero-btn">
+              <AppIcon icon="message-circle" class="w-5 h-5" />
               Contact Store
             </button>
           </div>
@@ -41,7 +39,7 @@
 
       <!-- Stats -->
       <section class="store-stats-row">
-        <div class="max-w-6xl mx-auto px-4 flex flex-wrap justify-center gap-8 sm:gap-16">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-center gap-8 sm:gap-12">
           <div class="stat-item">
             <div class="stat-number">{{ stats?.total_venues || 0 }}</div>
             <div class="stat-text">Venues</div>
@@ -58,76 +56,80 @@
       </section>
 
       <!-- About -->
-      <section v-if="landing?.about_text" class="py-16 px-4">
-        <div class="max-w-4xl mx-auto">
-          <h2 class="text-2xl font-bold text-surface-900 mb-4">About Us</h2>
-          <p class="text-surface-600 leading-relaxed whitespace-pre-line">{{ landing.about_text }}</p>
+      <section v-if="landing?.about_text" class="py-12 px-4">
+        <div class="mx-auto max-w-3xl">
+          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-4">About Us</h4>
+          <p class="text-warm-500 leading-relaxed whitespace-pre-line">{{ landing.about_text }}</p>
         </div>
       </section>
 
       <!-- Services -->
-      <section v-if="landing?.services?.length" class="py-16 px-4" style="background: var(--color-bg-elevated);">
-        <div class="max-w-6xl mx-auto">
-          <h2 class="text-2xl font-bold text-surface-900 mb-8 text-center">Our Services</h2>
+      <section v-if="landing?.services?.length" class="py-12 px-4 bg-warm-50 dark:bg-warm-900/50">
+        <div class="mx-auto max-w-6xl">
+          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">Our Services</h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div v-for="(s, i) in landing.services" :key="i" class="service-card">
-              <h3 class="text-lg font-semibold text-surface-900 mb-2">{{ s.title }}</h3>
-              <p class="text-sm text-surface-500 leading-relaxed">{{ s.description }}</p>
+              <h5 class="font-semibold text-warm-800 dark:text-warm-100 mb-2">{{ s.title }}</h5>
+              <p class="text-sm text-warm-500 mb-0">{{ s.description }}</p>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Venues -->
-      <section v-if="store.venues?.length" class="py-16 px-4">
-        <div class="max-w-6xl mx-auto">
-          <h2 class="text-2xl font-bold text-surface-900 mb-8 text-center">Our Venues</h2>
+      <section v-if="store.venues?.length" class="py-12 px-4">
+        <div class="mx-auto max-w-6xl">
+          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">Our Venues</h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <RouterLink v-for="venue in store.venues" :key="venue.id" :to="`/venues/${venue.id}`" class="venue-card">
-              <div class="venue-card-img">
-                <img v-if="venue.images?.length" :src="getImageUrl(venue.images[0].path)" :alt="venue.name" />
-                <div v-else class="venue-card-placeholder"><span class="text-4xl">🏛️</span></div>
-              </div>
-              <div class="venue-card-body">
-                <h3 class="font-semibold text-surface-900 mb-1">{{ venue.name }}</h3>
-                <p class="text-sm text-surface-500 mb-2">{{ venue.city }}</p>
-                <div class="flex justify-between items-center">
-                  <span class="font-bold" style="color: var(--color-primary)">PKR {{ venue.price_per_head ? Number(venue.price_per_head).toLocaleString() : 'Contact' }}/head</span>
-                  <span class="text-xs text-surface-400">{{ venue.capacity_min }}-{{ venue.capacity_max }} guests</span>
+            <div v-for="venue in store.venues" :key="venue.id">
+              <RouterLink :to="`/venues/${venue.id}`" class="venue-card">
+                <div class="venue-card-img">
+                  <img v-if="venue.images?.length" :src="getImageUrl(venue.images[0].path)" :alt="venue.name" />
+                  <div v-else class="venue-card-placeholder">
+                    <AppIcon icon="building" class="w-10 h-10" style="color:var(--color-text-muted);" />
+                  </div>
                 </div>
-              </div>
-            </RouterLink>
+                <div class="venue-card-body">
+                  <h6 class="font-semibold text-warm-800 dark:text-warm-100 mb-1">{{ venue.name }}</h6>
+                  <p class="text-sm text-warm-500 mb-2">{{ venue.city }}</p>
+                  <div class="flex justify-between items-center">
+                    <span class="font-bold text-primary-500">PKR {{ venue.price_per_head ? Number(venue.price_per_head).toLocaleString() : 'Contact' }}/head</span>
+                    <span class="text-sm text-warm-400">{{ venue.capacity_min }}-{{ venue.capacity_max }} guests</span>
+                  </div>
+                </div>
+              </RouterLink>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- Testimonials -->
-      <section v-if="landing?.testimonials?.length" class="py-16 px-4" style="background: var(--color-bg-elevated);">
-        <div class="max-w-6xl mx-auto">
-          <h2 class="text-2xl font-bold text-surface-900 mb-8 text-center">What Customers Say</h2>
+      <section v-if="landing?.testimonials?.length" class="py-12 px-4 bg-warm-50 dark:bg-warm-900/50">
+        <div class="mx-auto max-w-6xl">
+          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">What Customers Say</h4>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div v-for="(t, i) in landing.testimonials" :key="i" class="testimonial-card">
-              <div class="flex gap-0.5 text-amber-400 mb-3">
-                <span v-for="s in (t.rating || 5)" :key="s">★</span>
+              <div class="flex gap-1 mb-3 text-accent">
+                <span v-for="s in (t.rating || 5)" :key="s">&#9733;</span>
               </div>
-              <p class="text-surface-600 text-sm leading-relaxed italic mb-4">"{{ t.quote }}"</p>
-              <p class="font-semibold text-surface-900 text-sm">— {{ t.name }}</p>
+              <p class="text-sm text-warm-500 italic mb-4">"{{ t.quote }}"</p>
+              <p class="text-sm font-semibold text-warm-700 dark:text-warm-300 mb-0">&mdash; {{ t.name }}</p>
             </div>
           </div>
         </div>
       </section>
 
       <!-- FAQ -->
-      <section v-if="landing?.faq?.length" class="py-16 px-4">
-        <div class="max-w-4xl mx-auto">
-          <h2 class="text-2xl font-bold text-surface-900 mb-8 text-center">Frequently Asked Questions</h2>
-          <div class="space-y-3">
+      <section v-if="landing?.faq?.length" class="py-12 px-4">
+        <div class="mx-auto max-w-3xl">
+          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">Frequently Asked Questions</h4>
+          <div class="flex flex-col gap-3">
             <div v-for="(f, i) in landing.faq" :key="i" class="faq-item">
               <button class="faq-question" @click="toggleFaq(i)">
                 <span>{{ f.question }}</span>
-                <svg class="w-5 h-5 flex-shrink-0 transition-transform" :class="{ 'rotate-180': openFaqs.has(i) }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
+                <span class="flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': openFaqs.has(i) }">
+                  <AppIcon icon="chevron-down" class="w-5 h-5" />
+                </span>
               </button>
               <div v-if="openFaqs.has(i)" class="faq-answer">
                 {{ f.answer }}
@@ -138,10 +140,10 @@
       </section>
 
       <!-- Social Links -->
-      <section v-if="hasSocialLinks" class="py-12 px-4" style="background: var(--color-bg-elevated); border-top: 1px solid var(--color-border);">
-        <div class="max-w-4xl mx-auto text-center">
-          <h3 class="text-lg font-semibold text-surface-900 mb-4">Connect With Us</h3>
-          <div class="flex justify-center gap-4">
+      <section v-if="hasSocialLinks" class="py-12 px-4 bg-warm-50 dark:bg-warm-900/50 border-t border-warm-200 dark:border-warm-800">
+        <div class="mx-auto text-center max-w-3xl">
+          <h5 class="font-semibold text-warm-800 dark:text-warm-100 mb-4">Connect With Us</h5>
+          <div class="flex justify-center gap-3">
             <a v-if="landing?.social_links?.facebook" :href="landing.social_links.facebook" target="_blank" rel="noopener" class="social-link">Facebook</a>
             <a v-if="landing?.social_links?.instagram" :href="landing.social_links.instagram" target="_blank" rel="noopener" class="social-link">Instagram</a>
             <a v-if="landing?.social_links?.twitter" :href="landing.social_links.twitter" target="_blank" rel="noopener" class="social-link">Twitter</a>
@@ -159,6 +161,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import api from '@/lib/axios'
 import { useChat } from '@/composables/useChat'
 import { getStorageUrl } from '@/lib/storageUrl'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 const route = useRoute()
 const { startConversation } = useChat()
@@ -250,7 +253,7 @@ onMounted(fetchStoreProfile)
 .store-hero {
   position: relative;
   padding: 5rem 1rem;
-  background: linear-gradient(135deg, #0a0a14 0%, #141420 35%, #1e1e30 65%, #0f0f1a 100%);
+  background: linear-gradient(135deg, #064E3B 0%, #065F46 35%, #047857 65%, #064E3B 100%);
   background-size: cover;
   background-position: center;
 }
@@ -258,7 +261,7 @@ onMounted(fetchStoreProfile)
 .store-hero-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.45);
 }
 
 .store-hero-content {
@@ -272,14 +275,19 @@ onMounted(fetchStoreProfile)
 .store-hero-avatar {
   width: 100px;
   height: 100px;
-  border-radius: 50%;
+  border-radius: 9999px;
   overflow: hidden;
   margin: 0 auto 1.5rem;
-  border: 4px solid rgba(245, 158, 11, 0.4);
+  border: 4px solid #6EE7B7;
   background: rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: border-color 0.2s ease;
+}
+
+.store-hero-avatar:hover {
+  border-color: #34D399;
 }
 
 .store-hero-avatar img {
@@ -291,10 +299,11 @@ onMounted(fetchStoreProfile)
 .store-hero-initials {
   font-size: 2rem;
   font-weight: 700;
-  color: #f59e0b;
+  color: #34D399;
 }
 
 .store-hero-name {
+  font-family: 'DM Sans', sans-serif;
   font-size: 2.5rem;
   font-weight: 800;
   color: white;
@@ -312,64 +321,83 @@ onMounted(fetchStoreProfile)
   justify-content: center;
 }
 
-.hero-btn-primary {
+.store-hero-btn {
   display: inline-flex;
   align-items: center;
-  padding: 0.75rem 2rem;
-  background: var(--color-primary);
-  color: #1a1a00;
-  font-weight: 700;
-  border-radius: 0.75rem;
-  text-decoration: none;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #10B981;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9375rem;
   border: none;
+  border-radius: 0.75rem;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
-  transition: all 0.2s;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  transition: all 0.2s ease;
 }
 
-.hero-btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+.store-hero-btn:hover {
+  background: #059669;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+  transform: translateY(-1px);
 }
 
 /* Stats */
 .store-stats-row {
   padding: 2rem 1rem;
-  background: var(--color-bg-elevated);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
-.stat-item { text-align: center; }
-.stat-number { font-size: 1.5rem; font-weight: 800; color: var(--color-primary); }
-.stat-text { font-size: 0.8125rem; color: var(--color-text-secondary); font-weight: 500; margin-top: 0.125rem; }
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #10B981;
+}
+
+.stat-text {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-top: 0.125rem;
+}
 
 /* Service cards */
 .service-card {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-light);
   border-radius: 1rem;
   padding: 1.5rem;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  height: 100%;
 }
 
 .service-card:hover {
-  border-color: rgba(245, 158, 11, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #6EE7B7;
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.08));
 }
 
 /* Venue cards */
 .venue-card {
+  display: block;
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-light);
   border-radius: 1rem;
   overflow: hidden;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
+  height: 100%;
 }
 
 .venue-card:hover {
-  border-color: rgba(245, 158, 11, 0.2);
-  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.08);
+  border-color: #6EE7B7;
+  box-shadow: var(--shadow-elevated, 0 10px 40px rgba(0,0,0,0.1));
   transform: translateY(-4px);
 }
 
@@ -383,6 +411,11 @@ onMounted(fetchStoreProfile)
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.venue-card:hover .venue-card-img img {
+  transform: scale(1.03);
 }
 
 .venue-card-placeholder {
@@ -400,17 +433,28 @@ onMounted(fetchStoreProfile)
 /* Testimonial cards */
 .testimonial-card {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-light);
   border-radius: 1rem;
   padding: 1.5rem;
+  height: 100%;
+  transition: box-shadow 0.2s ease;
+}
+
+.testimonial-card:hover {
+  box-shadow: var(--shadow-soft, 0 2px 6px rgba(0,0,0,0.06));
 }
 
 /* FAQ */
 .faq-item {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-light);
   border-radius: 0.75rem;
   overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.faq-item:hover {
+  border-color: #6EE7B7;
 }
 
 .faq-question {
@@ -426,6 +470,7 @@ onMounted(fetchStoreProfile)
   background: none;
   border: none;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .faq-question:hover {
@@ -442,36 +487,64 @@ onMounted(fetchStoreProfile)
 /* Social links */
 .social-link {
   padding: 0.5rem 1.25rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
+  border: 1px solid var(--color-border-light);
+  border-radius: 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-text);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .social-link:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: #10B981;
+  color: #10B981;
+  background: #ECFDF5;
+  box-shadow: var(--shadow-soft, 0 1px 3px rgba(0,0,0,0.06));
 }
 
-.spinner-lg {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--color-border);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+:root.dark .social-link:hover {
+  background: rgba(16, 185, 129, 0.1);
+  color: #34D399;
+  border-color: #34D399;
 }
 
 @media (max-width: 768px) {
   .store-hero-name {
     font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .store-hero {
+    padding: 2.5rem 1rem;
+  }
+
+  .store-hero-avatar {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 1rem;
+  }
+
+  .store-hero-initials {
+    font-size: 1.5rem;
+  }
+
+  .store-hero-name {
+    font-size: 1.5rem;
+  }
+
+  .store-hero-tagline {
+    font-size: 0.9375rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .store-stats-row {
+    padding: 1.5rem 1rem;
+  }
+
+  .stat-number {
+    font-size: 1.25rem;
   }
 }
 </style>

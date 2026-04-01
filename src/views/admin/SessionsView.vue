@@ -1,300 +1,188 @@
 <template>
-  <div class="page-container">
-    <!-- Page Header -->
-    <div class="page-header">
+  <div class="content-container">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between mb-8">
       <div>
-        <h1 class="page-title">Sessions Management</h1>
-        <p class="page-subtitle">Monitor and revoke active user sessions across all devices</p>
+        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-warm-50">Sessions Management</h1>
+        <p class="text-warm-500 dark:text-warm-400 mt-1">Monitor and revoke active user sessions across all devices</p>
       </div>
-      <button @click="loadSessions" class="btn btn-white btn-sm gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
+      <button @click="loadSessions" class="btn-outline inline-flex items-center gap-1.5 text-sm">
+        <AppIcon icon="refresh" class="w-4 h-4" />
         Refresh
       </button>
     </div>
 
     <!-- Stats Row -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
       <div class="stat-card">
-        <div class="stat-icon bg-primary-100">
-          <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-          </svg>
+        <div class="stat-icon bg-primary-50 dark:bg-primary-900/30">
+          <AppIcon icon="users" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
         </div>
         <div>
-          <div class="stat-value">{{ stats.total }}</div>
-          <div class="stat-label">Total Sessions</div>
+          <h4 class="stat-value">{{ stats.total }}</h4>
+          <span class="stat-label">Total Sessions</span>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon bg-success-100">
-          <svg class="w-5 h-5 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
+        <div class="stat-icon bg-emerald-50 dark:bg-emerald-900/30">
+          <AppIcon icon="circle-check" class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div>
-          <div class="stat-value">{{ stats.active }}</div>
-          <div class="stat-label">Active</div>
+          <h4 class="stat-value">{{ stats.active }}</h4>
+          <span class="stat-label">Active</span>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon bg-danger-100">
-          <svg class="w-5 h-5 text-danger-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-          </svg>
+        <div class="stat-icon bg-coral/10 dark:bg-coral/20">
+          <AppIcon icon="x" class="w-5 h-5 text-coral" />
         </div>
         <div>
-          <div class="stat-value">{{ stats.revoked }}</div>
-          <div class="stat-label">Revoked</div>
+          <h4 class="stat-value">{{ stats.revoked }}</h4>
+          <span class="stat-label">Revoked</span>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon bg-surface-100">
-          <svg class="w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
+        <div class="stat-icon bg-warm-100 dark:bg-warm-800">
+          <AppIcon icon="clock" class="w-5 h-5 text-warm-500 dark:text-warm-400" />
         </div>
         <div>
-          <div class="stat-value">{{ stats.expired }}</div>
-          <div class="stat-label">Expired</div>
+          <h4 class="stat-value">{{ stats.expired }}</h4>
+          <span class="stat-label">Expired</span>
         </div>
       </div>
     </div>
 
-    <!-- Filters -->
-    <div class="card card-body">
-      <div class="flex flex-col sm:flex-row gap-3">
-        <div class="search-bar flex-1">
-          <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <input
-            v-model="filters.search"
-            type="text"
-            placeholder="Search by user name or email..."
-            @input="debouncedLoad"
-          />
-        </div>
-        <select v-model="filters.status" class="form-select w-40" @change="loadSessions">
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="revoked">Revoked</option>
-          <option value="expired">Expired</option>
-        </select>
-        <select v-model="filters.role" class="form-select w-40" @change="loadSessions">
-          <option value="">All Roles</option>
-          <option value="admin">Support</option>
-          <option value="store_owner">Shop Owner</option>
-          <option value="client">Customer</option>
-        </select>
-        <select v-model="filters.per_page" class="form-select w-24" @change="loadSessions">
-          <option value="10">10</option>
-          <option value="20">20</option>
-          <option value="50">50</option>
-        </select>
-      </div>
-    </div>
 
     <!-- Sessions Table -->
-    <div class="table-wrapper">
+    <div class="card">
       <!-- Loading -->
-      <div v-if="loading" class="p-8 text-center">
-        <div class="inline-flex items-center gap-2 text-surface-500 text-sm">
-          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          Loading sessions...
-        </div>
+      <div v-if="loading" class="p-5 text-center py-12">
+        <div class="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto"></div>
+        <p class="text-warm-500 dark:text-warm-400 text-sm mt-3">Loading sessions...</p>
       </div>
 
       <!-- Table -->
-      <table v-else-if="sessions.length" class="table">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>IP Address</th>
-            <th>Device</th>
-            <th>Last Used</th>
-            <th>Expires</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="session in sessions" :key="session.id">
-            <!-- User -->
-            <td>
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center
-                            text-primary-700 font-semibold text-xs flex-shrink-0">
-                  {{ (session.user?.name || 'U').charAt(0).toUpperCase() }}
+      <div v-else-if="sessions.length" class="table-wrapper overflow-x-auto">
+        <table class="w-full min-w-[700px]">
+          <thead>
+            <tr class="table-header">
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">User</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Role</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Status</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">IP Address</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Device</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Last Used</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Expires</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="session in sessions" :key="session.id" class="table-row">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+                    <span class="text-xs font-bold text-primary-700 dark:text-primary-300">{{ (session.user?.name || 'U').charAt(0).toUpperCase() }}</span>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-warm-800 dark:text-warm-200 mb-0">{{ session.user?.name }}</p>
+                    <span class="text-xs text-warm-400 dark:text-warm-500">{{ session.user?.email }}</span>
+                  </div>
                 </div>
-                <div>
-                  <div class="font-medium text-surface-900 text-xs">{{ session.user?.name }}</div>
-                  <div class="text-2xs text-surface-400">{{ session.user?.email }}</div>
-                </div>
-              </div>
-            </td>
-            <!-- Role -->
-            <td>
-              <span :class="getRoleBadge(session.user?.role)">
-                {{ formatRole(session.user?.role) }}
-              </span>
-            </td>
-            <!-- Status -->
-            <td>
-              <span :class="getStatusBadge(session)">
-                {{ getStatusLabel(session) }}
-              </span>
-            </td>
-            <!-- IP -->
-            <td class="font-mono text-xs text-surface-500">{{ session.ip_address || '—' }}</td>
-            <!-- Device (user agent) -->
-            <td>
-              <span class="text-xs text-surface-500 line-clamp-1 max-w-xs" :title="session.user_agent ?? undefined">
-                {{ parseDevice(session.user_agent) }}
-              </span>
-            </td>
-            <!-- Last Used -->
-            <td class="text-xs text-surface-500 whitespace-nowrap">
-              {{ formatDate(session.last_used_at) }}
-            </td>
-            <!-- Expires -->
-            <td class="text-xs text-surface-500 whitespace-nowrap">
-              {{ formatDate(session.expires_at) }}
-            </td>
-            <!-- Actions -->
-            <td>
-              <button
-                v-if="!session.is_revoked && !isExpired(session)"
-                @click="revokeSession(session)"
-                :disabled="revokingId === session.id"
-                class="btn-danger btn-sm gap-1"
-                title="Revoke this session"
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636"/>
-                </svg>
-                {{ revokingId === session.id ? 'Revoking...' : 'Revoke' }}
-              </button>
-              <span v-else class="text-xs text-surface-400">—</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+              <td class="px-5 py-3"><span :class="getRoleBadge(session.user?.role)">{{ formatRole(session.user?.role) }}</span></td>
+              <td class="px-5 py-3"><span :class="getStatusBadge(session)">{{ getStatusLabel(session) }}</span></td>
+              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 font-mono">{{ session.ip_address || '---' }}</td>
+              <td class="px-5 py-3">
+                <span class="text-sm text-warm-500 dark:text-warm-400 truncate inline-block max-w-[150px]" :title="session.user_agent ?? undefined">{{ parseDevice(session.user_agent) }}</span>
+              </td>
+              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 whitespace-nowrap">{{ formatDate(session.last_used_at) }}</td>
+              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 whitespace-nowrap">{{ formatDate(session.expires_at) }}</td>
+              <td class="px-5 py-3">
+                <button
+                  v-if="!session.is_revoked && !isExpired(session)"
+                  @click="revokeSession(session)"
+                  :disabled="revokingId === session.id"
+                  class="btn-danger text-sm px-3 py-1.5 inline-flex items-center gap-1"
+                  title="Revoke this session"
+                >
+                  <AppIcon icon="x" class="w-3.5 h-3.5" />
+                  {{ revokingId === session.id ? 'Revoking...' : 'Revoke' }}
+                </button>
+                <span v-else class="text-sm text-warm-400 dark:text-warm-500">---</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-      <!-- Empty state -->
-      <div v-else class="empty-state">
-        <div class="empty-state-icon">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-          </svg>
+      <!-- Empty -->
+      <div v-else class="p-5 text-center py-12">
+        <div class="w-14 h-14 rounded-2xl bg-warm-100 dark:bg-warm-800 flex items-center justify-center mx-auto mb-4">
+          <AppIcon icon="shield" class="w-7 h-7 text-warm-400" />
         </div>
-        <p class="empty-state-title">No sessions found</p>
-        <p class="empty-state-desc">Try adjusting your search or filters</p>
+        <p class="font-medium text-warm-700 dark:text-warm-300 mb-1">No sessions found</p>
+        <p class="text-warm-500 dark:text-warm-400 text-sm">Try adjusting your search or filters</p>
       </div>
     </div>
 
     <!-- Pagination -->
-    <div v-if="pagination" class="pagination">
-      <div class="pagination-info">
-        Showing {{ pagination.from }}–{{ pagination.to }} of {{ pagination.total }} sessions
-      </div>
-      <div class="pagination-controls">
-        <button
-          class="pagination-btn"
-          :disabled="pagination.current_page === 1"
-          @click="goToPage(pagination.current_page - 1)"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-          </svg>
+    <div v-if="pagination" class="flex flex-wrap items-center justify-between mt-6">
+      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ pagination.from }}--{{ pagination.to }} of {{ pagination.total }} sessions</p>
+      <nav class="flex items-center gap-1">
+        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="pagination.current_page === 1 ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="pagination.current_page === 1" @click="goToPage(pagination.current_page - 1)">
+          <AppIcon icon="chevron-left" class="w-4 h-4" />
         </button>
-        <button
-          v-for="page in visiblePages"
-          :key="page"
-          class="pagination-btn"
-          :class="{ active: page === pagination.current_page }"
-          @click="goToPage(page)"
-        >{{ page }}</button>
-        <button
-          class="pagination-btn"
-          :disabled="pagination.current_page === pagination.last_page"
-          @click="goToPage(pagination.current_page + 1)"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-          </svg>
+        <button v-for="pg in visiblePages" :key="pg" class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-medium transition-all" :class="pg === pagination.current_page ? 'bg-primary-600 text-white shadow-soft' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" @click="goToPage(pg)">{{ pg }}</button>
+        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="pagination.current_page === pagination.last_page ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="pagination.current_page === pagination.last_page" @click="goToPage(pagination.current_page + 1)">
+          <AppIcon icon="chevron-right" class="w-4 h-4" />
         </button>
-      </div>
+      </nav>
     </div>
 
     <!-- Confirm Revoke Modal -->
-    <div v-if="confirmSession" class="modal-overlay" @click.self="confirmSession = null">
-      <div class="modal max-w-md">
-        <div class="modal-header">
-          <h3 class="modal-title">Revoke Session</h3>
-          <button @click="confirmSession = null" class="btn-ghost btn-icon">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body space-y-4">
-          <div class="flex items-start gap-3 p-4 bg-danger-50 rounded-xl border border-danger-100">
-            <svg class="w-5 h-5 text-danger-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-            <div>
-              <p class="text-sm font-medium text-danger-800">This will immediately log out the user</p>
-              <p class="text-xs text-danger-600 mt-1">
-                <strong>{{ confirmSession.user?.name }}</strong> will be signed out and their JWT token will no longer be valid.
-                They will need to log in again.
-              </p>
-            </div>
+    <VuexyModal v-model:visible="showRevokeModal" title="Revoke Session" width="28rem">
+      <div class="rounded-2xl bg-coral/5 dark:bg-coral/10 border border-coral/20 p-4 mb-4">
+        <div class="flex items-start gap-2.5">
+          <AppIcon icon="alert-triangle" class="w-5 h-5 text-coral flex-shrink-0 mt-0.5" />
+          <div>
+            <p class="text-sm font-medium text-coral mb-1">This will immediately log out the user</p>
+            <p class="text-sm text-warm-600 dark:text-warm-400">
+              <strong class="text-warm-800 dark:text-warm-200">{{ confirmSession?.user?.name }}</strong> will be signed out and their JWT token will no longer be valid. They will need to log in again.
+            </p>
           </div>
-          <div class="text-sm text-surface-600 space-y-1">
-            <div class="flex justify-between">
-              <span class="text-surface-400">User:</span>
-              <span class="font-medium">{{ confirmSession.user?.name }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-surface-400">IP:</span>
-              <span class="font-mono text-xs">{{ confirmSession.ip_address || 'Unknown' }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-surface-400">Device:</span>
-              <span class="text-xs">{{ parseDevice(confirmSession.user_agent) }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button @click="confirmSession = null" class="btn-ghost">Cancel</button>
-          <button @click="confirmRevoke" :disabled="revoking" class="btn-danger gap-2">
-            <svg v-if="revoking" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            {{ revoking ? 'Revoking...' : 'Revoke Session' }}
-          </button>
         </div>
       </div>
-    </div>
+      <div class="space-y-2 text-sm text-warm-500 dark:text-warm-400">
+        <div class="flex justify-between">
+          <span>User:</span>
+          <span class="font-medium text-warm-800 dark:text-warm-200">{{ confirmSession?.user?.name }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>IP:</span>
+          <span class="font-mono text-sm">{{ confirmSession?.ip_address || 'Unknown' }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Device:</span>
+          <span class="text-sm">{{ parseDevice(confirmSession?.user_agent ?? null) }}</span>
+        </div>
+      </div>
+      <template #footer>
+        <button class="btn-secondary" @click="showRevokeModal = false">Cancel</button>
+        <button class="btn-danger inline-flex items-center" :disabled="revoking" @click="confirmRevoke">
+          <AppIcon v-if="revoking" icon="loader" class="w-4 h-4 animate-spin mr-1.5" />
+          {{ revoking ? 'Revoking...' : 'Revoke Session' }}
+        </button>
+      </template>
+    </VuexyModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/lib/axios'
+import { useTopBarActionsStore } from '@/stores/topBarActions'
+import AppIcon from '@/components/ui/AppIcon.vue'
+import VuexyModal from '@/components/ui/VuexyModal.vue'
 
 interface SessionUser {
   id: number
@@ -332,6 +220,7 @@ const loading     = ref(false)
 const revoking    = ref(false)
 const revokingId  = ref<number | null>(null)
 const confirmSession = ref<Session | null>(null)
+const showRevokeModal = ref(false)
 
 const filters = ref({
   search:   '',
@@ -342,6 +231,7 @@ const filters = ref({
 })
 
 const stats = ref({ total: 0, active: 0, revoked: 0, expired: 0 })
+const topBarActions = useTopBarActionsStore()
 
 const visiblePages = computed(() => {
   if (!pagination.value) return []
@@ -377,7 +267,6 @@ async function loadSessions() {
       to:           result.to   || 0,
     }
 
-    // Compute stats
     stats.value.total   = result.total
     stats.value.active  = sessions.value.filter(s => !s.is_revoked && !isExpired(s)).length
     stats.value.revoked = sessions.value.filter(s => s.is_revoked).length
@@ -391,6 +280,7 @@ async function loadSessions() {
 
 function revokeSession(session: Session) {
   confirmSession.value = session
+  showRevokeModal.value = true
 }
 
 async function confirmRevoke() {
@@ -400,6 +290,7 @@ async function confirmRevoke() {
   try {
     await api.delete(`/admin/sessions/${confirmSession.value.id}`)
     confirmSession.value = null
+    showRevokeModal.value = false
     await loadSessions()
   } catch (e) {
     console.error('Failed to revoke session', e)
@@ -414,7 +305,6 @@ function goToPage(page: number) {
   loadSessions()
 }
 
-// Debounce search input
 let debounceTimer: ReturnType<typeof setTimeout>
 function debouncedLoad() {
   clearTimeout(debounceTimer)
@@ -435,18 +325,18 @@ function getStatusLabel(session: Session): string {
 }
 
 function getStatusBadge(session: Session): string {
-  if (session.is_revoked) return 'session-revoked'
-  if (isExpired(session)) return 'session-expired'
-  return 'session-active'
+  if (session.is_revoked) return 'badge-coral'
+  if (isExpired(session)) return 'badge-warm'
+  return 'badge-primary'
 }
 
 function getRoleBadge(role?: string): string {
   const map: Record<string, string> = {
-    admin: 'badge badge-danger',
-    store_owner: 'badge badge-warning',
-    client: 'badge badge-info',
+    admin: 'badge-coral',
+    store_owner: 'badge-accent',
+    client: 'badge-primary',
   }
-  return map[role || ''] || 'badge badge-gray'
+  return map[role || ''] || 'badge-warm'
 }
 
 function formatRole(role?: string): string {
@@ -455,11 +345,11 @@ function formatRole(role?: string): string {
     store_owner: 'Shop Owner',
     client: 'Customer',
   }
-  return map[role || ''] || role || '—'
+  return map[role || ''] || role || '---'
 }
 
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—'
+  if (!dateStr) return '---'
   return new Intl.DateTimeFormat('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   }).format(new Date(dateStr))
@@ -476,5 +366,42 @@ function parseDevice(ua: string | null): string {
   return ua.substring(0, 40)
 }
 
-onMounted(loadSessions)
+function resetAndLoad() {
+  filters.value.page = 1
+  loadSessions()
+}
+
+onMounted(() => {
+  loadSessions()
+  topBarActions.set({
+    searchPlaceholder: 'Search by user name or email...',
+    searchValue: filters.value.search,
+    filterOptions: [
+      { key: 'status', label: 'All Status', options: [
+        { value: 'active', label: 'Active' },
+        { value: 'revoked', label: 'Revoked' },
+        { value: 'expired', label: 'Expired' },
+      ]},
+      { key: 'role', label: 'All Roles', options: [
+        { value: 'admin', label: 'Support' },
+        { value: 'store_owner', label: 'Shop Owner' },
+        { value: 'client', label: 'Customer' },
+      ]},
+    ],
+    initialFilterValues: { status: filters.value.status, role: filters.value.role },
+    onSearch(q: string) {
+      filters.value.search = q
+      resetAndLoad()
+    },
+    onFilter(key: string, value: string) {
+      if (key === 'status') filters.value.status = value
+      else if (key === 'role') filters.value.role = value
+      resetAndLoad()
+    },
+  })
+})
+
+onUnmounted(() => {
+  topBarActions.clear()
+})
 </script>

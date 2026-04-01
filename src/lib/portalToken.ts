@@ -2,6 +2,9 @@ import { ref } from 'vue'
 
 export type Portal = 'customer' | 'shop' | 'support'
 
+/** Reactive trigger — increments whenever a token is written/removed so computed properties recompute. */
+export const tokenVersion = ref(0)
+
 export const TOKEN_KEYS: Record<Portal, string> = {
   customer: 'auth_token_customer',
   shop:     'auth_token_shop',
@@ -31,11 +34,13 @@ export function getToken(portal?: Portal): string | null {
 /** Store a JWT token for a portal (defaults to current). */
 export function setToken(token: string, portal?: Portal): void {
   localStorage.setItem(getTokenKey(portal ?? currentPortal.value), token)
+  tokenVersion.value++
 }
 
 /** Remove the JWT token for a portal (defaults to current). */
 export function removeToken(portal?: Portal): void {
   localStorage.removeItem(getTokenKey(portal ?? currentPortal.value))
+  tokenVersion.value++
 }
 
 /**

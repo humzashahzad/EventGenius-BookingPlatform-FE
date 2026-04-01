@@ -3,18 +3,14 @@
     <!-- Week Navigation -->
     <div class="week-nav">
       <button @click="prevWeek" class="week-nav-btn" :disabled="isPrevDisabled">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
+        <AppIcon icon="chevron-left" class="w-4 h-4" />
       </button>
       <div class="week-nav-label">
         <span class="week-nav-range">{{ weekRangeLabel }}</span>
         <button @click="goToThisWeek" class="week-nav-today" v-if="!isCurrentWeek">Today</button>
       </div>
       <button @click="nextWeek" class="week-nav-btn">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-        </svg>
+        <AppIcon icon="chevron-right" class="w-4 h-4" />
       </button>
     </div>
 
@@ -62,9 +58,7 @@
             </p>
           </div>
           <button @click="removeDay(dateStr)" class="day-slot-remove" title="Remove day">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
+            <AppIcon icon="x" class="w-4 h-4" />
           </button>
         </div>
 
@@ -112,7 +106,7 @@
             <select
               :value="daySelections[dateStr]?.start_time || ''"
               @change="setStartTime(dateStr, ($event.target as HTMLSelectElement).value)"
-              class="form-input"
+              class="form-select"
             >
               <option value="">Select start</option>
               <option
@@ -130,7 +124,7 @@
             <select
               :value="daySelections[dateStr]?.end_time || ''"
               @change="setEndTime(dateStr, ($event.target as HTMLSelectElement).value)"
-              class="form-input"
+              class="form-select"
               :disabled="!daySelections[dateStr]?.start_time"
             >
               <option value="">Select end</option>
@@ -168,6 +162,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/lib/axios'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 export interface SelectedDaySlot {
   date: string        // YYYY-MM-DD
@@ -473,9 +468,10 @@ onMounted(() => {
 <style scoped>
 .weekly-calendar {
   background: var(--color-bg-card);
-  border-radius: 12px;
+  border-radius: 1rem;
   padding: 1.25rem;
   border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
 }
 
 /* Week navigation */
@@ -489,7 +485,7 @@ onMounted(() => {
 .week-nav-btn {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: 0.75rem;
   border: 1px solid var(--color-border);
   background: transparent;
   color: var(--color-text-secondary);
@@ -503,6 +499,7 @@ onMounted(() => {
 .week-nav-btn:hover:not(:disabled) {
   background: var(--color-bg-hover);
   color: var(--color-text);
+  border-color: var(--color-primary);
 }
 
 .week-nav-btn:disabled {
@@ -526,16 +523,16 @@ onMounted(() => {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-primary);
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(16, 185, 129, 0.12);
   border: none;
   padding: 0.25rem 0.625rem;
-  border-radius: 6px;
+  border-radius: 0.5rem;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .week-nav-today:hover {
-  background: rgba(245, 158, 11, 0.2);
+  background: rgba(16, 185, 129, 0.24);
 }
 
 /* Week days row */
@@ -553,7 +550,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.125rem;
   padding: 0.625rem 0.25rem;
-  border-radius: 10px;
+  border-radius: 0.75rem;
   border: 2px solid var(--color-border);
   background: var(--color-bg);
   cursor: pointer;
@@ -562,7 +559,7 @@ onMounted(() => {
 
 .week-day:hover:not(:disabled) {
   border-color: var(--color-primary);
-  background: rgba(245, 158, 11, 0.04);
+  background: rgba(16, 185, 129, 0.06);
 }
 
 .week-day--past {
@@ -575,13 +572,13 @@ onMounted(() => {
 }
 
 .week-day--selected {
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(16, 185, 129, 0.12);
   border-color: var(--color-primary);
   box-shadow: 0 0 0 1px var(--color-primary);
 }
 
 .week-day--has-bookings {
-  background: rgba(245, 158, 11, 0.05);
+  background: rgba(16, 185, 129, 0.08);
 }
 
 .week-day-name {
@@ -617,7 +614,7 @@ onMounted(() => {
   padding: 0 4px;
   border-radius: 8px;
   background: var(--color-primary);
-  color: #1a1a00;
+  color: #fff;
   font-size: 0.5625rem;
   font-weight: 700;
   display: flex;
@@ -666,9 +663,10 @@ onMounted(() => {
 
 .day-slot-panel {
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 0.75rem;
   padding: 1rem;
   background: var(--color-bg);
+  box-shadow: var(--shadow-soft);
 }
 
 .day-slot-header {
@@ -693,7 +691,7 @@ onMounted(() => {
 .day-slot-remove {
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: 0.5rem;
   border: none;
   background: transparent;
   color: var(--color-text-muted);
@@ -705,8 +703,8 @@ onMounted(() => {
 }
 
 .day-slot-remove:hover {
-  background: var(--danger-bg);
-  color: var(--danger-text);
+  background: rgba(249, 112, 102, 0.1);
+  color: #F97066;
 }
 
 /* Timeline */
@@ -753,25 +751,25 @@ onMounted(() => {
 }
 
 .timeline-block--booked {
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(249, 112, 102, 0.2);
+  border: 1px solid rgba(249, 112, 102, 0.4);
   z-index: 2;
 }
 
 .timeline-block--buffer {
   background: repeating-linear-gradient(
     45deg,
-    rgba(245, 158, 11, 0.08),
-    rgba(245, 158, 11, 0.08) 4px,
-    rgba(245, 158, 11, 0.16) 4px,
-    rgba(245, 158, 11, 0.16) 8px
+    rgba(245, 158, 11, 0.14),
+    rgba(245, 158, 11, 0.14) 4px,
+    rgba(245, 158, 11, 0.26) 4px,
+    rgba(245, 158, 11, 0.26) 8px
   );
-  border: 1px dashed rgba(245, 158, 11, 0.3);
+  border: 1px dashed rgba(245, 158, 11, 0.42);
   z-index: 1;
 }
 
 .timeline-block--selected {
-  background: rgba(245, 158, 11, 0.2);
+  background: rgba(16, 185, 129, 0.25);
   border: 2px solid var(--color-primary);
   z-index: 3;
 }
@@ -822,23 +820,23 @@ onMounted(() => {
 }
 
 .legend-swatch--booked {
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(249, 112, 102, 0.2);
+  border: 1px solid rgba(249, 112, 102, 0.4);
 }
 
 .legend-swatch--buffer {
   background: repeating-linear-gradient(
     45deg,
-    rgba(245, 158, 11, 0.08),
-    rgba(245, 158, 11, 0.08) 3px,
-    rgba(245, 158, 11, 0.16) 3px,
-    rgba(245, 158, 11, 0.16) 6px
+    rgba(245, 158, 11, 0.14),
+    rgba(245, 158, 11, 0.14) 3px,
+    rgba(245, 158, 11, 0.26) 3px,
+    rgba(245, 158, 11, 0.26) 6px
   );
-  border: 1px dashed rgba(245, 158, 11, 0.3);
+  border: 1px dashed rgba(245, 158, 11, 0.42);
 }
 
 .legend-swatch--selected {
-  background: rgba(245, 158, 11, 0.2);
+  background: rgba(16, 185, 129, 0.25);
   border: 2px solid var(--color-primary);
 }
 

@@ -1,160 +1,133 @@
 <template>
-  <div class="client-page">
-    <nav class="client-breadcrumb">
-      <RouterLink to="/customer/bookings">Dashboard</RouterLink>
-      <span class="client-breadcrumb-sep">›</span>
-      <span>My Profile</span>
-    </nav>
-
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+  <div class="content-container">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
       <div>
-        <h1 class="text-xl font-bold text-surface-800">My Profile</h1>
-        <p class="text-sm text-surface-500 mt-0.5">Manage your personal information and account security.</p>
+        <h1 class="text-2xl font-bold text-warm-900 tracking-tight">My Profile</h1>
+        <p class="text-sm text-warm-500 mt-1">Manage your personal information and account security.</p>
       </div>
-      <button @click="saveProfile" :disabled="saving" class="client-btn-primary inline-flex items-center gap-2">
-        <svg v-if="saving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-        </svg>
-        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-        </svg>
-        {{ saving ? 'Saving…' : 'Save Changes' }}
+      <button @click="saveProfile" :disabled="saving" class="btn-primary inline-flex items-center gap-2">
+        <AppIcon v-if="saving" icon="loader" class="w-4 h-4 animate-spin" />
+        <AppIcon v-else icon="check" class="w-4 h-4" />
+        {{ saving ? 'Saving...' : 'Save Changes' }}
       </button>
     </div>
 
+    <!-- Alerts -->
     <transition name="fade">
-      <div v-if="successMsg" class="mb-4 p-4 rounded-xl bg-success-50 text-success-700 text-sm flex items-center gap-2">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        {{ successMsg }}
+      <div v-if="successMsg" class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/30 mb-6">
+        <AppIcon icon="circle-check" class="w-5 h-5 text-primary-600 flex-shrink-0" />
+        <span class="text-sm font-medium text-primary-700 dark:text-primary-400">{{ successMsg }}</span>
       </div>
     </transition>
     <transition name="fade">
-      <div v-if="errorMsg" class="mb-4 p-4 rounded-xl bg-danger-50 text-danger-700 text-sm flex items-center gap-2">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        {{ errorMsg }}
+      <div v-if="errorMsg" class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-coral/10 border border-coral/20 mb-6">
+        <AppIcon icon="alert-circle" class="w-5 h-5 text-coral flex-shrink-0" />
+        <span class="text-sm font-medium text-coral">{{ errorMsg }}</span>
       </div>
     </transition>
 
-    <form @submit.prevent="saveProfile" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="space-y-5">
-        <div class="client-card">
-          <div class="client-card-body flex flex-col items-center text-center gap-4">
-          <div class="w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-            <img
-              v-if="avatarUrl"
-              :src="avatarUrl"
-              alt="Profile"
-              class="w-full h-full object-cover"
-            />
-            <span v-else class="text-white text-3xl font-bold select-none">{{ userInitials }}</span>
-          </div>
-          <ProfileAvatarUpload
-            :current-avatar="authStore.user?.avatar"
-            @update="onAvatarUpdate"
-          />
-          <div>
-            <p class="text-base font-semibold text-surface-800">{{ form.name || 'Your Name' }}</p>
-            <p class="text-sm text-surface-500 mt-0.5">{{ form.email || authStore.user?.email }}</p>
-          </div>
-          <div class="w-full pt-3 border-t border-surface-200">
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-surface-500">Account Type</span>
-              <span class="px-2.5 py-1 rounded-lg bg-primary-100 text-primary-700 text-xs font-medium capitalize">{{ authStore.user?.role?.replace('_', ' ') || 'Client' }}</span>
+    <form @submit.prevent="saveProfile" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Left: Avatar card -->
+      <div class="lg:col-span-1 space-y-6">
+        <div class="card">
+          <div class="p-6 text-center">
+            <div class="mx-auto mb-4 w-24 h-24">
+              <img v-if="avatarUrl" :src="avatarUrl" alt="Profile" class="rounded-2xl w-full h-full object-cover shadow-soft" />
+              <div v-else class="rounded-2xl w-full h-full flex items-center justify-center bg-primary-100 dark:bg-primary-900/30">
+                <span class="text-3xl font-bold text-primary-600">{{ userInitials }}</span>
+              </div>
+            </div>
+            <ProfileAvatarUpload :current-avatar="authStore.user?.avatar" @update="onAvatarUpdate" />
+            <div class="mt-4">
+              <h3 class="text-lg font-semibold text-warm-900 mb-1">{{ form.name || 'Your Name' }}</h3>
+              <p class="text-sm text-warm-500 mb-3">{{ form.email || authStore.user?.email }}</p>
+              <span class="badge-primary capitalize">{{ authStore.user?.role?.replace('_', ' ') || 'Client' }}</span>
             </div>
           </div>
-          </div>
         </div>
 
-        <div class="client-card">
-          <div class="client-card-body space-y-3">
-          <p class="text-xs font-semibold uppercase tracking-wider text-surface-400">Quick Info</p>
-          <div class="flex items-center gap-3 text-sm text-surface-600">
-            <svg class="w-4 h-4 text-surface-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            <span class="truncate text-xs">{{ form.email || 'No email' }}</span>
-          </div>
-          <div class="flex items-center gap-3 text-sm text-surface-600">
-            <svg class="w-4 h-4 text-surface-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-            </svg>
-            <span class="text-xs">{{ form.phone || 'No phone set' }}</span>
-          </div>
+        <!-- Quick Info -->
+        <div class="card">
+          <div class="p-5">
+            <p class="text-xs font-semibold uppercase text-warm-400 tracking-wider mb-4">Quick Info</p>
+            <div class="space-y-3">
+              <div class="flex items-center gap-3">
+                <AppIcon icon="mail" class="w-4 h-4 text-warm-400 flex-shrink-0" />
+                <span class="text-sm text-warm-700 truncate">{{ form.email || 'No email' }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <AppIcon icon="phone" class="w-4 h-4 text-warm-400 flex-shrink-0" />
+                <span class="text-sm text-warm-700">{{ form.phone || 'No phone set' }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- ── Right: Form sections ──────────────────────────────────── -->
-      <div class="lg:col-span-2 space-y-5">
-
+      <!-- Right: Form sections -->
+      <div class="lg:col-span-2 space-y-6">
         <!-- Personal Info -->
-        <div class="card card-body space-y-4">
-          <div class="flex items-center gap-2 pb-3 border-b border-surface-100">
-            <div class="w-7 h-7 rounded-lg bg-primary-100 flex items-center justify-center">
-              <svg class="w-3.5 h-3.5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-              </svg>
+        <div class="card">
+          <div class="flex items-center gap-3 px-5 py-4 border-b border-warm-100 dark:border-warm-700">
+            <div class="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+              <AppIcon icon="user" class="w-4 h-4 text-primary-600" />
             </div>
-            <h2 class="text-sm font-semibold text-surface-800">Personal Information</h2>
+            <h2 class="text-sm font-semibold text-warm-800">Personal Information</h2>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="form-group">
-              <label class="form-label">Full Name</label>
-              <input v-model="form.name" type="text" class="form-input" placeholder="Your full name" />
+          <div class="p-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label class="form-label">Full Name</label>
+                <input v-model="form.name" type="text" class="form-input" placeholder="Your full name" />
+              </div>
+              <div>
+                <label class="form-label">Phone Number</label>
+                <input v-model="form.phone" type="tel" class="form-input" placeholder="+92 300 0000000" />
+              </div>
+              <div class="sm:col-span-2">
+                <label class="form-label">Email Address</label>
+                <input :value="form.email" type="email" class="form-input bg-warm-100 dark:bg-warm-700 cursor-not-allowed opacity-70" disabled placeholder="your@email.com" />
+                <p class="text-xs text-warm-400 dark:text-warm-500 mt-1">Email cannot be changed.</p>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Phone Number</label>
-              <input v-model="form.phone" type="tel" class="form-input" placeholder="+92 300 0000000" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Email Address</label>
-            <input v-model="form.email" type="email" class="form-input" placeholder="your@email.com" />
           </div>
         </div>
 
         <!-- Change Password -->
-        <div class="card card-body space-y-4">
-          <div class="flex items-center gap-2 pb-3 border-b border-surface-100">
-            <div class="w-7 h-7 rounded-lg bg-warning-100 flex items-center justify-center">
-              <svg class="w-3.5 h-3.5 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-              </svg>
+        <div class="card">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-warm-100 dark:border-warm-700">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center">
+                <AppIcon icon="lock" class="w-4 h-4 text-accent" />
+              </div>
+              <h2 class="text-sm font-semibold text-warm-800">Change Password</h2>
             </div>
-            <h2 class="text-sm font-semibold text-surface-800">Change Password</h2>
-            <span class="text-xs text-surface-400 ml-auto">Leave blank to keep current password</span>
+            <span class="text-xs text-warm-400">Leave blank to keep current password</span>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="form-group">
-              <label class="form-label">New Password</label>
-              <input v-model="form.password" type="password" class="form-input" placeholder="Enter new password" />
+          <div class="p-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label class="form-label">New Password</label>
+                <input v-model="form.password" type="password" class="form-input" placeholder="Enter new password" />
+              </div>
+              <div>
+                <label class="form-label">Confirm Password</label>
+                <input v-model="form.password_confirmation" type="password" class="form-input" placeholder="Repeat new password" />
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Confirm Password</label>
-              <input v-model="form.password_confirmation" type="password" class="form-input" placeholder="Repeat new password" />
-            </div>
-          </div>
-          <!-- Password strength indicator -->
-          <div v-if="form.password" class="space-y-1.5">
-            <div class="flex items-center justify-between text-xs">
-              <span class="text-surface-500">Password strength</span>
-              <span :class="passwordStrength.color" class="font-medium">{{ passwordStrength.label }}</span>
-            </div>
-            <div class="progress-bar">
-              <div
-                class="progress-bar-fill transition-all"
-                :class="passwordStrength.barColor"
-                :style="{ width: passwordStrength.percent + '%' }"
-              ></div>
+            <!-- Password strength -->
+            <div v-if="form.password" class="mt-4">
+              <div class="flex items-center justify-between text-xs mb-1.5">
+                <span class="text-warm-500">Password strength</span>
+                <span :class="passwordStrength.color" class="font-medium">{{ passwordStrength.label }}</span>
+              </div>
+              <div class="h-1.5 bg-warm-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-300" :class="passwordStrength.barColor" :style="{ width: passwordStrength.percent + '%' }"></div>
+              </div>
             </div>
           </div>
         </div>
-
       </div>
     </form>
   </div>
@@ -163,6 +136,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/lib/axios'
+import AppIcon from '@/components/ui/AppIcon.vue'
 import { useAuthStore } from '@/stores/auth'
 import ProfileAvatarUpload from '@/components/profile/AvatarUpload.vue'
 
@@ -178,7 +152,7 @@ function getAvatarUrl(path: string | undefined): string | null {
 const avatarUrl = computed(() => getAvatarUrl(authStore.user?.avatar))
 
 function onAvatarUpdate(_urlOrPath: string | null) {
-  // Auth store already updated by AvatarUpload; path is in authStore.user.avatar
+  // Auth store already updated by AvatarUpload
 }
 const saving = ref(false)
 const successMsg = ref('')
@@ -200,10 +174,10 @@ const passwordStrength = computed(() => {
   if (/[A-Z]/.test(p)) score++
   if (/[0-9]/.test(p)) score++
   if (/[^A-Za-z0-9]/.test(p)) score++
-  if (score <= 1) return { label: 'Weak', color: 'text-danger-500', barColor: 'bg-danger-400', percent: 20 }
-  if (score <= 2) return { label: 'Fair', color: 'text-warning-500', barColor: 'bg-warning-400', percent: 45 }
-  if (score <= 3) return { label: 'Good', color: 'text-info-600', barColor: 'bg-info-500', percent: 65 }
-  return { label: 'Strong', color: 'text-success-600', barColor: 'bg-success-500', percent: 100 }
+  if (score <= 1) return { label: 'Weak', color: 'text-coral', barColor: 'bg-coral', percent: 20 }
+  if (score <= 2) return { label: 'Fair', color: 'text-accent', barColor: 'bg-accent', percent: 45 }
+  if (score <= 3) return { label: 'Good', color: 'text-primary-500', barColor: 'bg-primary-500', percent: 65 }
+  return { label: 'Strong', color: 'text-primary-600', barColor: 'bg-primary-600', percent: 100 }
 })
 
 async function saveProfile() {
@@ -238,6 +212,13 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>

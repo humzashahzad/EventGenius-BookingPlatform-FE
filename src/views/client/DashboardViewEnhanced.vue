@@ -1,15 +1,13 @@
 <template>
-  <div class="page-container">
+  <div class="content-container">
     <!-- Header -->
-    <div class="page-header">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
       <div>
-        <h1 class="page-title">Welcome back, {{ authStore.user?.name?.split(' ')[0] || 'there' }} 👋</h1>
-        <p class="page-subtitle">{{ today }} · Here's your booking overview.</p>
+        <h1 class="text-2xl font-bold text-warm-900 tracking-tight">Welcome back, {{ authStore.user?.name?.split(' ')[0] || 'there' }}</h1>
+        <p class="text-sm text-warm-500 mt-1">{{ today }} &middot; Here's your booking overview.</p>
       </div>
       <RouterLink to="/venues" class="btn-primary gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-        </svg>
+        <AppIcon icon="search" class="w-4 h-4" />
         Browse Venues
       </RouterLink>
     </div>
@@ -17,49 +15,41 @@
     <!-- Loading skeleton -->
     <div v-if="loading" class="space-y-6">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div v-for="i in 4" :key="i" class="skeleton h-28 rounded-xl"></div>
+        <div v-for="i in 4" :key="i" class="card animate-pulse h-28 rounded-2xl"></div>
       </div>
-      <div class="skeleton h-72 rounded-xl"></div>
+      <div class="card animate-pulse h-72 rounded-2xl"></div>
     </div>
 
     <template v-else>
-      <!-- KPI Stat Cards — Gradient -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="gradient-stat-card" style="background: linear-gradient(135deg, #d97706, #f59e0b);">
+      <!-- KPI Stat Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="gradient-stat-card bg-gradient-to-br from-primary-700 to-primary-500">
           <div class="gradient-stat-icon">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
+            <AppIcon icon="calendar-event" class="w-5 h-5" />
           </div>
           <div class="gradient-stat-value">{{ stats.total_bookings }}</div>
           <div class="gradient-stat-label">Total Bookings</div>
         </div>
 
-        <div class="gradient-stat-card" style="background: linear-gradient(135deg, #b45309, #d97706);">
+        <div class="gradient-stat-card bg-gradient-to-br from-amber-700 to-accent">
           <div class="gradient-stat-icon">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
+            <AppIcon icon="clock" class="w-5 h-5" />
           </div>
           <div class="gradient-stat-value">{{ stats.upcoming_bookings }}</div>
           <div class="gradient-stat-label">Upcoming</div>
         </div>
 
-        <div class="gradient-stat-card" style="background: linear-gradient(135deg, #059669, #34d399);">
+        <div class="gradient-stat-card bg-gradient-to-br from-primary-800 to-primary-400">
           <div class="gradient-stat-icon">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
+            <AppIcon icon="circle-check" class="w-5 h-5" />
           </div>
           <div class="gradient-stat-value">{{ stats.completed_bookings }}</div>
           <div class="gradient-stat-label">Completed</div>
         </div>
 
-        <div class="gradient-stat-card" style="background: linear-gradient(135deg, #dc2626, #f87171);">
+        <div class="gradient-stat-card bg-gradient-to-br from-red-700 to-coral">
           <div class="gradient-stat-icon">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
+            <AppIcon icon="x" class="w-5 h-5" />
           </div>
           <div class="gradient-stat-value">{{ stats.cancelled_bookings }}</div>
           <div class="gradient-stat-label">Cancelled</div>
@@ -67,35 +57,31 @@
       </div>
 
       <!-- Booking Activity Chart & Upcoming Events -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <!-- Booking Activity -->
         <div class="card">
-          <div class="card-body">
-            <h2 class="section-title mb-4">Your Booking Activity</h2>
+          <div class="p-5">
+            <h2 class="text-sm font-semibold text-warm-800 uppercase tracking-wider mb-4">Your Booking Activity</h2>
             <BarChart :data="bookingActivityData" />
           </div>
         </div>
 
         <!-- Upcoming Events -->
         <div class="card">
-          <div class="card-body">
+          <div class="p-5">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="section-title">Upcoming Events</h2>
-              <RouterLink to="/customer/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+              <h2 class="text-sm font-semibold text-warm-800 uppercase tracking-wider">Upcoming Events</h2>
+              <RouterLink to="/customer/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1 transition-colors">
                 View all
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
+                <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
               </RouterLink>
             </div>
 
             <div v-if="upcomingEvents.length === 0" class="text-center py-8">
-              <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-surface-100 flex items-center justify-center">
-                <svg class="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
+              <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-warm-100 flex items-center justify-center">
+                <AppIcon icon="calendar-event" class="w-8 h-8 text-warm-400" />
               </div>
-              <p class="text-sm text-surface-500">No upcoming events</p>
+              <p class="text-sm text-warm-500">No upcoming events</p>
             </div>
 
             <div v-else class="space-y-3">
@@ -107,17 +93,13 @@
                 <div class="event-details">
                   <h3 class="event-title">{{ event.event_name }}</h3>
                   <p class="event-venue">{{ event.venue?.name }}</p>
-                  <div class="flex items-center gap-3 text-xs text-surface-500 mt-1">
+                  <div class="flex items-center gap-3 text-xs text-warm-500 mt-1">
                     <span class="flex items-center gap-1">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
+                      <AppIcon icon="clock" class="w-3.5 h-3.5" />
                       {{ event.start_time }}
                     </span>
                     <span class="flex items-center gap-1">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                      </svg>
+                      <AppIcon icon="users" class="w-3.5 h-3.5" />
                       {{ event.guests_count }} guests
                     </span>
                   </div>
@@ -130,78 +112,72 @@
       </div>
 
       <!-- Booking progress bar -->
-      <div class="card card-body" v-if="stats.total_bookings > 0">
+      <div class="card p-5 mb-8" v-if="stats.total_bookings > 0">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-surface-700">Booking Completion Rate</h3>
-          <span class="text-sm font-bold text-success-600">{{ completionRate }}%</span>
+          <h3 class="text-sm font-semibold text-warm-700">Booking Completion Rate</h3>
+          <span class="text-sm font-bold text-primary-600">{{ completionRate }}%</span>
         </div>
-        <div class="progress-bar">
-          <div class="progress-bar-fill bg-success-500" :style="{ width: completionRate + '%' }"></div>
+        <div class="h-2 bg-warm-100 rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full transition-all duration-500" :style="{ width: completionRate + '%' }"></div>
         </div>
-        <div class="flex justify-between mt-2 text-xs text-surface-400">
+        <div class="flex justify-between mt-2 text-xs text-warm-400">
           <span>{{ stats.completed_bookings }} completed</span>
           <span>{{ stats.total_bookings }} total</span>
         </div>
       </div>
 
       <!-- Recent Bookings -->
-      <div class="card">
-        <div class="card-body">
+      <div class="card mb-8">
+        <div class="p-5">
           <div class="flex items-center justify-between mb-5">
-            <h2 class="section-title">Recent Bookings</h2>
-            <RouterLink to="/customer/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+            <h2 class="text-sm font-semibold text-warm-800 uppercase tracking-wider">Recent Bookings</h2>
+            <RouterLink to="/customer/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1 transition-colors">
               View all
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
+              <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
             </RouterLink>
           </div>
 
           <!-- Empty state -->
-          <div v-if="recentBookings.length === 0" class="empty-state py-12">
-            <div class="empty-state-icon">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
+          <div v-if="recentBookings.length === 0" class="text-center py-12">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-warm-100 flex items-center justify-center">
+              <AppIcon icon="calendar-event" class="w-8 h-8 text-warm-400" />
             </div>
-            <p class="empty-state-title">No bookings yet</p>
-            <p class="empty-state-desc">Find and book the perfect venue for your next event.</p>
-            <RouterLink to="/venues" class="btn-primary mt-4">Browse Venues</RouterLink>
+            <p class="text-sm font-medium text-warm-700">No bookings yet</p>
+            <p class="text-xs text-warm-500 mt-1">Find and book the perfect venue for your next event.</p>
+            <RouterLink to="/venues" class="btn-primary mt-4 inline-flex">Browse Venues</RouterLink>
           </div>
 
           <!-- Bookings table -->
-          <div v-else class="table-wrapper">
-            <table class="table">
+          <div v-else class="overflow-x-auto -mx-5">
+            <table class="w-full text-left">
               <thead>
-                <tr>
-                  <th>Booking #</th>
-                  <th>Venue</th>
-                  <th>Event Date</th>
-                  <th>Amount</th>
-                  <th>Status</th>
+                <tr class="border-b border-warm-200">
+                  <th class="px-5 py-3 text-xs font-semibold text-warm-500 uppercase tracking-wider">Booking #</th>
+                  <th class="px-5 py-3 text-xs font-semibold text-warm-500 uppercase tracking-wider">Venue</th>
+                  <th class="px-5 py-3 text-xs font-semibold text-warm-500 uppercase tracking-wider">Event Date</th>
+                  <th class="px-5 py-3 text-xs font-semibold text-warm-500 uppercase tracking-wider">Amount</th>
+                  <th class="px-5 py-3 text-xs font-semibold text-warm-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="divide-y divide-warm-100">
                 <tr v-for="b in recentBookings" :key="b.id" class="cursor-pointer hover:bg-primary-50/30 transition-colors">
-                  <td>
+                  <td class="px-5 py-3">
                     <RouterLink :to="`/customer/bookings/${b.id}`" class="font-mono text-xs text-primary-600 font-semibold hover:text-primary-700">
                       {{ b.booking_number }}
                     </RouterLink>
                   </td>
-                  <td>
+                  <td class="px-5 py-3">
                     <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-surface-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <div class="w-8 h-8 rounded-lg bg-warm-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                         <img v-if="b.venue?.thumbnail" :src="getImageUrl(b.venue.thumbnail)" class="w-full h-full object-cover" />
-                        <svg v-else class="w-4 h-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        </svg>
+                        <AppIcon v-else icon="map-pin" class="w-4 h-4 text-warm-400" />
                       </div>
-                      <span class="font-medium text-surface-800 text-sm">{{ b.venue?.name }}</span>
+                      <span class="font-medium text-warm-800 text-sm">{{ b.venue?.name }}</span>
                     </div>
                   </td>
-                  <td class="text-surface-500 text-sm whitespace-nowrap">{{ formatDate(b.event_date) }}</td>
-                  <td class="font-semibold text-surface-800 text-sm">PKR {{ Number(b.total_amount).toLocaleString() }}</td>
-                  <td><span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span></td>
+                  <td class="px-5 py-3 text-warm-500 text-sm whitespace-nowrap">{{ formatDate(b.event_date) }}</td>
+                  <td class="px-5 py-3 font-semibold text-warm-800 text-sm">PKR {{ Number(b.total_amount).toLocaleString() }}</td>
+                  <td class="px-5 py-3"><span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span></td>
                 </tr>
               </tbody>
             </table>
@@ -211,39 +187,33 @@
 
       <!-- Quick Actions -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <RouterLink to="/venues" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
+        <RouterLink to="/venues" class="card-hover flex items-center gap-4 p-4 no-underline group">
           <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center group-hover:bg-primary-200 transition-colors flex-shrink-0">
-            <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
+            <AppIcon icon="search" class="w-5 h-5 text-primary-600" />
           </div>
           <div>
-            <p class="text-sm font-semibold text-surface-800">Browse Venues</p>
-            <p class="text-xs text-surface-500">Discover new places</p>
+            <p class="text-sm font-semibold text-warm-800">Browse Venues</p>
+            <p class="text-xs text-warm-500">Discover new places</p>
           </div>
         </RouterLink>
 
-        <RouterLink to="/customer/bookings" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
+        <RouterLink to="/customer/bookings" class="card-hover flex items-center gap-4 p-4 no-underline group">
           <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors flex-shrink-0">
-            <svg class="w-5 h-5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
+            <AppIcon icon="calendar-event" class="w-5 h-5 text-primary-700" />
           </div>
           <div>
-            <p class="text-sm font-semibold text-surface-800">My Bookings</p>
-            <p class="text-xs text-surface-500">View all your bookings</p>
+            <p class="text-sm font-semibold text-warm-800">My Bookings</p>
+            <p class="text-xs text-warm-500">View all your bookings</p>
           </div>
         </RouterLink>
 
-        <RouterLink to="/customer/profile" class="card card-body flex items-center gap-4 hover:shadow-md hover:border-primary-200 border border-transparent transition-all group">
+        <RouterLink to="/customer/profile" class="card-hover flex items-center gap-4 p-4 no-underline group">
           <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors flex-shrink-0">
-            <svg class="w-5 h-5 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-            </svg>
+            <AppIcon icon="user" class="w-5 h-5 text-primary-700" />
           </div>
           <div>
-            <p class="text-sm font-semibold text-surface-800">My Profile</p>
-            <p class="text-xs text-surface-500">Update your information</p>
+            <p class="text-sm font-semibold text-warm-800">My Profile</p>
+            <p class="text-xs text-warm-500">Update your information</p>
           </div>
         </RouterLink>
       </div>
@@ -258,6 +228,7 @@ import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
 import { useAuthStore } from '@/stores/auth'
 import BarChart from '@/components/charts/BarChart.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 const authStore = useAuthStore()
 const loading = ref(true)
@@ -319,13 +290,13 @@ function getImageUrl(path: string) {
 
 function statusClass(s: string) {
   const map: Record<string, string> = {
-    pending: 'badge-warning',
-    confirmed: 'badge-success',
-    completed: 'badge-info',
-    cancelled: 'badge-danger',
-    rejected: 'badge-danger',
+    pending: 'badge-accent',
+    confirmed: 'badge-primary',
+    completed: 'badge-primary',
+    cancelled: 'badge-coral',
+    rejected: 'badge-coral',
   }
-  return map[s] || 'badge-info'
+  return map[s] || 'badge-warm'
 }
 
 onMounted(load)
@@ -339,19 +310,19 @@ onMounted(load)
   color: white;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-card), 0 4px 15px rgba(16, 185, 129, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .gradient-stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-elevated), 0 8px 25px rgba(16, 185, 129, 0.3);
 }
 
 .gradient-stat-icon {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: 0.75rem;
   background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
@@ -380,16 +351,16 @@ onMounted(load)
   gap: 1rem;
   padding: 1rem;
   border-radius: 0.75rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-elevated);
-  transition: all 0.2s;
+  border: 1px solid var(--color-warm-200, #e7e5e4);
+  background: var(--color-bg, #FAFAF9);
+  transition: all 0.2s ease;
 }
 
 .event-card:hover {
-  border-color: rgba(245, 158, 11, 0.2);
-  background: var(--color-bg-hover);
+  border-color: #6ee7b7;
+  background: #f5f5f4;
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-card);
 }
 
 .event-date {
@@ -399,8 +370,8 @@ onMounted(load)
   justify-content: center;
   width: 3.5rem;
   height: 3.5rem;
-  border-radius: 0.5rem;
-  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #10B981, #34D399);
   color: white;
   flex-shrink: 0;
 }
@@ -427,7 +398,7 @@ onMounted(load)
 .event-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-text, #1C1917);
   margin-bottom: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -436,7 +407,7 @@ onMounted(load)
 
 .event-venue {
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: var(--color-warm-500, #78716c);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

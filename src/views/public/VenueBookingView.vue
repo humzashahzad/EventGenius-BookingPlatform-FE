@@ -1,20 +1,17 @@
 <template>
-  <div class="booking-wizard-page">
+  <div class="booking-wizard-page font-['DM_Sans']">
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-20">
+    <div v-if="loading" class="flex items-center justify-center py-24">
       <div class="flex flex-col items-center gap-3">
-        <svg class="w-8 h-8 animate-spin" style="color: var(--color-primary)" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-        </svg>
-        <span class="text-sm" style="color: var(--color-text-muted)">Loading venue...</span>
+        <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin"></div>
+        <span class="text-sm text-warm-500">Loading venue...</span>
       </div>
     </div>
 
     <!-- Not found -->
-    <div v-else-if="!venue" class="text-center py-20">
-      <p class="text-lg font-semibold" style="color: var(--color-text)">Venue not found</p>
-      <RouterLink to="/venues" class="btn-primary mt-4 inline-flex">Browse Venues</RouterLink>
+    <div v-else-if="!venue" class="text-center py-24">
+      <h5 class="font-semibold text-warm-800 dark:text-warm-200">Venue not found</h5>
+      <RouterLink to="/venues" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-soft hover:shadow-elevated">Browse Venues</RouterLink>
     </div>
 
     <!-- Wizard -->
@@ -29,9 +26,7 @@
           @click="goToStep(i)"
         >
           <div class="wizard-step-num">
-            <svg v-if="step > i" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-            </svg>
+            <AppIcon v-if="step > i" icon="check" class="w-3.5 h-3.5" />
             <span v-else>{{ i + 1 }}</span>
           </div>
           <span class="wizard-step-label">{{ s }}</span>
@@ -44,19 +39,14 @@
         <div class="venue-summary">
           <div class="venue-summary-image">
             <img v-if="venueImage" :src="venueImage" :alt="venue.name" class="w-full h-full object-cover" />
-            <div v-else class="w-full h-full flex items-center justify-center" style="background: var(--color-bg-elevated); color: var(--color-text-muted)">
-              <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
+            <div v-else class="w-full h-full flex items-center justify-center bg-warm-100 dark:bg-warm-800">
+              <AppIcon icon="image" class="w-12 h-12 text-[var(--color-text-muted)]" />
             </div>
           </div>
           <div class="venue-summary-info">
-            <h3 class="text-xl font-bold" style="color: var(--color-text)">{{ venue.name }}</h3>
-            <p v-if="venue.location" class="text-sm mt-1" style="color: var(--color-text-secondary)">
-              <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
+            <h3 class="text-lg font-bold text-warm-800 dark:text-warm-100">{{ venue.name }}</h3>
+            <p v-if="venue.location" class="text-sm mt-1 text-warm-500">
+              <AppIcon icon="map-pin" class="w-3.5 h-3.5 mr-1" />
               {{ venue.location }}
             </p>
             <div class="flex flex-wrap gap-4 mt-4">
@@ -75,14 +65,14 @@
                 <span class="venue-summary-stat-value">{{ venue.store.name }}</span>
               </div>
             </div>
-            <p v-if="venue.description" class="text-sm mt-4 leading-relaxed" style="color: var(--color-text-secondary)">
+            <p v-if="venue.description" class="text-sm mt-4 text-warm-500">
               {{ venue.description?.substring(0, 200) }}{{ venue.description?.length > 200 ? '...' : '' }}
             </p>
           </div>
         </div>
         <div class="wizard-actions">
-          <RouterLink :to="`/venues/${route.params.id}`" class="btn-ghost">Back to Venue</RouterLink>
-          <button @click="step = 1" class="btn-primary">Continue to Date & Time</button>
+          <RouterLink :to="`/venues/${route.params.id}`" class="wizard-btn-secondary">Back to Venue</RouterLink>
+          <button @click="step = 1" class="wizard-btn-primary">Continue to Date & Time</button>
         </div>
       </div>
 
@@ -95,17 +85,17 @@
           @update:selection="onCalendarUpdate"
         />
         <div v-if="calendarSlots.length > 0" class="selection-summary">
-          <h4 class="text-sm font-semibold mb-2" style="color: var(--color-text)">Your Selection</h4>
+          <h4 class="text-sm font-semibold mb-2 text-warm-800 dark:text-warm-100">Your Selection</h4>
           <div class="selection-summary-list">
             <div v-for="slot in calendarSlots" :key="slot.date" class="selection-summary-item">
-              <span class="font-medium" style="color: var(--color-text)">{{ formatSlotDate(slot.date) }}</span>
-              <span style="color: var(--color-primary)">{{ slot.start_time }} — {{ slot.end_time }}</span>
+              <span class="font-medium text-warm-800 dark:text-warm-100">{{ formatSlotDate(slot.date) }}</span>
+              <span class="text-primary-500 font-semibold">{{ slot.start_time }} — {{ slot.end_time }}</span>
             </div>
           </div>
         </div>
         <div class="wizard-actions">
-          <button @click="step = 0" class="btn-ghost">Back</button>
-          <button @click="step = 2" :disabled="calendarSlots.length === 0" class="btn-primary">
+          <button @click="step = 0" class="wizard-btn-secondary">Back</button>
+          <button @click="step = 2" :disabled="calendarSlots.length === 0" class="wizard-btn-primary">
             Continue to Event Details
           </button>
         </div>
@@ -115,14 +105,14 @@
       <div v-if="step === 2" class="wizard-card">
         <h2 class="wizard-card-title">Event Details</h2>
         <p class="wizard-card-desc">Tell us about your event so the venue can prepare accordingly.</p>
-        <form @submit.prevent="step = 3" class="space-y-4">
+        <form @submit.prevent="step = 3" class="flex flex-col gap-5">
           <div>
-            <label class="form-label">Event Name *</label>
-            <input v-model="booking.event_name" type="text" required class="form-input" placeholder="e.g. My Wedding Reception" />
+            <label class="form-label-warm">Event Name *</label>
+            <input v-model="booking.event_name" type="text" required class="form-input-warm" placeholder="e.g. My Wedding Reception" />
           </div>
           <div>
-            <label class="form-label">Event Type *</label>
-            <select v-model="booking.event_type" required class="form-input">
+            <label class="form-label-warm">Event Type *</label>
+            <select v-model="booking.event_type" required class="form-input-warm">
               <option value="">Select type</option>
               <option v-for="cat in activeCategories" :key="cat.slug" :value="cat.slug">
                 {{ cat.emoji }} {{ cat.name }}
@@ -130,30 +120,30 @@
             </select>
           </div>
           <div>
-            <label class="form-label">Expected Guests *</label>
+            <label class="form-label-warm">Expected Guests *</label>
             <input
               v-model.number="booking.expected_guests"
               type="number"
               required
-              class="form-input"
+              class="form-input-warm"
               :min="venue.capacity_min || 1"
               :max="venue.capacity_max || 10000"
               :placeholder="`${venue.capacity_min || 1}–${venue.capacity_max || '∞'}`"
             />
-            <p class="text-xs mt-1" style="color: var(--color-text-muted)">
+            <p class="text-xs text-warm-400 mt-1.5">
               Venue capacity: {{ venue.capacity_min || 1 }} – {{ venue.capacity_max || 'unlimited' }}
             </p>
           </div>
           <div>
-            <label class="form-label">Special Requirements</label>
-            <textarea v-model="booking.special_requirements" class="form-input" rows="3" placeholder="Any special requests, equipment needs, dietary requirements..."></textarea>
+            <label class="form-label-warm">Special Requirements</label>
+            <textarea v-model="booking.special_requirements" class="form-input-warm" rows="3" placeholder="Any special requests, equipment needs, dietary requirements..."></textarea>
           </div>
           <div class="wizard-actions">
-            <button type="button" @click="step = 1" class="btn-ghost">Back</button>
+            <button type="button" @click="step = 1" class="wizard-btn-secondary">Back</button>
             <button
               type="submit"
               :disabled="!booking.event_name || !booking.event_type || !booking.expected_guests"
-              class="btn-primary"
+              class="wizard-btn-primary"
             >
               Review Booking
             </button>
@@ -196,63 +186,32 @@
             </div>
           </div>
 
-          <!-- Geolocation -->
-          <div class="review-section">
-            <h4 class="review-section-title">Location Verification</h4>
-            <div v-if="coords.latitude !== Infinity" class="flex items-center gap-2 text-sm" style="color: var(--success-text)">
-              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              Location captured (accuracy: {{ Math.round(coords.accuracy) }}m)
-            </div>
-            <div v-else-if="geoError" class="flex items-center gap-2 text-sm" style="color: var(--color-text-muted)">
-              <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-              </svg>
-              Location unavailable — booking will proceed without it
-            </div>
-            <div v-else class="flex items-center gap-2 text-sm" style="color: var(--color-text-muted)">
-              <svg class="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-              Acquiring location...
-            </div>
-          </div>
-
           <!-- Price estimate -->
           <div class="review-section review-section--highlight">
             <h4 class="review-section-title">Estimated Total</h4>
-            <p class="text-2xl font-bold" style="color: var(--color-primary)">PKR {{ estimatedTotal }}</p>
-            <p class="text-xs" style="color: var(--color-text-muted)">
-              PKR {{ formatPrice(venue) }} / head × {{ booking.expected_guests }} guest{{ booking.expected_guests !== 1 ? 's' : '' }}
+            <p class="text-2xl font-bold text-primary-500 mb-1">PKR {{ estimatedTotal }}</p>
+            <p class="text-sm text-warm-500 mb-0">
+              PKR {{ formatPrice(venue) }} / head x {{ booking.expected_guests }} guest{{ booking.expected_guests !== 1 ? 's' : '' }}
             </p>
           </div>
         </div>
 
         <!-- Errors -->
-        <div v-if="submitError" class="mt-4 flex items-start gap-2.5 text-sm rounded-lg px-3.5 py-3" style="color: var(--danger-text); background: var(--danger-bg); border: 1px solid rgba(239,68,68,0.2);">
-          <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-          </svg>
+        <div v-if="submitError" class="alert-error mt-4">
+          <AppIcon icon="alert-triangle" class="w-4 h-4 flex-shrink-0 mt-0.5" />
           {{ submitError }}
         </div>
 
         <!-- Success -->
-        <div v-if="submitSuccess" class="mt-4 flex items-start gap-2.5 text-sm rounded-lg px-3.5 py-3" style="color: var(--success-text); background: var(--success-bg); border: 1px solid rgba(34,197,94,0.2);">
-          <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
+        <div v-if="submitSuccess" class="alert-success mt-4">
+          <AppIcon icon="circle-check" class="w-4 h-4 flex-shrink-0 mt-0.5" />
           Booking submitted successfully! Redirecting to your bookings...
         </div>
 
         <div class="wizard-actions">
-          <button @click="step = 2" :disabled="submitting" class="btn-ghost">Back</button>
-          <button @click="submitBooking" :disabled="submitting || submitSuccess" class="btn-primary gap-2">
-            <svg v-if="submitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
+          <button @click="step = 2" :disabled="submitting" class="wizard-btn-secondary">Back</button>
+          <button @click="submitBooking" :disabled="submitting || submitSuccess" class="wizard-btn-primary inline-flex items-center gap-2">
+            <span v-if="submitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             {{ submitting ? 'Submitting...' : 'Confirm Booking' }}
           </button>
         </div>
@@ -262,19 +221,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
-import { useAuthStore } from '@/stores/auth'
 import { useCategoriesStore } from '@/stores/categories'
 import { getStorageUrl } from '@/lib/storageUrl'
-import { useGeolocation } from '@vueuse/core'
 import BookingCalendar from '@/components/booking/BookingCalendar.vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
 import type { SelectedDaySlot } from '@/components/booking/BookingCalendar.vue'
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
 const categoriesStore = useCategoriesStore()
 
 const activeCategories = computed(() => categoriesStore.categories.filter(c => c.is_active))
@@ -287,20 +244,6 @@ const calendarSlots = ref<SelectedDaySlot[]>([])
 const submitting = ref(false)
 const submitError = ref('')
 const submitSuccess = ref(false)
-
-// Geolocation — request when entering event details step
-const { coords, error: geoError, resume: resumeGeo, pause: pauseGeo } = useGeolocation({
-  enableHighAccuracy: true,
-  immediate: false,
-})
-const geoRequested = ref(false)
-
-watch(step, (s) => {
-  if (s === 2 && !geoRequested.value) {
-    geoRequested.value = true
-    resumeGeo()
-  }
-})
 
 const booking = reactive({
   event_name: '',
@@ -361,7 +304,7 @@ async function submitBooking() {
   const primarySlot = calendarSlots.value[0]
 
   try {
-    await api.post('/customer/bookings', {
+    await api.post('/client/bookings', {
       venue_id: venue.value.id,
       event_name: booking.event_name,
       event_type: booking.event_type,
@@ -370,10 +313,6 @@ async function submitBooking() {
       end_time: primarySlot.end_time,
       expected_guests: booking.expected_guests,
       special_requirements: booking.special_requirements,
-      // Geolocation
-      latitude: coords.value.latitude !== Infinity ? coords.value.latitude : null,
-      longitude: coords.value.longitude !== Infinity ? coords.value.longitude : null,
-      geo_accuracy: coords.value.accuracy !== Infinity ? coords.value.accuracy : null,
       // Send all slots for multi-day support
       slots: calendarSlots.value,
     })
@@ -424,18 +363,19 @@ onMounted(() => {
   top: 50%;
   width: 0.5rem;
   height: 2px;
-  background: var(--color-border);
+  background: var(--color-border-light);
+  transition: background 0.2s ease;
 }
 
 .wizard-step--done + .wizard-step::before {
-  background: var(--color-primary);
+  background: #10B981;
 }
 
 .wizard-step-num {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
-  border: 2px solid var(--color-border);
+  border-radius: 9999px;
+  border: 2px solid var(--color-border-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -443,19 +383,25 @@ onMounted(() => {
   font-weight: 700;
   color: var(--color-text-muted);
   flex-shrink: 0;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .wizard-step--active .wizard-step-num {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: #1a1a00;
+  border-color: #10B981;
+  background: #10B981;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
 }
 
 .wizard-step--done .wizard-step-num {
-  border-color: var(--color-primary);
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--color-primary);
+  border-color: #10B981;
+  background: #ECFDF5;
+  color: #10B981;
+}
+
+:root.dark .wizard-step--done .wizard-step-num {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
 }
 
 .wizard-step--done {
@@ -467,6 +413,7 @@ onMounted(() => {
   font-weight: 500;
   color: var(--color-text-muted);
   white-space: nowrap;
+  transition: color 0.15s ease;
 }
 
 .wizard-step--active .wizard-step-label {
@@ -475,24 +422,43 @@ onMounted(() => {
 }
 
 .wizard-step--done .wizard-step-label {
-  color: var(--color-primary);
+  color: #10B981;
 }
 
 @media (max-width: 640px) {
   .wizard-step-label {
     display: none;
   }
+
+  .wizard-card {
+    padding: 1rem;
+  }
+
+  .wizard-card-title {
+    font-size: 1.125rem;
+  }
+
+  .wizard-actions {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+  }
+
+  .booking-wizard-page {
+    padding: 0.75rem 0;
+  }
 }
 
 /* Card */
 .wizard-card {
   background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 1rem;
   padding: 1.5rem;
+  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.06));
 }
 
 .wizard-card-title {
+  font-family: 'DM Sans', sans-serif;
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--color-text);
@@ -512,7 +478,90 @@ onMounted(() => {
   align-items: center;
   margin-top: 1.5rem;
   padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border-light);
+}
+
+/* Buttons */
+.wizard-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background: #10B981;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.wizard-btn-primary:hover {
+  background: #059669;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
+.wizard-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.wizard-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border-light);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.wizard-btn-secondary:hover {
+  border-color: var(--color-border);
+  background: var(--color-bg-hover);
+  box-shadow: var(--shadow-soft, 0 1px 3px rgba(0,0,0,0.06));
+}
+
+/* Form controls */
+.form-label-warm {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 0.375rem;
+}
+
+.form-input-warm {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: 0.75rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.form-input-warm:focus {
+  border-color: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.form-input-warm::placeholder {
+  color: var(--color-text-muted);
 }
 
 /* Venue summary */
@@ -532,7 +581,7 @@ onMounted(() => {
   width: 240px;
   min-width: 240px;
   height: 160px;
-  border-radius: 10px;
+  border-radius: 0.75rem;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -579,9 +628,14 @@ onMounted(() => {
 .selection-summary {
   margin-top: 1rem;
   padding: 1rem;
-  background: rgba(245, 158, 11, 0.05);
-  border: 1px solid rgba(245, 158, 11, 0.15);
-  border-radius: 8px;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  border-radius: 0.75rem;
+}
+
+:root.dark .selection-summary {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
 }
 
 .selection-summary-list {
@@ -608,13 +662,18 @@ onMounted(() => {
 .review-section {
   padding: 1rem;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 0.75rem;
 }
 
 .review-section--highlight {
-  background: rgba(245, 158, 11, 0.05);
-  border-color: rgba(245, 158, 11, 0.2);
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+}
+
+:root.dark .review-section--highlight {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
 }
 
 .review-section-title {
@@ -664,6 +723,31 @@ onMounted(() => {
 .review-slot-time {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-primary);
+  color: #10B981;
+}
+
+/* Alerts */
+.alert-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(249, 112, 102, 0.1);
+  color: #F97066;
+  font-size: 0.875rem;
+  border: 1px solid rgba(249, 112, 102, 0.2);
+}
+
+.alert-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+  font-size: 0.875rem;
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 </style>

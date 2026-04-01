@@ -45,7 +45,7 @@ export const useThemeStore = defineStore('theme', () => {
     return () => {}
   }
 
-  // Apply theme class to document root
+  // Apply theme via class for Tailwind dark mode
   function applyTheme(theme: ResolvedTheme) {
     document.documentElement.classList.remove('light', 'dark')
     document.documentElement.classList.add(theme)

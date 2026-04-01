@@ -15,13 +15,19 @@ export function getEcho(): Echo<'reverb'> {
   if (echoInstance) return echoInstance
 
   const token = getToken()
+  const browserHost = window.location.hostname || 'localhost'
+  const envHost = import.meta.env.VITE_REVERB_HOST
+  const wsHost = envHost && ['localhost', '127.0.0.1'].includes(envHost) && !['localhost', '127.0.0.1'].includes(browserHost)
+    ? browserHost
+    : (envHost || browserHost || 'localhost')
+  const wsPort = parseInt(import.meta.env.VITE_REVERB_PORT || '8081')
 
   echoInstance = new Echo({
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY || 'eventgenius-key',
-    wsHost: import.meta.env.VITE_REVERB_HOST || 'localhost',
-    wsPort: parseInt(import.meta.env.VITE_REVERB_PORT || '8080'),
-    wssPort: parseInt(import.meta.env.VITE_REVERB_PORT || '8080'),
+    wsHost,
+    wsPort,
+    wssPort: wsPort,
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME || 'http') === 'https',
     enabledTransports: ['ws', 'wss'],
     disableStats: true,
