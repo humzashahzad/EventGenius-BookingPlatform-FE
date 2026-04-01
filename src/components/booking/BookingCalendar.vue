@@ -190,6 +190,8 @@ interface WeekDay {
 
 const props = defineProps<{
   venueId: string | number
+  operatingStart?: string
+  operatingEnd?: string
 }>()
 
 const emit = defineEmits<{
@@ -360,15 +362,20 @@ function isTimeBlocked(dateStr: string, time: string): boolean {
 }
 
 function getAvailableStartTimes(dateStr: string): string[] {
-  return allTimeSlots.filter(t => t < '23:00')
+  const opStart = props.operatingStart || '00:00'
+  const opEnd   = props.operatingEnd || '23:00'
+  return allTimeSlots.filter(t => t >= opStart && t < opEnd)
 }
 
 function getAvailableEndTimes(dateStr: string): string[] {
   const startTime = daySelections.value[dateStr]?.start_time
   if (!startTime) return []
+  const opEnd = props.operatingEnd || '23:59'
   return allTimeSlots
-    .filter(t => t > startTime)
-    .concat(['24:00'])
+    .filter(t => t > startTime && t <= opEnd)
+    .concat(opEnd === '23:59' || opEnd === '24:00' ? ['23:59'] : [])
+    .filter((v, i, a) => a.indexOf(v) === i) // unique
+    .sort()
     .filter(t => {
       const bookings = dayBookings.value[dateStr] || []
       const buffers = dayBuffers.value[dateStr] || []

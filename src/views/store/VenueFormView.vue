@@ -123,6 +123,33 @@
           </div>
         </div>
 
+        <!-- Operating Hours -->
+        <div class="card">
+          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+              <AppIcon icon="clock" class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Operating Hours</h2>
+          </div>
+          <div class="p-5 sm:p-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="form-label">Opening Time</label>
+                <select v-model="form.operating_start" class="form-select">
+                  <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">Closing Time</label>
+                <select v-model="form.operating_end" class="form-select">
+                  <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
+                </select>
+              </div>
+            </div>
+            <p class="text-xs text-warm-500 dark:text-warm-400 mt-3">Customers will only be able to book slots within this time range. Use 24-hour format (e.g. 09:00 to 23:00).</p>
+          </div>
+        </div>
+
       </div>
 
       <!-- Sidebar column -->
@@ -217,6 +244,16 @@ const form = reactive({
   capacity_min: 1, capacity_max: 100, area_sqft: null as number | null,
   floors: 1, price_per_head: null as number | null,
   event_types: [] as string[], status: 'active',
+  operating_start: '00:00', operating_end: '23:00',
+})
+
+const timeSlots = computed(() => {
+  const slots = []
+  for (let h = 0; h < 24; h++) {
+    slots.push(`${String(h).padStart(2, '0')}:00`)
+  }
+  slots.push('23:59')
+  return slots
 })
 
 async function load() {

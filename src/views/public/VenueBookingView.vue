@@ -82,6 +82,8 @@
         <p class="wizard-card-desc">Choose your event dates and times. Select multiple days for multi-day events.</p>
         <BookingCalendar
           :venue-id="venue.id"
+          :operating-start="venue.operating_start"
+          :operating-end="venue.operating_end"
           @update:selection="onCalendarUpdate"
         />
         <div v-if="calendarSlots.length > 0" class="selection-summary">
@@ -111,15 +113,6 @@
             <input v-model="booking.event_name" type="text" required class="form-input-warm" placeholder="e.g. My Wedding Reception" />
           </div>
           <div>
-            <label class="form-label-warm">Event Type *</label>
-            <select v-model="booking.event_type" required class="form-input-warm">
-              <option value="">Select type</option>
-              <option v-for="cat in activeCategories" :key="cat.slug" :value="cat.slug">
-                {{ cat.emoji }} {{ cat.name }}
-              </option>
-            </select>
-          </div>
-          <div>
             <label class="form-label-warm">Expected Guests *</label>
             <input
               v-model.number="booking.expected_guests"
@@ -142,7 +135,7 @@
             <button type="button" @click="step = 1" class="wizard-btn-secondary">Back</button>
             <button
               type="submit"
-              :disabled="!booking.event_name || !booking.event_type || !booking.expected_guests"
+              :disabled="!booking.event_name || !booking.expected_guests"
               class="wizard-btn-primary"
             >
               Review Booking
@@ -177,7 +170,7 @@
             <h4 class="review-section-title">Event Details</h4>
             <div class="review-grid">
               <div><span class="review-label">Name</span><span class="review-value">{{ booking.event_name }}</span></div>
-              <div><span class="review-label">Type</span><span class="review-value">{{ booking.event_type }}</span></div>
+              <div v-if="booking.event_type"><span class="review-label">Type</span><span class="review-value capitalize">{{ booking.event_type.replace(/_/g, ' ') }}</span></div>
               <div><span class="review-label">Guests</span><span class="review-value">{{ booking.expected_guests }}</span></div>
             </div>
             <div v-if="booking.special_requirements" class="mt-2">
@@ -288,6 +281,7 @@ async function loadVenue() {
   try {
     const { data } = await api.get(`/venues/${route.params.id}`)
     venue.value = data.data
+    booking.event_type = venue.value?.event_types?.[0] || 'general'
   } catch {
     venue.value = null
   } finally {
