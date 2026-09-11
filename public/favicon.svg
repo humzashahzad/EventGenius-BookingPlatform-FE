@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="EventGenius">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f2937" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#eab308" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)" />
+  <path d="M14 20h36v6H14zM14 29h26v6H14zM14 38h36v6H14z" fill="#4b5563" />
+  <circle cx="47" cy="32" r="9" fill="url(#accent)" />
+  <path d="M26 18h12v28H26z" fill="#111827" opacity=".32" />
+  <text x="18" y="49" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#f9fafb">EG</text>
+</svg>

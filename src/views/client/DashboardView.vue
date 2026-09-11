@@ -1,75 +1,87 @@
 <template>
-  <div class="client-page">
+  <div class="content-container">
     <!-- Breadcrumb -->
-    <nav class="client-breadcrumb">
-      <RouterLink to="/client/dashboard">Dashboard</RouterLink>
-      <span class="client-breadcrumb-sep">›</span>
-      <span>Overview</span>
+    <nav class="flex items-center gap-2 text-sm text-warm-500 mb-6">
+      <RouterLink to="/customer/bookings" class="hover:text-primary-600 transition-colors">Dashboard</RouterLink>
+      <span class="text-warm-300">/</span>
+      <span class="text-warm-700 font-medium">Overview</span>
     </nav>
 
     <!-- Loading -->
     <div v-if="loading" class="space-y-6">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div v-for="i in 4" :key="i" class="client-stat-card animate-pulse">
-          <div class="h-8 bg-slate-200 rounded w-20"></div>
-          <div class="h-4 bg-slate-100 rounded w-24 mt-2"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div v-for="i in 4" :key="i" class="card animate-pulse p-5">
+          <div class="h-8 bg-warm-200 rounded-xl w-20"></div>
+          <div class="h-4 bg-warm-100 rounded-xl w-24 mt-2"></div>
         </div>
       </div>
-      <div class="h-64 bg-slate-100 rounded-2xl"></div>
+      <div class="h-64 bg-warm-100 rounded-2xl"></div>
     </div>
 
     <template v-else>
       <!-- Hero / Promo card -->
-      <div class="client-hero-card mb-6">
+      <div class="bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl p-6 mb-6 shadow-elevated text-white">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p class="text-sm font-medium text-violet-600 mb-0.5">EventGenius</p>
-            <h2 class="client-hero-title">Find your perfect venue</h2>
-            <p class="client-hero-desc">Track your bookings and discover new spaces for your next event.</p>
-            <RouterLink to="/venues" class="client-btn-primary">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
+            <p class="text-sm font-medium text-primary-200 mb-0.5">EventGenius</p>
+            <h2 class="text-2xl font-bold text-white mb-1">Find your perfect venue</h2>
+            <p class="text-primary-100 text-sm mb-4">Track your bookings and discover new spaces for your next event.</p>
+            <RouterLink to="/venues" class="btn-primary inline-flex items-center gap-2 !bg-white !text-primary-700 hover:!bg-primary-50">
+              <AppIcon icon="search" class="w-4 h-4" />
               Browse Venues
             </RouterLink>
           </div>
-          <div class="hidden sm:block w-32 h-32 rounded-2xl bg-white/50 flex items-center justify-center text-4xl">🏛️</div>
+          <div class="hidden sm:flex w-32 h-32 rounded-2xl bg-white/20 items-center justify-center text-5xl">
+            <AppIcon icon="building" class="w-16 h-16 text-white/80" />
+          </div>
         </div>
       </div>
 
       <!-- Stat cards row -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="client-stat-card">
-          <div class="client-stat-value">{{ stats.total_bookings }}</div>
-          <div class="client-stat-label">Total Bookings</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="stat-card">
+          <div class="stat-icon bg-primary-100 text-primary-600">
+            <AppIcon icon="calendar-event" class="w-5 h-5" />
+          </div>
+          <div class="stat-value">{{ stats.total_bookings }}</div>
+          <div class="stat-label">Total Bookings</div>
         </div>
-        <div class="client-stat-card">
-          <div class="client-stat-value text-violet-600">{{ stats.upcoming_bookings }}</div>
-          <div class="client-stat-label">Upcoming</div>
+        <div class="stat-card">
+          <div class="stat-icon bg-accent/10 text-accent">
+            <AppIcon icon="clock" class="w-5 h-5" />
+          </div>
+          <div class="stat-value text-primary-600">{{ stats.upcoming_bookings }}</div>
+          <div class="stat-label">Upcoming</div>
         </div>
-        <div class="client-stat-card">
-          <div class="client-stat-value text-emerald-600">{{ stats.completed_bookings }}</div>
-          <div class="client-stat-label">Completed</div>
+        <div class="stat-card">
+          <div class="stat-icon bg-primary-100 text-primary-700">
+            <AppIcon icon="circle-check" class="w-5 h-5" />
+          </div>
+          <div class="stat-value text-primary-700">{{ stats.completed_bookings }}</div>
+          <div class="stat-label">Completed</div>
         </div>
-        <div class="client-stat-card">
-          <div class="client-stat-value text-slate-500">{{ stats.cancelled_bookings }}</div>
-          <div class="client-stat-label">Cancelled</div>
+        <div class="stat-card">
+          <div class="stat-icon bg-coral/10 text-coral">
+            <AppIcon icon="x" class="w-5 h-5" />
+          </div>
+          <div class="stat-value text-warm-500">{{ stats.cancelled_bookings }}</div>
+          <div class="stat-label">Cancelled</div>
         </div>
       </div>
 
       <!-- Progress + Recent in grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <!-- Completion rate card -->
-        <div class="client-card">
-          <div class="client-card-body">
+        <div class="card">
+          <div class="p-5">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="client-card-title">Booking completion</h3>
-              <span class="text-sm font-bold text-violet-600">{{ completionRate }}%</span>
+              <h3 class="text-sm font-semibold text-warm-800">Booking completion</h3>
+              <span class="text-sm font-bold text-primary-600">{{ completionRate }}%</span>
             </div>
-            <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div class="h-full bg-gradient-to-r from-violet-500 to-violet-400 rounded-full transition-all duration-500" :style="{ width: completionRate + '%' }"></div>
+            <div class="h-2 bg-warm-100 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full transition-all duration-500" :style="{ width: completionRate + '%' }"></div>
             </div>
-            <div class="flex justify-between mt-2 text-xs text-slate-500">
+            <div class="flex justify-between mt-2 text-xs text-warm-500">
               <span>{{ stats.completed_bookings }} completed</span>
               <span>{{ stats.total_bookings }} total</span>
             </div>
@@ -77,36 +89,38 @@
         </div>
 
         <!-- Recent Bookings card (spans 2) -->
-        <div class="lg:col-span-2 client-card">
-          <div class="client-card-body">
+        <div class="lg:col-span-2 card">
+          <div class="p-5">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="client-card-title">Recent Bookings</h3>
-              <RouterLink to="/client/bookings" class="text-sm font-medium text-violet-600 hover:text-violet-700">
-                View all →
+              <h3 class="text-sm font-semibold text-warm-800">Recent Bookings</h3>
+              <RouterLink to="/customer/bookings" class="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors">
+                View all &rarr;
               </RouterLink>
             </div>
 
             <div v-if="recentBookings.length === 0" class="py-10 text-center">
-              <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-2xl">📅</div>
-              <p class="text-sm font-medium text-slate-700">No bookings yet</p>
-              <p class="text-xs text-slate-500 mt-0.5">Find and book the perfect venue</p>
-              <RouterLink to="/venues" class="client-btn-primary mt-4 inline-flex">Browse Venues</RouterLink>
+              <div class="w-14 h-14 rounded-full bg-warm-100 flex items-center justify-center mx-auto mb-3">
+                <AppIcon icon="calendar-event" class="w-7 h-7 text-warm-400" />
+              </div>
+              <p class="text-sm font-medium text-warm-700">No bookings yet</p>
+              <p class="text-xs text-warm-500 mt-0.5">Find and book the perfect venue</p>
+              <RouterLink to="/venues" class="btn-primary mt-4 inline-flex">Browse Venues</RouterLink>
             </div>
 
             <div v-else class="space-y-3">
               <RouterLink
                 v-for="b in recentBookings"
                 :key="b.id"
-                :to="`/client/bookings/${b.id}`"
-                class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
+                :to="`/customer/bookings/${b.id}`"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-warm-50 transition-colors border border-transparent hover:border-warm-200"
               >
-                <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-warm-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                   <img v-if="b.venue?.thumbnail" :src="getImageUrl(b.venue.thumbnail)" class="w-full h-full object-cover" />
-                  <span v-else class="text-slate-400 text-sm">🏛️</span>
+                  <AppIcon v-else icon="building" class="w-5 h-5 text-warm-400" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="font-medium text-slate-800 text-sm truncate">{{ b.venue?.name }}</p>
-                  <p class="text-xs text-slate-500">{{ formatDate(b.event_date) }} · PKR {{ Number(b.total_amount).toLocaleString() }}</p>
+                  <p class="font-medium text-warm-800 text-sm truncate">{{ b.venue?.name }}</p>
+                  <p class="text-xs text-warm-500">{{ formatDate(b.event_date) }} &middot; PKR {{ Number(b.total_amount).toLocaleString() }}</p>
                 </div>
                 <span :class="statusClass(b.status)" class="text-xs font-medium px-2.5 py-1 rounded-full capitalize flex-shrink-0">{{ b.status }}</span>
               </RouterLink>
@@ -116,39 +130,33 @@
       </div>
 
       <!-- Quick actions -->
-      <h3 class="client-section-title">Quick actions</h3>
+      <h3 class="text-sm font-semibold text-warm-800 uppercase tracking-wider mb-4">Quick actions</h3>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <RouterLink to="/venues" class="client-card flex items-center gap-4 p-4 hover:shadow-md hover:border-violet-200 transition-all group no-underline">
-          <div class="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center group-hover:bg-violet-200 transition-colors flex-shrink-0">
-            <svg class="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
+        <RouterLink to="/venues" class="card-hover flex items-center gap-4 p-4 no-underline">
+          <div class="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center group-hover:bg-primary-200 transition-colors flex-shrink-0">
+            <AppIcon icon="search" class="w-6 h-6 text-primary-600" />
           </div>
           <div>
-            <p class="font-semibold text-slate-800 text-sm">Browse Venues</p>
-            <p class="text-xs text-slate-500">Discover new places</p>
+            <p class="font-semibold text-warm-800 text-sm">Browse Venues</p>
+            <p class="text-xs text-warm-500">Discover new places</p>
           </div>
         </RouterLink>
-        <RouterLink to="/client/bookings" class="client-card flex items-center gap-4 p-4 hover:shadow-md hover:border-violet-200 transition-all group no-underline">
-          <div class="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center group-hover:bg-violet-200 transition-colors flex-shrink-0">
-            <svg class="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
+        <RouterLink to="/customer/bookings" class="card-hover flex items-center gap-4 p-4 no-underline">
+          <div class="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center group-hover:bg-primary-200 transition-colors flex-shrink-0">
+            <AppIcon icon="calendar-event" class="w-6 h-6 text-primary-600" />
           </div>
           <div>
-            <p class="font-semibold text-slate-800 text-sm">My Bookings</p>
-            <p class="text-xs text-slate-500">View all your bookings</p>
+            <p class="font-semibold text-warm-800 text-sm">My Bookings</p>
+            <p class="text-xs text-warm-500">View all your bookings</p>
           </div>
         </RouterLink>
-        <RouterLink to="/client/profile" class="client-card flex items-center gap-4 p-4 hover:shadow-md hover:border-violet-200 transition-all group no-underline">
-          <div class="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center group-hover:bg-violet-200 transition-colors flex-shrink-0">
-            <svg class="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-            </svg>
+        <RouterLink to="/customer/profile" class="card-hover flex items-center gap-4 p-4 no-underline">
+          <div class="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center group-hover:bg-primary-200 transition-colors flex-shrink-0">
+            <AppIcon icon="user" class="w-6 h-6 text-primary-600" />
           </div>
           <div>
-            <p class="font-semibold text-slate-800 text-sm">My Profile</p>
-            <p class="text-xs text-slate-500">Update your information</p>
+            <p class="font-semibold text-warm-800 text-sm">My Profile</p>
+            <p class="text-xs text-warm-500">Update your information</p>
           </div>
         </RouterLink>
       </div>
@@ -161,6 +169,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 const loading = ref(true)
 const stats = reactive({ total_bookings: 0, upcoming_bookings: 0, completed_bookings: 0, cancelled_bookings: 0 })
@@ -192,13 +201,13 @@ function getImageUrl(path: string) {
 
 function statusClass(s: string) {
   const map: Record<string, string> = {
-    pending: 'bg-amber-100 text-amber-800',
-    confirmed: 'bg-emerald-100 text-emerald-800',
-    completed: 'bg-blue-100 text-blue-800',
-    cancelled: 'bg-red-100 text-red-800',
-    rejected: 'bg-red-100 text-red-800',
+    pending: 'badge-accent',
+    confirmed: 'badge-primary',
+    completed: 'badge-primary',
+    cancelled: 'badge-coral',
+    rejected: 'badge-coral',
   }
-  return map[s] || 'bg-slate-100 text-slate-700'
+  return map[s] || 'badge-warm'
 }
 
 onMounted(load)

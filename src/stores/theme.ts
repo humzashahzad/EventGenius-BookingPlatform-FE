@@ -5,7 +5,7 @@ export type ThemeMode = 'light' | 'dark' | 'auto'
 export type ResolvedTheme = 'light' | 'dark'
 
 export const useThemeStore = defineStore('theme', () => {
-  const themeMode = ref<ThemeMode>((localStorage.getItem('themeMode') as ThemeMode) || 'auto')
+  const themeMode = ref<ThemeMode>((localStorage.getItem('themeMode') as ThemeMode) || 'dark')
   const systemPreference = ref<ResolvedTheme>('light')
 
   // Computed resolved theme (actual theme to apply)
@@ -45,7 +45,7 @@ export const useThemeStore = defineStore('theme', () => {
     return () => {}
   }
 
-  // Apply theme class to document root
+  // Apply theme via class for Tailwind dark mode
   function applyTheme(theme: ResolvedTheme) {
     document.documentElement.classList.remove('light', 'dark')
     document.documentElement.classList.add(theme)

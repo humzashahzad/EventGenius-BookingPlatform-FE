@@ -1,13 +1,9 @@
 class SoundService {
   private enabled: boolean = true
-  private volume: number = 0.5
-
-  // Data URIs for notification and message sounds (create new Audio on each play for reliable playback)
-  private readonly NOTIFICATION_SRC = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTUIGWi777edTAwNUKfk77RgGgU7k9nxxnksBSpzy/DXjT4KFl+z6OunUxQJSKDh8sFsIAUrlM3y2oo2CBtpu+7mm0wNDlKo5O+zXxkGPJLY8sV5KwYqcs7v1os+CRZftejqplEUCUqg4vO/ax8FKpPM8tqLNQgbaLnu5ppMDA5SqOTwsl4ZBjyS2PLGeSoGKnHN79aKPgkVXrXo6qZSEwlJn+HyvmsgBSuVzPLbiTUIGmm67OWaTQwOUqjk77JeGQY7kdjywXgpBipxzu/WiT0KFV6z5+qnUhMKSaDh8sFrIAUrlM3y2ok2BhppuuvmmkwMDlKn5PCyXhoFO5LZ8sB4KQUqcs3w1Yk+ChVfsufrplETCkmg4vLAax4FKpTN8tuJNQYaabrs5ZpNDA5SqOTwsl4ZBjuS2fHBeSkFKnHM8NWJPgkVX7Lm6qdSEwlKoOLywGwfBSuUzvLaiTYGG2i56+aaTQwOUqjk77JfGQY6ktnywXgpBSp0ze/WiT4JFV+y5+umUhIJSp/h88FrHgUrkM3y2Yk2Bhppuuzlmk0MDlOo5O+yXhkGPJPY8cJ4KQUqccvv1oo9CRZfsufqp1MSCEqf4fPBbB8FK5PN8tuJNgYbaLjr5ppNDA5TqOTvsV4ZBT2S2/LBeCgFK3HN8NSJPggWX7Ln6qdTEglJoODywWseByqTzvLZijYGG2m56+WaTQwOUqjk77FfGgU8ktnywXgpBCt0zO/ViT4IFl6y5+qmUxMJSZ/h8sFsHwUqlM3y2ok2Bhto'
-  private readonly MESSAGE_SRC = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTUIGWi777edTAwNUKfk77RgGgU7k9nxxnksBSpzy/DXjT4KFl+z6OunUxQJSKDh8sFsIAUrlM3y2oo2CBtpu+7mm0wNDlKo5O+zXxkGPJLY8sV5KwYqcs7v1os+CRZftejqplEUCUqg4vO/ax8FKpPM8tqLNQgbaLnu5ppMDA5SqOTwsl4ZBjyS2PLGeSoGKnHN79aKPgkVXrXo6qZSEwlJn+HyvmsgBSuVzPLbiTUIGmm67OWaTQwOUqjk77JeGQY7kdjywXgpBipxzu/WiT0KFV6z5+qnUhMKSaDh8sFrIAUrlM3y2ok2BhppuuvmmkwMDlKn5PCyXhoFO5LZ8sB4KQUqcs3w1Yk+ChVfsufrplETCkmg4vLAax4FKpTN8tuJNQYaabrs5ZpNDA5SqOTwsl4ZBjuS2fHBeSkFKnHM8NWJPgkVX7Lm6qdSEwlKoOLywGwfBSuUzvLaiTYGG2i56+aaTQwOUqjk77JfGQY6ktnywXgpBSp0ze/WiT4JFV+y5+umUhIJSp/h88FrHgUrkM3y2Yk2Bhppuuzlmk0MDlOo5O+yXhkGPJPY8cJ4KQUqccvv1oo9CRZfsufqp1MSCEqf4fPBbB8FK5PN8tuJNgYbaLjr5ppNDA5TqOTvsV4ZBT2S2/LBeCgFK3HN8NSJPggWX7Ln6qdTEglJoODywWseByqTzvLZijYGG2m56+WaTQwOUqjk77FfGgU8ktnywXgpBCt0zO/ViT4IFl6y5+qmUxMJSZ/h8sFsHwUqlM3y2ok2Bhto'
+  private volume: number = 0.15
+  private audioContext: AudioContext | null = null
 
   constructor() {
-    // Check localStorage for user preferences
     const savedEnabled = localStorage.getItem('soundEnabled')
     const savedVolume = localStorage.getItem('soundVolume')
 
@@ -20,32 +16,70 @@ class SoundService {
     }
   }
 
+  private getAudioContext(): AudioContext {
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume()
+    }
+    return this.audioContext
+  }
+
+  /**
+   * Play a soft, gentle notification chime — two ascending sine tones.
+   */
   playNotification() {
     if (!this.enabled) return
 
     try {
-      const audio = new Audio(this.NOTIFICATION_SRC)
-      audio.volume = this.volume
-      audio.play().catch(err => {
-        console.warn('Failed to play notification sound:', err)
-      })
+      const ctx = this.getAudioContext()
+      const now = ctx.currentTime
+      const vol = this.volume
+
+      // Soft two-tone chime (C5 → E5)
+      this.playTone(ctx, 523.25, now, 0.12, vol * 0.6)        // C5
+      this.playTone(ctx, 659.25, now + 0.13, 0.18, vol * 0.5) // E5
     } catch (error) {
       console.warn('Error playing notification sound:', error)
     }
   }
 
+  /**
+   * Play a subtle message pop — single soft tone.
+   */
   playMessage() {
     if (!this.enabled) return
 
     try {
-      const audio = new Audio(this.MESSAGE_SRC)
-      audio.volume = this.volume
-      audio.play().catch(err => {
-        console.warn('Failed to play message sound:', err)
-      })
+      const ctx = this.getAudioContext()
+      const now = ctx.currentTime
+      const vol = this.volume
+
+      // Single soft pop tone (G5)
+      this.playTone(ctx, 783.99, now, 0.1, vol * 0.4)
     } catch (error) {
       console.warn('Error playing message sound:', error)
     }
+  }
+
+  private playTone(ctx: AudioContext, frequency: number, startTime: number, duration: number, volume: number) {
+    const oscillator = ctx.createOscillator()
+    const gainNode = ctx.createGain()
+
+    oscillator.type = 'sine'
+    oscillator.frequency.setValueAtTime(frequency, startTime)
+
+    // Soft envelope: quick fade-in, gentle fade-out
+    gainNode.gain.setValueAtTime(0, startTime)
+    gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.01)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
+
+    oscillator.connect(gainNode)
+    gainNode.connect(ctx.destination)
+
+    oscillator.start(startTime)
+    oscillator.stop(startTime + duration + 0.01)
   }
 
   setEnabled(enabled: boolean) {

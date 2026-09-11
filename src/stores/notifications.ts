@@ -1,6 +1,8 @@
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import type { Channel } from 'laravel-echo'
 import api from '@/lib/axios'
+import { getEcho } from '@/lib/echo'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { soundService } from '@/services/soundService'
@@ -16,12 +18,16 @@ export interface AppNotification {
 }
 
 export const useNotificationStore = defineStore('notifications', () => {
-  const notifications  = ref<AppNotification[]>([])
-  const unreadCount    = ref(0)
-  const loading        = ref(false)
-  const sseSource      = ref<EventSource | null>(null)
-  const lastEventId    = ref(0)
-  /** Dedupe: when chat socket already showed sound+browser notif for this conversation, skip when SSE delivers same */
+  const notifications = ref<AppNotification[]>([])
+  const unreadCount = ref(0)
+  const bookingUnreadCount = ref(0)
+  const loading = ref(false)
+  const lastEventId = ref(0)
+  const userChannel = ref<Channel | null>(null)
+  const connectedUserId = ref<number | null>(null)
+
+  // Dedupe: chat socket may already show sound/browser notification before
+  // the persisted app notification reaches the same user channel.
   const lastChatNotifConversationId = ref<number | null>(null)
   const lastChatNotifTime = ref(0)
   const CHAT_NOTIF_DEDUPE_MS = 4000
@@ -39,158 +45,205 @@ export const useNotificationStore = defineStore('notifications', () => {
     return Date.now() - lastChatNotifTime.value < CHAT_NOTIF_DEDUPE_MS
   }
 
-  // ── Fetch latest notifications (initial load + poll fallback) ──────────────
+  function mergeNotification(notification: AppNotification): boolean {
+    const existing = notifications.value.find(n => n.id === notification.id)
+    if (existing) {
+      Object.assign(existing, notification)
+      lastEventId.value = Math.max(lastEventId.value, notification.id)
+      return false
+    }
+
+    notifications.value.unshift(notification)
+    if (!notification.is_read) unreadCount.value++
+    lastEventId.value = Math.max(lastEventId.value, notification.id)
+    return true
+  }
+
   async function fetchUnread() {
     try {
-      const { data } = await api.get('/notifications/unread')
-      unreadCount.value = data.unread_count
-      // Merge latest into notifications (prepend new ones)
+      notifications.value = notifications.value.filter(notification => notification.type !== 'chat_message')
+      const { data } = await api.get('/notifications/unread', {
+        params: { exclude_types: ['chat_message'] },
+      })
+      unreadCount.value = Number(data.counts?.general ?? data.unread_count ?? 0)
+      bookingUnreadCount.value = Number(data.counts?.booking ?? 0)
+      lastEventId.value = Math.max(lastEventId.value, Number(data.last_id || 0))
+
       const incoming: AppNotification[] = data.latest || []
-      for (const n of incoming) {
-        if (!notifications.value.find(x => x.id === n.id)) {
-          notifications.value.unshift(n)
-          if (n.id > lastEventId.value) lastEventId.value = n.id
+      for (const notification of incoming) {
+        if (!notifications.value.find(existing => existing.id === notification.id)) {
+          notifications.value.unshift(notification)
         }
       }
-    } catch { /* silent */ }
+    } catch {
+      // Silent by design for header refreshes.
+    }
   }
 
   async function fetchAll(page = 1) {
     loading.value = true
     try {
-      const { data } = await api.get('/notifications', { params: { page, per_page: 30 } })
+      const { data } = await api.get('/notifications', {
+        params: {
+          page,
+          per_page: 30,
+          exclude_types: ['chat_message'],
+        },
+      })
       if (page === 1) {
         notifications.value = data.data.data
-        unreadCount.value   = data.unread_count
+        unreadCount.value = Number(data.counts?.general ?? data.unread_count ?? 0)
+        bookingUnreadCount.value = Number(data.counts?.booking ?? 0)
         if (notifications.value.length) {
-          lastEventId.value = Math.max(...notifications.value.map(n => n.id))
+          lastEventId.value = Math.max(...notifications.value.map(notification => notification.id))
         }
       } else {
         notifications.value.push(...data.data.data)
       }
       return data.data
-    } catch { /* silent */ } finally {
+    } finally {
       loading.value = false
     }
   }
 
-  // ── SSE real-time stream ───────────────────────────────────────────────────
-  function startSSE() {
+  function connectRealtime() {
     const authStore = useAuthStore()
-    const token = localStorage.getItem('auth_token')
-    if (!token || sseSource.value) return
+    if (!authStore.user || !authStore.token) return
 
-    const url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/notifications/stream?token=${encodeURIComponent(token)}&lastId=${lastEventId.value}`
+    if (connectedUserId.value === authStore.user.id && userChannel.value) {
+      return
+    }
 
-    const es = new EventSource(url)
-    sseSource.value = es
+    disconnectRealtime()
 
-    es.addEventListener('notification', (event) => {
-      try {
-        const n: AppNotification = JSON.parse(event.data)
-        if (!notifications.value.find(x => x.id === n.id)) {
-          notifications.value.unshift(n)
-          if (!n.is_read) unreadCount.value++
-          lastEventId.value = Math.max(lastEventId.value, n.id)
-          const conversationId = n.type === 'chat_message' ? n.data?.conversation_id : undefined
-          const chatStore = useChatStore()
-          const isViewingThisChat = n.type === 'chat_message' &&
-            conversationId != null &&
-            chatStore.currentConversationId === conversationId
-          const alreadyShownBySocket = n.type === 'chat_message' && shouldSkipChatNotifSoundAndBrowser(conversationId)
-          // Real-time chat is driven by WebSockets (socket server). We only show notification/sound here.
-          if (!alreadyShownBySocket) {
-            showBrowserNotification(n)
-            if (!isViewingThisChat) soundService.playNotification()
-          }
-        }
-      } catch { /* ignore parse errors */ }
+    connectedUserId.value = authStore.user.id
+    userChannel.value = getEcho().private(`user.${authStore.user.id}`)
+    userChannel.value.listen('.notification.created', (event: any) => {
+      handleIncomingNotification(event.notification as AppNotification)
     })
+  }
 
-    es.addEventListener('reconnect', () => {
-      stopSSE()
-      setTimeout(startSSE, 1000)
-    })
+  function disconnectRealtime() {
+    if (connectedUserId.value != null) {
+      getEcho().leave(`user.${connectedUserId.value}`)
+    }
+    userChannel.value = null
+    connectedUserId.value = null
+  }
 
-    es.addEventListener('connected', () => {
-      // SSE connected successfully
-    })
+  function handleIncomingNotification(notification: AppNotification) {
+    if (notification.type === 'session_revoked') {
+      window.dispatchEvent(new CustomEvent('auth:session-expired'))
+    }
 
-    es.onerror = () => {
-      stopSSE()
-      // Fallback: poll every 15 seconds when SSE fails
-      setTimeout(() => {
-        fetchUnread()
-        startSSE()
-      }, 15000)
+    if (notification.type === 'chat_message') {
+      return
+    }
+
+    const inserted = mergeNotification(notification)
+    if (inserted && isBookingNotification(notification.type) && !notification.is_read) {
+      bookingUnreadCount.value++
+    }
+
+    if (!inserted) return
+
+    showBrowserNotification(notification)
+    if (!document.hasFocus()) {
+      soundService.playNotification()
     }
   }
 
-  function stopSSE() {
-    if (sseSource.value) {
-      sseSource.value.close()
-      sseSource.value = null
-    }
-  }
-
-  // ── Actions ────────────────────────────────────────────────────────────────
   async function markRead(id: number) {
     await api.patch(`/notifications/${id}/read`)
-    const n = notifications.value.find(x => x.id === id)
-    if (n && !n.is_read) {
-      n.is_read = true
+    const notification = notifications.value.find(item => item.id === id)
+    if (notification && !notification.is_read) {
+      notification.is_read = true
       unreadCount.value = Math.max(0, unreadCount.value - 1)
+      if (isBookingNotification(notification.type)) {
+        bookingUnreadCount.value = Math.max(0, bookingUnreadCount.value - 1)
+      }
     }
   }
 
   async function markAllRead() {
     await api.post('/notifications/read-all')
-    notifications.value.forEach(n => { n.is_read = true })
+    notifications.value.forEach(notification => {
+      notification.is_read = true
+    })
     unreadCount.value = 0
+    bookingUnreadCount.value = 0
   }
 
   async function remove(id: number) {
     await api.delete(`/notifications/${id}`)
-    const idx = notifications.value.findIndex(x => x.id === id)
-    if (idx !== -1) {
-      if (!notifications.value[idx].is_read) unreadCount.value = Math.max(0, unreadCount.value - 1)
-      notifications.value.splice(idx, 1)
+    const index = notifications.value.findIndex(item => item.id === id)
+    if (index !== -1) {
+      if (!notifications.value[index].is_read) {
+        unreadCount.value = Math.max(0, unreadCount.value - 1)
+        if (isBookingNotification(notifications.value[index].type)) {
+          bookingUnreadCount.value = Math.max(0, bookingUnreadCount.value - 1)
+        }
+      }
+      notifications.value.splice(index, 1)
     }
   }
 
-  function showBrowserNotification(n: AppNotification) {
+  function isBookingNotification(type: string): boolean {
+    return [
+      'booking_created',
+      'booking_confirmed',
+      'booking_rejected',
+      'booking_cancelled',
+      'new_booking_received',
+    ].includes(type)
+  }
+
+  function showBrowserNotification(notification: AppNotification) {
     if (!('Notification' in window)) return
     if (Notification.permission === 'granted') {
       try {
-        new Notification(n.title, {
-          body: n.body,
-          icon: '/favicon.ico',
-          tag: `notif-${n.id}`,
+        new Notification(notification.title, {
+          body: notification.body,
+          icon: '/favicon.svg',
+          tag: `notif-${notification.id}`,
         })
-      } catch (e) {
-        console.warn('Browser notification failed:', e)
+      } catch (error) {
+        console.warn('Browser notification failed:', error)
       }
       return
     }
+
     if (Notification.permission === 'default') {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
           try {
-            new Notification(n.title, { body: n.body, icon: '/favicon.ico', tag: `notif-${n.id}` })
-          } catch (e) {
-            console.warn('Browser notification failed:', e)
+            new Notification(notification.title, {
+              body: notification.body,
+              icon: '/favicon.svg',
+              tag: `notif-${notification.id}`,
+            })
+          } catch (error) {
+            console.warn('Browser notification failed:', error)
           }
         }
       })
     }
   }
 
-  /** Call when chat socket delivers a new message and user is not viewing that conversation: instant sound + browser notif; records so SSE won’t duplicate. */
   function showChatMessageNotification(title: string, body: string, conversationId: number) {
     recordChatNotificationShown(conversationId)
-    soundService.playNotification()
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '/favicon.ico', tag: `chat-${conversationId}-${Date.now()}` })
+
+    const chatStore = useChatStore()
+    const isViewingThisChat = chatStore.currentChatId === conversationId && document.hasFocus()
+    if (!isViewingThisChat) {
+      soundService.playMessage()
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+          body,
+          icon: '/favicon.svg',
+          tag: `chat-${conversationId}-${Date.now()}`,
+        })
+      }
     }
   }
 
@@ -200,50 +253,62 @@ export const useNotificationStore = defineStore('notifications', () => {
     }
   }
 
-  // ── Icon by type ───────────────────────────────────────────────────────────
   function iconForType(type: string): string {
     const map: Record<string, string> = {
-      booking_created:      '📅',
-      booking_confirmed:    '✅',
-      booking_rejected:     '❌',
-      booking_cancelled:    '🚫',
+      booking_created: '📅',
+      booking_confirmed: '✅',
+      booking_rejected: '❌',
+      booking_cancelled: '🚫',
       new_booking_received: '🔔',
-      store_approved:       '🏪',
-      store_suspended:      '⛔',
-      chat_message:         '💬',
+      store_approved: '🏪',
+      store_suspended: '⛔',
+      chat_message: '💬',
+      session_revoked: '🔒',
     }
     return map[type] || '🔔'
   }
 
   function colorForType(type: string): string {
     const map: Record<string, string> = {
-      booking_created:      'primary',
-      booking_confirmed:    'success',
-      booking_rejected:     'danger',
-      booking_cancelled:    'warning',
+      booking_created: 'primary',
+      booking_confirmed: 'success',
+      booking_rejected: 'danger',
+      booking_cancelled: 'warning',
       new_booking_received: 'info',
-      store_approved:       'success',
-      store_suspended:      'danger',
-      chat_message:         'primary',
+      store_approved: 'success',
+      store_suspended: 'danger',
+      chat_message: 'primary',
+      session_revoked: 'danger',
     }
     return map[type] || 'primary'
   }
 
   function timeAgo(dateStr: string): string {
     const date = new Date(dateStr)
-    const now  = new Date()
+    const now = new Date()
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
-    if (diff < 60)    return 'just now'
-    if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`
+    if (diff < 60) return 'just now'
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
     return `${Math.floor(diff / 86400)}d ago`
   }
 
   return {
-    notifications, unreadCount, loading, unread,
-    fetchUnread, fetchAll, startSSE, stopSSE,
-    markRead, markAllRead, remove,
-    iconForType, colorForType, timeAgo,
+    notifications,
+    unreadCount,
+    bookingUnreadCount,
+    loading,
+    unread,
+    fetchUnread,
+    fetchAll,
+    connectRealtime,
+    disconnectRealtime,
+    markRead,
+    markAllRead,
+    remove,
+    iconForType,
+    colorForType,
+    timeAgo,
     requestBrowserPermission,
     showBrowserNotification,
     showChatMessageNotification,

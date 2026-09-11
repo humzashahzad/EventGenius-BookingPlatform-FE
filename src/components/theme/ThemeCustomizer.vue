@@ -1,43 +1,62 @@
 <template>
   <Teleport to="body">
-    <Transition name="offcanvas">
-      <div v-if="open" class="theme-customizer-overlay" @click.self="close">
-        <div class="theme-customizer">
-          <div class="theme-customizer-header">
-            <h2 class="theme-customizer-title">Theme</h2>
-            <button type="button" class="theme-customizer-close" aria-label="Close" @click="close">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
+    <Transition name="backdrop">
+      <div
+        v-if="open"
+        class="fixed inset-0 z-50 bg-warm-900/50 backdrop-blur-sm"
+        aria-hidden="true"
+        @click="close"
+      />
+    </Transition>
+    <Transition name="panel">
+      <aside
+        v-if="open"
+        class="fixed top-0 right-0 z-50 w-full max-w-sm h-full bg-white dark:bg-warm-800 shadow-float border-l border-warm-200 dark:border-warm-700 flex flex-col"
+      >
+        <div class="flex items-center justify-between h-14 px-4 border-b border-warm-200 dark:border-warm-700">
+          <h2 class="font-semibold text-warm-800 dark:text-white">Theme</h2>
+          <button
+            type="button"
+            class="p-2 rounded-xl hover:bg-warm-100 dark:hover:bg-warm-700 text-warm-500 dark:text-warm-400"
+            aria-label="Close"
+            @click="close"
+          >
+            <AppIcon icon="x" class="w-5 h-5" />
+          </button>
+        </div>
+        <div class="p-4 flex-1 overflow-auto">
+          <p class="text-sm text-warm-500 dark:text-warm-400 mb-4">
+            Choose how the app looks. System follows your device setting.
+          </p>
+          <div class="flex flex-col gap-2">
+            <button
+              v-for="opt in options"
+              :key="opt.mode"
+              type="button"
+              class="flex items-center gap-3 p-3 rounded-2xl border text-left transition-colors"
+              :class="themeStore.themeMode === opt.mode
+                ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                : 'border-warm-200 dark:border-warm-700 hover:bg-warm-50 dark:hover:bg-warm-700/50'"
+              @click="select(opt.mode)"
+            >
+              <span class="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400">
+                <AppIcon :icon="opt.icon" class="w-4 h-4" />
+              </span>
+              <span class="flex-1 font-medium text-warm-800 dark:text-white">{{ opt.label }}</span>
+              <span v-if="opt.mode === 'auto'" class="text-sm text-warm-500 dark:text-warm-400">
+                {{ themeStore.resolvedTheme === 'dark' ? 'Dark' : 'Light' }}
+              </span>
             </button>
           </div>
-          <div class="theme-customizer-body">
-            <p class="theme-customizer-desc">Choose how the app looks. System follows your device setting.</p>
-            <div class="theme-options">
-              <button
-                v-for="opt in options"
-                :key="opt.mode"
-                type="button"
-                class="theme-option"
-                :class="{ active: themeStore.themeMode === opt.mode }"
-                @click="select(opt.mode)"
-              >
-                <span class="theme-option-icon" :aria-hidden="true">{{ opt.icon }}</span>
-                <span class="theme-option-label">{{ opt.label }}</span>
-                <span v-if="opt.mode === 'auto'" class="theme-option-hint">
-                  {{ themeStore.resolvedTheme === 'dark' ? 'Dark' : 'Light' }}
-                </span>
-              </button>
-            </div>
-          </div>
         </div>
-      </div>
+      </aside>
     </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
@@ -45,9 +64,9 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>()
 const themeStore = useThemeStore()
 
 const options: { mode: ThemeMode; label: string; icon: string }[] = [
-  { mode: 'light', label: 'Light', icon: '☀️' },
-  { mode: 'dark', label: 'Dark', icon: '🌙' },
-  { mode: 'auto', label: 'System', icon: '💻' },
+  { mode: 'light', label: 'Light', icon: 'sun' },
+  { mode: 'dark', label: 'Dark', icon: 'moon' },
+  { mode: 'auto', label: 'System', icon: 'device-desktop' },
 ]
 
 function close() {
@@ -60,162 +79,20 @@ function select(mode: ThemeMode) {
 </script>
 
 <style scoped>
-.theme-customizer-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  justify-content: flex-end;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(4px);
+.backdrop-enter-active,
+.backdrop-leave-active {
+  transition: opacity 0.15s ease;
 }
-
-.theme-customizer {
-  width: 100%;
-  max-width: 320px;
-  height: 100%;
-  background: var(--color-surface, #fff);
-  border-left: 1px solid var(--color-border, #e2e8f0);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-}
-
-.theme-customizer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
-}
-
-.theme-customizer-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--color-text, #0f172a);
-}
-
-.theme-customizer-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: none;
-  border-radius: 0.5rem;
-  background: transparent;
-  color: var(--color-text-secondary, #64748b);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.theme-customizer-close:hover {
-  background: var(--color-bg, #f1f5f9);
-  color: var(--color-text, #0f172a);
-}
-
-.theme-customizer-body {
-  padding: 1.25rem;
-  flex: 1;
-}
-
-.theme-customizer-desc {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary, #64748b);
-  margin-bottom: 1.25rem;
-}
-
-.theme-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.theme-option {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 0.75rem;
-  background: var(--color-bg, #f8fafc);
-  color: var(--color-text, #0f172a);
-  font-size: 0.9375rem;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-}
-
-.theme-option:hover {
-  border-color: var(--color-primary, #2563eb);
-  background: var(--color-surface, #fff);
-}
-
-.theme-option.active {
-  border-color: var(--color-primary, #2563eb);
-  background: rgba(37, 99, 235, 0.08);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-}
-
-.theme-option-icon {
-  font-size: 1.25rem;
-}
-
-.theme-option-label {
-  flex: 1;
-}
-
-.theme-option-hint {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--color-text-muted, #94a3b8);
-}
-
-/* Dark mode overrides */
-:global(html.dark) .theme-customizer {
-  background: var(--card-bg);
-  border-left-color: var(--border-color);
-}
-
-:global(html.dark) .theme-customizer-title {
-  color: var(--text-primary);
-}
-
-:global(html.dark) .theme-customizer-close:hover {
-  background: var(--color-bg-hover);
-  color: var(--text-primary);
-}
-
-:global(html.dark) .theme-option {
-  background: var(--input-bg);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
-:global(html.dark) .theme-option:hover,
-:global(html.dark) .theme-option.active {
-  border-color: var(--input-focus-border);
-  background: var(--color-bg-hover);
-}
-
-.offcanvas-enter-active,
-.offcanvas-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.offcanvas-enter-from,
-.offcanvas-leave-to {
+.backdrop-enter-from,
+.backdrop-leave-to {
   opacity: 0;
 }
-
-.offcanvas-enter-active .theme-customizer,
-.offcanvas-leave-active .theme-customizer {
+.panel-enter-active,
+.panel-leave-active {
   transition: transform 0.25s ease;
 }
-
-.offcanvas-enter-from .theme-customizer,
-.offcanvas-leave-to .theme-customizer {
+.panel-enter-from,
+.panel-leave-to {
   transform: translateX(100%);
 }
 </style>

@@ -1,175 +1,167 @@
 <template>
-  <div class="page-container">
-    <!-- Page header -->
-    <div class="page-header">
+  <div class="content-container">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between mb-8">
       <div>
-        <h1 class="page-title">Users</h1>
-        <p class="page-subtitle">Manage all registered users across the platform.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-warm-50">Users</h1>
+        <p class="text-warm-500 dark:text-warm-400 mt-1">Manage all registered users across the platform.</p>
       </div>
+      <span v-if="!loading" class="text-sm text-warm-400 dark:text-warm-500">{{ meta.total ?? '---' }} users</span>
     </div>
 
-    <!-- Results count -->
-    <div class="flex items-center gap-2 text-sm text-surface-500 mb-3">
-      <span v-if="!loading">{{ meta.total ?? '—' }} users</span>
-    </div>
-
-    <!-- Table -->
-    <div class="table-wrapper">
-      <!-- Skeleton rows -->
-      <div v-if="loading" class="bg-white">
-        <div v-for="i in 8" :key="i" class="flex gap-4 px-4 py-3.5 border-b border-surface-100">
-          <div class="skeleton h-4 w-32 rounded"></div>
-          <div class="skeleton h-4 w-48 rounded"></div>
-          <div class="skeleton h-4 w-20 rounded"></div>
-          <div class="skeleton h-4 w-16 rounded"></div>
-          <div class="skeleton h-4 w-24 rounded ml-auto"></div>
+    <!-- Table Card -->
+    <div class="card">
+      <!-- Loading skeleton -->
+      <div v-if="loading" class="p-5">
+        <div v-for="i in 8" :key="i" class="flex gap-3 py-3 border-b border-warm-100 dark:border-warm-800 last:border-0 animate-pulse">
+          <div class="h-4 w-1/6 rounded-lg bg-warm-200 dark:bg-warm-700"></div>
+          <div class="h-4 w-1/4 rounded-lg bg-warm-200 dark:bg-warm-700"></div>
+          <div class="h-4 w-1/12 rounded-lg bg-warm-200 dark:bg-warm-700"></div>
+          <div class="h-4 w-1/12 rounded-lg bg-warm-200 dark:bg-warm-700"></div>
+          <div class="h-4 w-1/6 rounded-lg bg-warm-200 dark:bg-warm-700 ml-auto"></div>
         </div>
       </div>
 
-      <div v-else-if="users.length === 0" class="empty-state bg-white rounded-xl">
-        <div class="empty-state-icon">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <!-- Empty state -->
+      <div v-else-if="users.length === 0" class="p-5 text-center py-12">
+        <div class="w-14 h-14 rounded-2xl bg-warm-100 dark:bg-warm-800 flex items-center justify-center mx-auto mb-4">
+          <AppIcon icon="users" class="w-7 h-7 text-warm-400" />
         </div>
-        <p class="empty-state-title">No users found</p>
-        <p class="empty-state-desc">Try adjusting your search or filters.</p>
+        <p class="font-medium text-warm-700 dark:text-warm-300 mb-1">No users found</p>
+        <p class="text-warm-500 dark:text-warm-400 text-sm">Try adjusting your search or filters.</p>
       </div>
 
-      <table v-else class="table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>User</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Joined</th>
-            <th class="text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(u, idx) in users" :key="u.id">
-            <td class="text-surface-400 text-xs w-10">{{ (meta.current_page - 1) * perPage + idx + 1 }}</td>
-            <td>
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                  <span class="text-xs font-semibold text-primary-700">{{ initials(u.name) }}</span>
+      <!-- Table -->
+      <div v-else class="table-wrapper overflow-x-auto">
+        <table class="w-full min-w-[700px]">
+          <thead>
+            <tr class="table-header">
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">#</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">User</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Email</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Role</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Status</th>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Joined</th>
+              <th class="text-right px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(u, idx) in users" :key="u.id" class="table-row">
+              <td class="px-5 py-3 text-sm text-warm-400 dark:text-warm-500">{{ (meta.current_page - 1) * perPage + idx + 1 }}</td>
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+                    <span class="text-xs font-bold text-primary-700 dark:text-primary-300">{{ initials(u.name) }}</span>
+                  </div>
+                  <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ u.name }}</span>
                 </div>
-                <span class="font-medium text-surface-800">{{ u.name }}</span>
-              </div>
-            </td>
-            <td class="text-surface-500">{{ u.email }}</td>
-            <td><span class="badge-info capitalize">{{ u.role?.replace('_', ' ') }}</span></td>
-            <td><span :class="u.is_active ? 'badge-success' : 'badge-danger'">{{ u.is_active ? 'Active' : 'Inactive' }}</span></td>
-            <td class="text-surface-400 text-xs whitespace-nowrap">{{ formatDate(u.created_at) }}</td>
-            <td class="text-right">
-              <div class="flex items-center justify-end gap-1">
-                <button @click="confirmToggle(u)" :class="u.is_active ? 'text-warning-600 hover:bg-warning-50' : 'text-success-600 hover:bg-success-50'"
-                  class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors" :title="u.is_active ? 'Deactivate' : 'Activate'">
-                  {{ u.is_active ? 'Deactivate' : 'Activate' }}
-                </button>
-                <button @click="confirmDelete(u)" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-danger-600 hover:bg-danger-50 transition-colors" title="Delete user">
-                  Delete
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400">{{ u.email }}</td>
+              <td class="px-5 py-3">
+                <span class="badge-primary capitalize">{{ roleLabels[u.role as keyof typeof roleLabels] || u.role?.replace('_', ' ') }}</span>
+              </td>
+              <td class="px-5 py-3">
+                <span :class="u.is_active ? 'badge-primary' : 'badge-coral'">{{ u.is_active ? 'Active' : 'Inactive' }}</span>
+              </td>
+              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 whitespace-nowrap">{{ formatDate(u.created_at) }}</td>
+              <td class="px-5 py-3 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button @click="confirmToggle(u)" class="text-sm font-medium px-3 py-1.5 rounded-xl transition-all" :class="u.is_active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50'" :title="u.is_active ? 'Deactivate' : 'Activate'">
+                    {{ u.is_active ? 'Deactivate' : 'Activate' }}
+                  </button>
+                  <button @click="confirmDelete(u)" class="btn-danger text-sm px-3 py-1.5" title="Delete user">
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Pagination -->
-    <div v-if="meta.last_page > 1" class="pagination">
-      <p class="pagination-info">Showing {{ (meta.current_page - 1) * perPage + 1 }}–{{ Math.min(meta.current_page * perPage, meta.total) }} of {{ meta.total }} users</p>
-      <div class="pagination-controls">
-        <button @click="changePage(1)" :disabled="meta.current_page === 1" class="pagination-btn" title="First">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+    <div v-if="meta.last_page > 1" class="flex flex-wrap items-center justify-between mt-6">
+      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ (meta.current_page - 1) * perPage + 1 }}--{{ Math.min(meta.current_page * perPage, meta.total) }} of {{ meta.total }} users</p>
+      <nav class="flex items-center gap-1">
+        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === 1 ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === 1" @click="changePage(1)">
+          <AppIcon icon="chevron-left" class="w-4 h-4" />
         </button>
-        <button @click="changePage(meta.current_page - 1)" :disabled="meta.current_page === 1" class="pagination-btn" title="Previous">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === 1 ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === 1" @click="changePage(meta.current_page - 1)">
+          <AppIcon icon="chevron-left" class="w-4 h-4" />
         </button>
         <template v-for="p in pageRange" :key="p">
-          <span v-if="p === '...'" class="w-8 h-8 flex items-center justify-center text-surface-400 text-sm">…</span>
-          <button v-else @click="changePage(Number(p))" :class="['pagination-btn', meta.current_page === p ? 'active' : '']">{{ p }}</button>
+          <span v-if="p === '...'" class="w-8 h-8 flex items-center justify-center text-sm text-warm-400 dark:text-warm-500">...</span>
+          <button v-else class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-medium transition-all" :class="meta.current_page === p ? 'bg-primary-600 text-white shadow-soft' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" @click="changePage(Number(p))">{{ p }}</button>
         </template>
-        <button @click="changePage(meta.current_page + 1)" :disabled="meta.current_page === meta.last_page" class="pagination-btn" title="Next">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === meta.last_page ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === meta.last_page" @click="changePage(meta.current_page + 1)">
+          <AppIcon icon="chevron-right" class="w-4 h-4" />
         </button>
-        <button @click="changePage(meta.last_page)" :disabled="meta.current_page === meta.last_page" class="pagination-btn" title="Last">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === meta.last_page ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === meta.last_page" @click="changePage(meta.last_page)">
+          <AppIcon icon="chevron-right" class="w-4 h-4" />
         </button>
-      </div>
+      </nav>
     </div>
 
-    <!-- Delete Confirm Modal -->
-    <Teleport to="body">
-      <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
-        <div class="modal">
-          <div class="modal-header">
-            <h3 class="modal-title">Delete User</h3>
-            <button @click="deleteTarget = null" class="btn-icon btn-ghost"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body">
-            <div class="flex items-start gap-4">
-              <div class="w-10 h-10 rounded-full bg-danger-100 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-danger-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-surface-800">Are you sure you want to delete <strong>{{ deleteTarget.name }}</strong>?</p>
-                <p class="text-sm text-surface-500 mt-1">This action cannot be undone. All their data will be permanently removed.</p>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button @click="deleteTarget = null" class="btn-ghost">Cancel</button>
-            <button @click="doDelete" :disabled="acting" class="btn-danger">
-              <svg v-if="acting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              Delete User
-            </button>
-          </div>
+    <!-- Delete Confirm Dialog -->
+    <VuexyModal v-model:visible="showDeleteDialog" title="Delete User" width="28rem">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-coral/10 dark:bg-coral/20 flex items-center justify-center flex-shrink-0">
+          <AppIcon icon="alert-triangle" class="w-5 h-5 text-coral" />
+        </div>
+        <div>
+          <p class="font-medium text-warm-800 dark:text-warm-200 mb-1">Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>?</p>
+          <p class="text-warm-500 dark:text-warm-400 text-sm">This action cannot be undone. All their data will be permanently removed.</p>
         </div>
       </div>
-    </Teleport>
+      <template #footer>
+        <button class="btn-secondary" @click="showDeleteDialog = false">Cancel</button>
+        <button class="btn-danger" :disabled="acting" @click="doDelete">
+          <AppIcon v-if="acting" icon="loader" class="w-4 h-4 animate-spin mr-1.5" />
+          Delete User
+        </button>
+      </template>
+    </VuexyModal>
 
-    <!-- Toggle Status Confirm Modal -->
-    <Teleport to="body">
-      <div v-if="toggleTarget" class="modal-overlay" @click.self="toggleTarget = null">
-        <div class="modal">
-          <div class="modal-header">
-            <h3 class="modal-title">{{ toggleTarget.is_active ? 'Deactivate' : 'Activate' }} User</h3>
-            <button @click="toggleTarget = null" class="btn-icon btn-ghost"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body">
-            <p class="text-sm text-surface-600">
-              Are you sure you want to <strong>{{ toggleTarget.is_active ? 'deactivate' : 'activate' }}</strong> user <strong>{{ toggleTarget.name }}</strong>?
-              <span v-if="toggleTarget.is_active"> They will be unable to log in until re-activated.</span>
-            </p>
-          </div>
-          <div class="modal-footer">
-            <button @click="toggleTarget = null" class="btn-ghost">Cancel</button>
-            <button @click="doToggle" :disabled="acting" :class="toggleTarget.is_active ? 'btn-danger' : 'btn-primary'">
-              <svg v-if="acting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              {{ toggleTarget.is_active ? 'Deactivate' : 'Activate' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Toggle Status Confirm Dialog -->
+    <VuexyModal v-model:visible="showToggleDialog" :title="(toggleTarget?.is_active ? 'Deactivate' : 'Activate') + ' User'" width="28rem">
+      <p class="text-warm-500 dark:text-warm-400">
+        Are you sure you want to <strong class="text-warm-800 dark:text-warm-200">{{ toggleTarget?.is_active ? 'deactivate' : 'activate' }}</strong> user <strong class="text-warm-800 dark:text-warm-200">{{ toggleTarget?.name }}</strong>?
+        <span v-if="toggleTarget?.is_active"> They will be unable to log in until re-activated.</span>
+      </p>
+      <template #footer>
+        <button class="btn-secondary" @click="showToggleDialog = false">Cancel</button>
+        <button :class="toggleTarget?.is_active ? 'btn-danger' : 'btn-primary'" :disabled="acting" @click="doToggle">
+          <AppIcon v-if="acting" icon="loader" class="w-4 h-4 animate-spin mr-1.5" />
+          {{ toggleTarget?.is_active ? 'Deactivate' : 'Activate' }}
+        </button>
+      </template>
+    </VuexyModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/lib/axios'
 import { useTopBarActionsStore } from '@/stores/topBarActions'
+import AppIcon from '@/components/ui/AppIcon.vue'
+import VuexyModal from '@/components/ui/VuexyModal.vue'
 
 const users      = ref<any[]>([])
 const loading    = ref(false)
 const acting     = ref(false)
+const roleLabels = {
+  admin: 'Support',
+  store_owner: 'Shop Owner',
+  client: 'Customer',
+} as const
 const search     = ref('')
 const roleFilter = ref('')
 const statusFilter = ref('')
 const deleteTarget = ref<any>(null)
 const toggleTarget = ref<any>(null)
+const showDeleteDialog = ref(false)
+const showToggleDialog = ref(false)
 const perPage    = 15
 const meta       = ref({ current_page: 1, last_page: 1, total: 0 })
 let page = 1
@@ -191,15 +183,17 @@ async function load() {
 
 function resetAndLoad() { page = 1; load() }
 
-function debouncedSearch() {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => resetAndLoad(), 400)
-}
-
 function changePage(p: number) { page = p; load() }
 
-function confirmDelete(u: any)  { deleteTarget.value = u }
-function confirmToggle(u: any)  { toggleTarget.value = u }
+function confirmDelete(u: any) {
+  deleteTarget.value = u
+  showDeleteDialog.value = true
+}
+
+function confirmToggle(u: any) {
+  toggleTarget.value = u
+  showToggleDialog.value = true
+}
 
 async function doDelete() {
   if (!deleteTarget.value) return
@@ -207,6 +201,7 @@ async function doDelete() {
   try {
     await api.delete(`/admin/users/${deleteTarget.value.id}`)
     users.value = users.value.filter(u => u.id !== deleteTarget.value.id)
+    showDeleteDialog.value = false
     deleteTarget.value = null
   } finally { acting.value = false }
 }
@@ -217,6 +212,7 @@ async function doToggle() {
   try {
     await api.patch(`/admin/users/${toggleTarget.value.id}/toggle-status`)
     toggleTarget.value.is_active = !toggleTarget.value.is_active
+    showToggleDialog.value = false
     toggleTarget.value = null
   } finally { acting.value = false }
 }
@@ -244,13 +240,13 @@ const pageRange = computed(() => {
 onMounted(() => {
   load()
   topBarActions.set({
-    searchPlaceholder: 'Search name or email…',
+    searchPlaceholder: 'Search name or email...',
     searchValue: search.value,
     filterOptions: [
       { key: 'role', label: 'All Roles', options: [
-        { value: 'client', label: 'Client' },
-        { value: 'store_owner', label: 'Store Owner' },
-        { value: 'admin', label: 'Admin' },
+        { value: 'client', label: 'Customer' },
+        { value: 'store_owner', label: 'Shop Owner' },
+        { value: 'admin', label: 'Support' },
       ]},
       { key: 'status', label: 'All Status', options: [
         { value: 'active', label: 'Active' },

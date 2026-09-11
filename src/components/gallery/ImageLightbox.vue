@@ -6,9 +6,7 @@
         <div class="lightbox-container" @click.stop>
           <!-- Close button -->
           <button @click="close" class="lightbox-close" title="Close (Esc)">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
+            <AppIcon icon="x" class="w-6 h-6" />
           </button>
 
           <!-- Previous button -->
@@ -16,11 +14,9 @@
             v-if="images.length > 1"
             @click="previous"
             class="lightbox-nav lightbox-nav-prev"
-            title="Previous (←)"
+            title="Previous"
           >
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
+            <AppIcon icon="chevron-left" class="w-8 h-8" />
           </button>
 
           <!-- Main image -->
@@ -41,11 +37,9 @@
             v-if="images.length > 1"
             @click="next"
             class="lightbox-nav lightbox-nav-next"
-            title="Next (→)"
+            title="Next"
           >
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
+            <AppIcon icon="chevron-right" class="w-8 h-8" />
           </button>
 
           <!-- Image counter -->
@@ -78,6 +72,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 export interface LightboxImage {
   url: string
@@ -202,7 +197,8 @@ defineExpose({
 .lightbox-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(15, 14, 13, 0.92);
+  backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -227,10 +223,10 @@ defineExpose({
   right: 20px;
   width: 48px;
   height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  background: rgba(250, 250, 249, 0.1);
   backdrop-filter: blur(10px);
-  color: white;
+  color: #FAFAF9;
   border: none;
   cursor: pointer;
   display: flex;
@@ -241,7 +237,7 @@ defineExpose({
 }
 
 .lightbox-close:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(250, 250, 249, 0.2);
   transform: scale(1.05);
 }
 
@@ -251,10 +247,10 @@ defineExpose({
   transform: translateY(-50%);
   width: 56px;
   height: 56px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  background: rgba(250, 250, 249, 0.1);
   backdrop-filter: blur(10px);
-  color: white;
+  color: #FAFAF9;
   border: none;
   cursor: pointer;
   display: flex;
@@ -265,7 +261,7 @@ defineExpose({
 }
 
 .lightbox-nav:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(250, 250, 249, 0.2);
   transform: translateY(-50%) scale(1.1);
 }
 
@@ -291,8 +287,8 @@ defineExpose({
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: 8px;
-  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+  border-radius: 1rem;
+  box-shadow: 0 10px 50px rgba(15, 14, 13, 0.5);
 }
 
 .lightbox-loading {
@@ -301,7 +297,8 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(15, 14, 13, 0.3);
+  border-radius: 1rem;
 }
 
 .lightbox-counter {
@@ -310,23 +307,23 @@ defineExpose({
   left: 50%;
   transform: translateX(-50%);
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(250, 250, 249, 0.1);
   backdrop-filter: blur(10px);
-  color: white;
+  color: #FAFAF9;
   font-size: 14px;
   font-weight: 600;
-  border-radius: 20px;
+  border-radius: 0.75rem;
 }
 
 .lightbox-caption {
   margin-top: 20px;
   padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(250, 250, 249, 0.1);
   backdrop-filter: blur(10px);
-  color: white;
+  color: #FAFAF9;
   font-size: 14px;
   text-align: center;
-  border-radius: 8px;
+  border-radius: 0.75rem;
   max-width: 600px;
 }
 
@@ -335,9 +332,9 @@ defineExpose({
   gap: 12px;
   margin-top: 20px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(250, 250, 249, 0.05);
   backdrop-filter: blur(10px);
-  border-radius: 12px;
+  border-radius: 1rem;
   overflow-x: auto;
   max-width: 100%;
 }
@@ -345,13 +342,13 @@ defineExpose({
 .lightbox-thumbnail {
   width: 80px;
   height: 80px;
-  border-radius: 8px;
+  border-radius: 0.75rem;
   overflow: hidden;
   border: 2px solid transparent;
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.2s ease;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(15, 14, 13, 0.3);
 }
 
 .lightbox-thumbnail img {
@@ -361,19 +358,20 @@ defineExpose({
 }
 
 .lightbox-thumbnail:hover {
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(250, 250, 249, 0.5);
   transform: scale(1.05);
 }
 
 .thumbnail-active {
-  border-color: white;
+  border-color: #10B981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
 }
 
 .spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid rgba(255, 255, 255, 0.2);
-  border-top-color: white;
+  border: 4px solid rgba(250, 250, 249, 0.2);
+  border-top-color: #10B981;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
