@@ -1,0 +1,198 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Variable Bridge ──────────────────────────────────────────────────── */
+:root {
+  --color-primary: #10B981;
+  --color-primary-light: #34D399;
+  --color-primary-100: #D1FAE5;
+  --color-primary-200: #A7F3D0;
+  --color-accent: #F59E0B;
+  --color-accent-light: #FCD34D;
+  --color-bg: #FAFAF9;
+  --color-bg-card: #FFFFFF;
+  --color-bg-elevated: #F5F5F4;
+  --color-bg-hover: #E7E5E4;
+  --color-text: #1C1917;
+  --color-text-secondary: #78716C;
+  --color-text-muted: #A8A29E;
+  --color-border-light: #E7E5E4;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 3px rgba(28, 25, 23, 0.06);
+  --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.05);
+  --shadow-lg: 0 12px 32px rgba(28, 25, 23, 0.08);
+  --shadow-xl: 0 20px 48px rgba(28, 25, 23, 0.1);
+}
+
+.dark {
+  --color-bg: #1C1917;
+  --color-bg-card: #292524;
+  --color-bg-elevated: #292524;
+  --color-bg-hover: #44403C;
+  --color-text: #FAFAF9;
+  --color-text-secondary: #D6D3D1;
+  --color-text-muted: #A8A29E;
+  --color-border-light: #44403C;
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────────── */
+@layer base {
+  body {
+    @apply font-sans text-warm-800 bg-warm-50 antialiased dark:bg-warm-900 dark:text-warm-100;
+  }
+}
+
+/* Paper texture overlay — subtle noise grain */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image:
+    repeating-conic-gradient(rgba(120, 113, 108, 0.08) 0% 25%, transparent 0% 50%);
+  background-size: 3px 3px;
+}
+
+:root.dark body::before {
+  opacity: 0.04;
+  background-image:
+    repeating-conic-gradient(rgba(250, 250, 249, 0.06) 0% 25%, transparent 0% 50%);
+}
+
+/* ─── Component Classes ────────────────────────────────────────────────────── */
+@layer components {
+  .content-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl shadow-soft hover:shadow-card hover:-translate-y-0.5 transition-all duration-200;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-warm-100 hover:bg-warm-200 text-warm-700 font-semibold rounded-xl transition-all duration-200 dark:bg-warm-700 dark:text-warm-200 dark:hover:bg-warm-600;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 border-2 border-primary-300 text-primary-600 hover:bg-primary-50 font-semibold rounded-xl transition-all duration-200 dark:border-primary-600 dark:text-primary-400 dark:hover:bg-primary-900/20;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-warm-600 hover:bg-warm-100 font-medium rounded-xl transition-all duration-200 dark:text-warm-300 dark:hover:bg-warm-700;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-coral hover:bg-coral-dark text-white font-semibold rounded-xl shadow-soft transition-all duration-200;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white dark:bg-warm-800 border border-warm-200 dark:border-warm-700 rounded-2xl shadow-card;
+  }
+  .card-hover {
+    @apply transition-all duration-200;
+  }
+  .card-hover:hover {
+    @apply shadow-elevated -translate-y-1 border-primary-200 dark:border-primary-800;
+  }
+
+  /* Form Elements */
+  .form-input {
+    @apply w-full px-4 py-2.5 bg-white dark:bg-warm-800 border border-warm-300 dark:border-warm-600 rounded-xl text-warm-800 dark:text-warm-100 placeholder-warm-400 dark:placeholder-warm-500 outline-none transition-all duration-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20;
+  }
+  .form-label {
+    @apply block text-sm font-medium text-warm-700 dark:text-warm-300 mb-1.5;
+  }
+  .form-select {
+    @apply w-full px-4 py-2.5 bg-white dark:bg-warm-800 border border-warm-300 dark:border-warm-600 rounded-xl text-warm-800 dark:text-warm-100 outline-none transition-all duration-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 appearance-none bg-no-repeat pr-10;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2378716C' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-size: 1em 1em;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full;
+  }
+  .badge-primary {
+    @apply bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400;
+  }
+  .badge-accent {
+    @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
+  }
+  .badge-coral {
+    @apply bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400;
+  }
+  .badge-warm {
+    @apply bg-warm-100 text-warm-600 dark:bg-warm-700 dark:text-warm-300;
+  }
+
+  /* Stat Cards */
+  .stat-card {
+    @apply bg-white dark:bg-warm-800 border border-warm-200 dark:border-warm-700 rounded-2xl shadow-card p-5 flex items-center gap-4;
+  }
+  .stat-icon {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center shrink-0;
+  }
+  .stat-value {
+    @apply text-2xl font-bold text-warm-900 dark:text-white tracking-tight;
+  }
+  .stat-label {
+    @apply text-sm text-warm-500 dark:text-warm-400 font-medium;
+  }
+}
+
+/* ─── Scrollbars ───────────────────────────────────────────────────────────── */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.warm.300') transparent;
+  }
+  .dark .scrollbar-thin {
+    scrollbar-color: theme('colors.warm.600') transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: theme('colors.warm.300');
+    border-radius: 9999px;
+  }
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: theme('colors.warm.600');
+  }
+}
+
+/* ─── Page Transitions ─────────────────────────────────────────────────────── */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ─── Animations ───────────────────────────────────────────────────────────── */
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
