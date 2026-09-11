@@ -1,14 +1,14 @@
 <template>
-  <div class="page-container">
-    <header v-if="title || $slots.actions" class="page-header">
-      <div v-if="title">
-        <h1 class="page-title">{{ title }}</h1>
-        <p v-if="subtitle" class="page-subtitle">{{ subtitle }}</p>
+  <div class="content-container flex-1 py-6">
+    <div v-if="title || $slots.actions" class="flex flex-wrap justify-between items-center gap-4 mb-6">
+      <div>
+        <h1 class="text-xl font-bold text-warm-800 dark:text-white mb-1">{{ title }}</h1>
+        <p v-if="subtitle" class="text-sm text-warm-500 dark:text-warm-400">{{ subtitle }}</p>
       </div>
-      <div v-if="$slots.actions" class="flex items-center gap-2 flex-shrink-0">
+      <div v-if="$slots.actions" class="flex items-center gap-2 shrink-0">
         <slot name="actions" />
       </div>
-    </header>
+    </div>
     <slot />
   </div>
 </template>

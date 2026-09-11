@@ -10,7 +10,7 @@ export default defineConfig({
     },
     server: {
         port: 5173,
-        host: 'localhost',
+        host: '0.0.0.0', // allow LAN access (e.g. from another laptop on same WiFi)
         proxy: {
             '/api': {
                 target: 'http://localhost:8000',

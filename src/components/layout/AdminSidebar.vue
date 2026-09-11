@@ -1,140 +1,84 @@
 <template>
-  <aside class="sidebar" :class="{ 'sidebar-collapsed': collapsed }">
-    <!-- Logo -->
-    <div class="sidebar-logo">
-      <div class="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center shadow-glow-sm flex-shrink-0">
-        <span class="text-white font-bold text-sm">EG</span>
-      </div>
-      <Transition name="label">
-        <div v-if="!collapsed" class="sidebar-logo-text">
-          <span class="text-base font-bold leading-none">EventGenius</span>
-          <p class="text-2xs mt-0.5 uppercase tracking-wider opacity-80">Admin Panel</p>
+  <aside
+    class="fixed top-3 left-3 bottom-3 z-40 flex flex-col bg-white dark:bg-warm-800 border border-warm-200 dark:border-warm-700 rounded-2xl shadow-float transition-all duration-300 ease-out lg:translate-x-0 overflow-hidden"
+    :class="[
+      collapsed ? 'w-[4.5rem]' : 'w-64',
+      sidebarOpen ? 'translate-x-0' : '-translate-x-[calc(100%+1rem)]'
+    ]"
+  >
+    <div class="flex items-center h-14 px-3 border-b border-warm-200 dark:border-warm-700 shrink-0">
+      <RouterLink to="/support/dashboard" class="flex items-center gap-2 min-w-0 flex-1">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center shadow-md shadow-primary-500/20 shrink-0">
+          <span class="text-white font-extrabold text-xs">EG</span>
         </div>
-      </Transition>
+        <span v-show="!collapsed" class="font-bold text-warm-800 dark:text-white truncate">EventGenius</span>
+      </RouterLink>
     </div>
 
-    <!-- Navigation -->
-    <nav class="sidebar-nav">
-      <p v-if="!collapsed" class="sidebar-section-label">Main</p>
-
+    <nav class="flex-1 overflow-y-auto scrollbar-thin py-3">
+      <p v-show="!collapsed" class="px-3 text-xs font-semibold uppercase tracking-wider text-warm-400 dark:text-warm-500 mb-1">Main</p>
       <RouterLink
         v-for="item in mainNav"
         :key="item.to"
         :to="item.to"
-        class="sidebar-link"
-        :class="{ active: isActive(item.to) }"
-        :title="collapsed ? item.label : undefined"
+        class="flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl text-warm-600 dark:text-warm-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors duration-150"
+        :class="{ 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium': isActive(item.to) }"
       >
-        <span class="sidebar-link-icon" v-html="item.icon"></span>
-        <Transition name="label">
-          <span v-if="!collapsed" class="sidebar-link-label">{{ item.label }}</span>
-        </Transition>
-        <Transition name="label">
-          <span v-if="!collapsed && item.badge" class="sidebar-badge">{{ item.badge }}</span>
-        </Transition>
-        <span v-if="collapsed && item.badge" class="sidebar-badge-dot"></span>
+        <span class="relative shrink-0">
+          <AppIcon :icon="item.icon" class="w-5 h-5" />
+          <span v-if="item.badge && collapsed" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[10px] font-bold rounded-full bg-red-500 text-white">{{ item.badge }}</span>
+        </span>
+        <span v-show="!collapsed" class="flex-1 truncate">{{ item.label }}</span>
+        <span v-if="item.badge && !collapsed" class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-500 text-white">{{ item.badge }}</span>
       </RouterLink>
-
-      <p v-if="!collapsed" class="sidebar-section-label mt-3">Security</p>
-
+      <p v-show="!collapsed" class="px-3 text-xs font-semibold uppercase tracking-wider text-warm-400 dark:text-warm-500 mt-4 mb-1">Security</p>
       <RouterLink
         v-for="item in securityNav"
         :key="item.to"
         :to="item.to"
-        class="sidebar-link"
-        :class="{ active: isActive(item.to) }"
-        :title="collapsed ? item.label : undefined"
+        class="flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl text-warm-600 dark:text-warm-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors duration-150"
+        :class="{ 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium': isActive(item.to) }"
       >
-        <span class="sidebar-link-icon" v-html="item.icon"></span>
-        <Transition name="label">
-          <span v-if="!collapsed" class="sidebar-link-label">{{ item.label }}</span>
-        </Transition>
+        <AppIcon :icon="item.icon" class="w-5 h-5 shrink-0" />
+        <span v-show="!collapsed">{{ item.label }}</span>
       </RouterLink>
     </nav>
-
-    <!-- Footer -->
-    <div class="sidebar-footer">
-      <button @click="logout" class="sidebar-logout" :title="collapsed ? 'Sign Out' : undefined">
-        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-        </svg>
-        <Transition name="label">
-          <span v-if="!collapsed">Sign Out</span>
-        </Transition>
-      </button>
-    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { RouterLink, useRoute } from 'vue-router'
 import { useNotificationStore } from '@/stores/notifications'
+import { useChatStore } from '@/stores/chat'
+import AppIcon from '@/components/ui/AppIcon.vue'
 
 const props = defineProps<{ collapsed?: boolean }>()
-const emit  = defineEmits<{ 'update:collapsed': [value: boolean] }>()
+const emit = defineEmits<{ 'update:collapsed': [value: boolean] }>()
 
-const authStore  = useAuthStore()
 const notifStore = useNotificationStore()
-const route      = useRoute()
-const router     = useRouter()
+const chatStore = useChatStore()
+const route = useRoute()
+
+const sidebarOpen = computed(() => !props.collapsed)
 
 const mainNav = computed(() => [
-  {
-    to: '/admin-panel/dashboard', label: 'Dashboard',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>`,
-    badge: undefined,
-  },
-  {
-    to: '/admin-panel/users', label: 'Users',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`,
-    badge: undefined,
-  },
-  {
-    to: '/admin-panel/stores', label: 'Stores',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`,
-    badge: undefined,
-  },
-  {
-    to: '/admin-panel/venues', label: 'Venues',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-    badge: undefined,
-  },
-  {
-    to: '/admin-panel/bookings', label: 'Bookings',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
-    badge: notifStore.unreadCount > 0 ? notifStore.unreadCount : undefined,
-  },
-  {
-    to: '/admin-panel/messages', label: 'Messages',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`,
-    badge: undefined,
-  },
-  {
-    to: '/admin-panel/settings', label: 'Settings',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-    badge: undefined,
-  },
+  { to: '/support/dashboard', label: 'Dashboard', icon: 'layout-grid', badge: undefined },
+  { to: '/support/users', label: 'Users', icon: 'users', badge: undefined },
+  { to: '/support/stores', label: 'Stores', icon: 'building-store', badge: undefined },
+  { to: '/support/venues', label: 'Venues', icon: 'map-pin', badge: undefined },
+  { to: '/support/bookings', label: 'Bookings', icon: 'calendar-event', badge: notifStore.bookingUnreadCount > 0 ? notifStore.bookingUnreadCount : undefined },
+  { to: '/support/categories', label: 'Categories', icon: 'tags', badge: undefined },
+  { to: '/support/messages', label: 'Messages', icon: 'message', badge: chatStore.totalUnreadCount > 0 ? chatStore.totalUnreadCount : undefined },
+  { to: '/support/notifications', label: 'Notifications', icon: 'bell', badge: notifStore.unreadCount > 0 ? notifStore.unreadCount : undefined },
+  { to: '/support/settings', label: 'Settings', icon: 'settings', badge: undefined },
 ])
 
 const securityNav = [
-  {
-    to: '/admin-panel/sessions', label: 'Sessions',
-    icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>`,
-  },
+  { to: '/support/sessions', label: 'Sessions', icon: 'shield-lock' },
 ]
 
-function isActive(path: string) { return route.path.startsWith(path) }
-
-async function logout() {
-  await authStore.logout()
-  router.push('/admin-panel/sign-in')
+function isActive(path: string) {
+  return route.path.startsWith(path)
 }
 </script>
-
-<style scoped>
-.label-enter-active, .label-leave-active { transition: opacity 0.15s ease, width 0.2s ease; overflow: hidden; white-space: nowrap; }
-.label-enter-from, .label-leave-to { opacity: 0; }
-</style>
