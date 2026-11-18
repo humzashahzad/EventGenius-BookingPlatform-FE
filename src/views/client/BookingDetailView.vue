@@ -144,6 +144,10 @@
                 <span class="text-warm-500 dark:text-warm-400">Base Price</span>
                 <span class="text-warm-700 dark:text-warm-300">PKR {{ Number(booking.base_price).toLocaleString() }}</span>
               </div>
+              <div v-if="Number(booking.amenities_price) > 0" class="flex items-center justify-between text-sm">
+                <span class="text-warm-500 dark:text-warm-400">Amenities</span>
+                <span class="text-warm-700 dark:text-warm-300">PKR {{ Number(booking.amenities_price).toLocaleString() }}</span>
+              </div>
               <div class="flex items-center justify-between text-sm">
                 <span class="text-warm-500 dark:text-warm-400">Tax (5%)</span>
                 <span class="text-warm-700 dark:text-warm-300">PKR {{ Number(booking.tax_amount).toLocaleString() }}</span>
@@ -210,6 +214,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Review (fix/features): self-contained, shows only when eligible or already reviewed -->
+      <ReviewForm :booking-id="booking.id" />
     </div>
 
     <!-- Not Found -->
@@ -229,6 +236,7 @@ import { ref, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import ReviewForm from '@/components/reviews/ReviewForm.vue'
 
 const route = useRoute()
 const router = useRouter()
