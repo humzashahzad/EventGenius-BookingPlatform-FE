@@ -61,7 +61,14 @@
               </td>
               <td class="px-5 py-3.5 text-center text-warm-700 dark:text-warm-300">{{ b.expected_guests }}</td>
               <td class="px-5 py-3.5 text-right font-semibold text-warm-800 dark:text-warm-200">PKR {{ Number(b.total_amount).toLocaleString() }}</td>
-              <td class="px-5 py-3.5"><span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span></td>
+              <td class="px-5 py-3.5">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span>
+                  <span v-if="b.payment_status === 'paid'" class="badge-primary inline-flex items-center gap-1"><AppIcon icon="circle-check" class="w-3 h-3" />Paid</span>
+                  <span v-else-if="b.payment_status === 'refunded'" class="badge-warm">Refunded</span>
+                  <span v-else-if="b.status === 'confirmed'" class="badge-accent">Unpaid</span>
+                </div>
+              </td>
               <td class="px-5 py-3.5 text-right">
                 <div v-if="b.status === 'pending'" class="flex items-center justify-end gap-1.5">
                   <button @click="doConfirm(b.id)" :disabled="acting" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/30 border border-primary-200 dark:border-primary-800 transition-colors">Confirm</button>
