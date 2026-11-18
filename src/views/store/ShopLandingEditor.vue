@@ -6,11 +6,17 @@
         <h1 class="text-2xl font-bold text-warm-900 dark:text-warm-50 tracking-tight">Landing Page</h1>
         <p class="text-sm text-warm-500 dark:text-warm-400 mt-1">Customize your public store page that customers see when they visit your shop.</p>
       </div>
+      <div class="flex flex-wrap items-center gap-2">
+      <RouterLink v-if="storeId" :to="{ name: 'store-profile', params: { id: storeId } }" target="_blank" class="btn-outline gap-1.5">
+        <AppIcon icon="external-link" class="w-4 h-4" />
+        View public page
+      </RouterLink>
       <button @click="save" :disabled="saving" class="btn-primary gap-1.5">
         <AppIcon v-if="saving" icon="loader" class="w-4 h-4 animate-spin" />
         <AppIcon v-else icon="check" class="w-4 h-4" />
         {{ saving ? 'Saving...' : 'Save Changes' }}
       </button>
+      </div>
     </div>
 
     <!-- Alerts -->
@@ -202,6 +208,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -294,7 +301,17 @@ async function uploadHero(e: Event) {
   }
 }
 
-onMounted(loadLanding)
+// Public profile link (/stores/:id) — only approved stores are publicly visible.
+const storeId = ref<number | null>(null)
+async function loadStoreId() {
+  try {
+    const { data } = await api.get('/store/profile')
+    const st = data.data?.store
+    storeId.value = st?.status === 'approved' ? st.id : null
+  } catch { storeId.value = null }
+}
+
+onMounted(() => { loadLanding(); loadStoreId() })
 </script>
 
 <style scoped>

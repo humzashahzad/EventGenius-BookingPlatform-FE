@@ -68,6 +68,7 @@ const mainNav = computed(() => [
   { to: '/support/stores', label: 'Stores', icon: 'building-store', badge: undefined },
   { to: '/support/venues', label: 'Venues', icon: 'map-pin', badge: undefined },
   { to: '/support/bookings', label: 'Bookings', icon: 'calendar-event', badge: notifStore.bookingUnreadCount > 0 ? notifStore.bookingUnreadCount : undefined },
+  { to: '/support/reviews', label: 'Reviews', icon: 'message-star', badge: undefined },
   { to: '/support/categories', label: 'Categories', icon: 'tags', badge: undefined },
   { to: '/support/messages', label: 'Messages', icon: 'message', badge: chatStore.totalUnreadCount > 0 ? chatStore.totalUnreadCount : undefined },
   { to: '/support/notifications', label: 'Notifications', icon: 'bell', badge: notifStore.unreadCount > 0 ? notifStore.unreadCount : undefined },

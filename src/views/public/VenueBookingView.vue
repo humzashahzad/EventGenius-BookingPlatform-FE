@@ -143,6 +143,8 @@
             <label class="form-label-warm">Special Requirements</label>
             <textarea v-model="booking.special_requirements" class="form-input-warm" rows="3" placeholder="Any special requests, equipment needs, dietary requirements..."></textarea>
           </div>
+          <!-- Amenities (fix/features) -->
+          <AmenityPicker v-model="selectedAmenityIds" :amenities="venue.amenities || []" />
           <div class="wizard-actions">
             <button type="button" @click="step = 1" class="wizard-btn-secondary">Back</button>
             <button
@@ -191,13 +193,22 @@
             </div>
           </div>
 
-          <!-- Price estimate -->
+          <!-- Price estimate (base + paid amenities + 5% tax, mirrors backend BookingPricing) -->
           <div class="review-section review-section--highlight">
             <h4 class="review-section-title">Estimated Total</h4>
-            <p class="text-2xl font-bold text-primary-500 mb-1">PKR {{ estimatedTotal }}</p>
-            <p class="text-sm text-warm-500 mb-0">
-              PKR {{ formatPrice(venue) }} / head x {{ booking.expected_guests }} guest{{ booking.expected_guests !== 1 ? 's' : '' }}
-            </p>
+            <p class="text-2xl font-bold text-primary-500 mb-2">PKR {{ fmt(pricing.total) }}</p>
+            <div class="text-sm text-warm-500 space-y-1">
+              <div class="flex justify-between gap-4">
+                <span>PKR {{ formatPrice(venue) }} / head x {{ booking.expected_guests }} guest{{ booking.expected_guests !== 1 ? 's' : '' }}</span>
+                <span>PKR {{ fmt(pricing.base) }}</span>
+              </div>
+              <div v-for="a in selectedPaidAmenities" :key="a.id" class="flex justify-between gap-4">
+                <span>{{ a.name }}</span><span>PKR {{ fmt(Number(a.price || 0)) }}</span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span>Tax (5%)</span><span>PKR {{ fmt(pricing.tax) }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -238,6 +249,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import { getStorageUrl } from '@/lib/storageUrl'
 import BookingCalendar from '@/components/booking/BookingCalendar.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AmenityPicker from '@/components/booking/AmenityPicker.vue'
 import type { SelectedDaySlot } from '@/components/booking/BookingCalendar.vue'
 
 const route = useRoute()
@@ -287,11 +299,21 @@ const venueImage = computed(() => {
   return path ? getStorageUrl(path) : null
 })
 
-const estimatedTotal = computed(() => {
-  const pricePerHead = venue.value?.price_per_head ?? 0
-  const guests = booking.expected_guests || 1
-  return Number(pricePerHead * guests).toLocaleString()
+// ── Amenities & pricing (fix/features) ────────────────────────────────
+const selectedAmenityIds = ref<number[]>([])
+const selectedPaidAmenities = computed(() =>
+  (venue.value?.amenities || []).filter((a: any) => a.is_paid && selectedAmenityIds.value.includes(a.id)),
+)
+const pricing = computed(() => {
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const base = round2((venue.value?.price_per_head ?? 0) * (booking.expected_guests || 1))
+  const amenities = round2(selectedPaidAmenities.value.reduce((sum: number, a: any) => sum + Number(a.price || 0), 0))
+  const tax = round2((base + amenities) * 0.05)
+  return { base, amenities, tax, total: round2(base + amenities + tax) }
 })
+function fmt(n: number) {
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
 
 function formatPrice(v: any) {
   const price = v.price_per_head
@@ -346,6 +368,7 @@ async function submitBooking() {
       end_time: primarySlot.end_time,
       expected_guests: booking.expected_guests,
       special_requirements: booking.special_requirements,
+      amenity_ids: selectedPaidAmenities.value.map((a: any) => a.id),
       // Send all slots for multi-day support
       slots: calendarSlots.value,
     })
