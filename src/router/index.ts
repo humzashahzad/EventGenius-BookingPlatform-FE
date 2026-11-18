@@ -31,6 +31,13 @@ const router = createRouter({
       meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
 
+    {
+      path: '/stores/:id',
+      name: 'store-profile',
+      component: () => import('@/views/public/StoreProfileView.vue'),
+      meta: { layout: 'public' },
+    },
+
     // ── Customer (was Client) ────────────────────────────────────────────
     {
       path: '/customer/sign-in',
@@ -157,6 +164,12 @@ const router = createRouter({
       meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
+      path: '/shop/reviews',
+      name: 'shop-reviews',
+      component: () => import('@/views/store/ReviewsView.vue'),
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
+    },
+    {
       path: '/shop/landing',
       name: 'shop-landing',
       component: () => import('@/views/store/ShopLandingEditor.vue'),
@@ -246,6 +259,12 @@ const router = createRouter({
       path: '/support/categories',
       name: 'support-categories',
       component: () => import('@/views/admin/CategoriesView.vue'),
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
+    },
+    {
+      path: '/support/reviews',
+      name: 'support-reviews',
+      component: () => import('@/views/admin/ReviewsView.vue'),
       meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
     // ── Catch-all ─────────────────────────────────────────────────────────

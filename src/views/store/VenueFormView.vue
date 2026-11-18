@@ -238,6 +238,9 @@
       </div>
     </form>
 
+    <!-- Amenities editor (edit only; manages its own API calls) -->
+    <AmenityEditor v-if="isEdit" :venue-id="String(route.params.id)" class="mt-6" />
+
     <!-- Map Modal -->
     <div v-if="showMapModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div class="bg-white dark:bg-warm-900 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -296,6 +299,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { useCategoriesStore } from '@/stores/categories'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AmenityEditor from '@/components/amenities/AmenityEditor.vue'
 
 const route  = useRoute()
 const router = useRouter()
