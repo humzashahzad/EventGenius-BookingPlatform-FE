@@ -90,6 +90,10 @@
           </div>
           <div class="p-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div class="sm:col-span-2">
+                <label class="form-label">Current Password</label>
+                <input v-model="form.current_password" type="password" class="form-input" placeholder="Required to set a new password" autocomplete="current-password" :required="!!form.password" />
+              </div>
               <div>
                 <label class="form-label">New Password</label>
                 <input v-model="form.password" type="password" class="form-input" placeholder="New password" />
@@ -118,7 +122,7 @@ const loading = ref(true)
 const saving = ref(false)
 const successMsg = ref('')
 const errorMsg = ref('')
-const form = reactive({ name: '', email: '', password: '', password_confirmation: '' })
+const form = reactive({ name: '', email: '', password: '', password_confirmation: '', current_password: '' })
 
 function getAvatarUrl(path: string | undefined): string | null {
   if (!path) return null
@@ -161,12 +165,14 @@ async function save() {
     if (form.password) {
       payload.password = form.password
       payload.password_confirmation = form.password_confirmation
+      payload.current_password = form.current_password
     }
     const { data } = await api.put('/admin/profile', payload)
     authStore.user = { ...authStore.user!, ...data.data }
     successMsg.value = 'Settings saved!'
     form.password = ''
     form.password_confirmation = ''
+    form.current_password = ''
     setTimeout(() => (successMsg.value = ''), 3500)
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || 'Save failed.'
