@@ -113,6 +113,18 @@
             <input v-model="booking.event_name" type="text" required class="form-input-warm" placeholder="e.g. My Wedding Reception" />
           </div>
           <div>
+            <label class="form-label-warm">Event Type *</label>
+            <select v-model="booking.event_type" required class="form-input-warm">
+              <option value="" disabled>Select an event type</option>
+              <option v-for="opt in eventTypeOptions" :key="opt.slug" :value="opt.slug">
+                {{ opt.label }}
+              </option>
+            </select>
+            <p v-if="venue.event_types?.length" class="text-xs text-warm-400 mt-1.5">
+              This venue hosts: {{ eventTypeOptions.map(o => o.label).join(', ') }}
+            </p>
+          </div>
+          <div>
             <label class="form-label-warm">Expected Guests *</label>
             <input
               v-model.number="booking.expected_guests"
@@ -135,7 +147,7 @@
             <button type="button" @click="step = 1" class="wizard-btn-secondary">Back</button>
             <button
               type="submit"
-              :disabled="!booking.event_name || !booking.expected_guests"
+              :disabled="!booking.event_name || !booking.event_type || !booking.expected_guests"
               class="wizard-btn-primary"
             >
               Review Booking
@@ -170,7 +182,7 @@
             <h4 class="review-section-title">Event Details</h4>
             <div class="review-grid">
               <div><span class="review-label">Name</span><span class="review-value">{{ booking.event_name }}</span></div>
-              <div v-if="booking.event_type"><span class="review-label">Type</span><span class="review-value capitalize">{{ booking.event_type.replace(/_/g, ' ') }}</span></div>
+              <div v-if="booking.event_type"><span class="review-label">Type</span><span class="review-value">{{ labelForSlug(booking.event_type) }}</span></div>
               <div><span class="review-label">Guests</span><span class="review-value">{{ booking.expected_guests }}</span></div>
             </div>
             <div v-if="booking.special_requirements" class="mt-2">
@@ -192,7 +204,12 @@
         <!-- Errors -->
         <div v-if="submitError" class="alert-error mt-4">
           <AppIcon icon="alert-triangle" class="w-4 h-4 flex-shrink-0 mt-0.5" />
-          {{ submitError }}
+          <div>
+            <p class="mb-0">{{ submitError }}</p>
+            <ul v-if="Object.keys(fieldErrors).length" class="mt-1 mb-0 pl-4 list-disc text-sm">
+              <li v-for="(msgs, field) in fieldErrors" :key="field">{{ msgs[0] }}</li>
+            </ul>
+          </div>
         </div>
 
         <!-- Success -->
@@ -229,6 +246,23 @@ const categoriesStore = useCategoriesStore()
 
 const activeCategories = computed(() => categoriesStore.categories.filter(c => c.is_active))
 
+/** Prettify a slug we have no category record for (e.g. "bridal_showers"). */
+function labelForSlug(slug: string): string {
+  const match = activeCategories.value.find(c => c.slug === slug)
+  if (match) return match.name
+  return slug.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())
+}
+
+/**
+ * The venue owner picks which categories the venue hosts; the booking must use
+ * one of them. If the venue lists none, any active category is allowed.
+ */
+const eventTypeOptions = computed(() => {
+  const offered: string[] = venue.value?.event_types || []
+  const slugs = offered.length ? offered : activeCategories.value.map(c => c.slug)
+  return slugs.map(slug => ({ slug, label: labelForSlug(slug) }))
+})
+
 const steps = ['Venue', 'Date & Time', 'Event Details', 'Review']
 const step = ref(0)
 const venue = ref<any>(null)
@@ -236,6 +270,7 @@ const loading = ref(true)
 const calendarSlots = ref<SelectedDaySlot[]>([])
 const submitting = ref(false)
 const submitError = ref('')
+const fieldErrors = ref<Record<string, string[]>>({})
 const submitSuccess = ref(false)
 
 const booking = reactive({
@@ -281,7 +316,10 @@ async function loadVenue() {
   try {
     const { data } = await api.get(`/venues/${route.params.id}`)
     venue.value = data.data
-    booking.event_type = venue.value?.event_types?.[0] || 'general'
+    // Preselect only when the venue offers exactly one type; otherwise the
+    // customer chooses. Never fall back to a slug that isn't a real category.
+    const offered: string[] = venue.value?.event_types || []
+    booking.event_type = offered.length === 1 ? offered[0] : ''
   } catch {
     venue.value = null
   } finally {
@@ -292,6 +330,7 @@ async function loadVenue() {
 async function submitBooking() {
   submitting.value = true
   submitError.value = ''
+  fieldErrors.value = {}
   submitSuccess.value = false
 
   // Use first slot as primary date for backward compatibility
@@ -313,6 +352,7 @@ async function submitBooking() {
     submitSuccess.value = true
     setTimeout(() => router.push('/customer/bookings'), 2000)
   } catch (e: any) {
+    fieldErrors.value = e.response?.data?.errors || {}
     submitError.value = e.response?.data?.message || 'Booking failed. Please try again.'
   } finally {
     submitting.value = false
