@@ -135,7 +135,8 @@
               :max="venue.capacity_max || 10000"
               :placeholder="`${venue.capacity_min || 1}–${venue.capacity_max || '∞'}`"
             />
-            <p class="text-xs text-warm-400 mt-1.5">
+            <p v-if="guestError" class="text-xs text-coral mt-1.5">{{ guestError }}</p>
+            <p v-else class="text-xs text-warm-400 mt-1.5">
               Venue capacity: {{ venue.capacity_min || 1 }} – {{ venue.capacity_max || 'unlimited' }}
             </p>
           </div>
@@ -147,7 +148,7 @@
             <button type="button" @click="step = 1" class="wizard-btn-secondary">Back</button>
             <button
               type="submit"
-              :disabled="!booking.event_name || !booking.event_type || !booking.expected_guests"
+              :disabled="!booking.event_name || !booking.event_type || !booking.expected_guests || !!guestError"
               class="wizard-btn-primary"
             >
               Review Booking
@@ -207,8 +208,14 @@
           <div>
             <p class="mb-0">{{ submitError }}</p>
             <ul v-if="Object.keys(fieldErrors).length" class="mt-1 mb-0 pl-4 list-disc text-sm">
-              <li v-for="(msgs, field) in fieldErrors" :key="field">{{ msgs[0] }}</li>
+              <li v-for="(msgs, field) in extraFieldErrors" :key="field">{{ msgs[0] }}</li>
             </ul>
+            <button v-if="fieldErrors.start_time || fieldErrors.end_time || fieldErrors.event_date" type="button" @click="step = 1" class="underline text-sm mt-1">
+              Choose another date or time
+            </button>
+            <button v-else-if="fieldErrors.expected_guests" type="button" @click="step = 2" class="underline text-sm mt-1">
+              Change guest count
+            </button>
           </div>
         </div>
 
@@ -280,6 +287,28 @@ const booking = reactive({
   special_requirements: '',
 })
 
+const guestMin = computed(() => Number(venue.value?.capacity_min) || 1)
+const guestMax = computed(() => Number(venue.value?.capacity_max) || 0)
+const guestError = computed(() => {
+  const g = Number(booking.expected_guests)
+  if (!g) return ''
+  if (!Number.isInteger(g) || g < guestMin.value || (guestMax.value && g > guestMax.value)) {
+    return guestMax.value
+      ? `This venue accommodates between ${guestMin.value} and ${guestMax.value} guests.`
+      : `This venue requires at least ${guestMin.value} guests.`
+  }
+  return ''
+})
+
+// Field errors that add information beyond the headline message.
+const extraFieldErrors = computed(() => {
+  const out: Record<string, string[]> = {}
+  for (const [field, msgs] of Object.entries(fieldErrors.value)) {
+    if (msgs?.length && !submitError.value.startsWith(msgs[0])) out[field] = msgs
+  }
+  return out
+})
+
 const venueImage = computed(() => {
   const imgs = venue.value?.images || []
   const primary = imgs.find((i: any) => i.is_primary)
@@ -320,6 +349,7 @@ async function loadVenue() {
     // customer chooses. Never fall back to a slug that isn't a real category.
     const offered: string[] = venue.value?.event_types || []
     booking.event_type = offered.length === 1 ? offered[0] : ''
+    booking.expected_guests = Number(venue.value?.capacity_min) || 1
   } catch {
     venue.value = null
   } finally {
@@ -352,8 +382,15 @@ async function submitBooking() {
     submitSuccess.value = true
     setTimeout(() => router.push('/customer/bookings'), 2000)
   } catch (e: any) {
+    const status = e.response?.status
     fieldErrors.value = e.response?.data?.errors || {}
-    submitError.value = e.response?.data?.message || 'Booking failed. Please try again.'
+    if (status === 429) {
+      submitError.value = e.response?.data?.message || 'Too many requests. Please wait a minute and try again.'
+    } else if (!e.response) {
+      submitError.value = 'Could not reach the server. Check your connection and try again.'
+    } else {
+      submitError.value = e.response?.data?.message || 'Booking failed. Please try again.'
+    }
   } finally {
     submitting.value = false
   }
