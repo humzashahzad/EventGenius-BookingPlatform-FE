@@ -456,7 +456,8 @@ async function fetchMonthAvailability() {
       params: { year, month },
     })
     if (response.data.success) {
-      monthBookings.value = response.data.data.booked_dates || []
+      // API returns a list of dates (ISO strings); the calendar expects { date: 'YYYY-MM-DD' } objects.
+      monthBookings.value = (response.data.data.booked_dates || []).map((d: string) => ({ date: String(d).slice(0, 10) }))
     }
   } catch {
     // Silently fail
