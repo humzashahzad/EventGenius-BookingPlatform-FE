@@ -30,18 +30,26 @@
                 <p class="font-mono text-xs text-warm-400 dark:text-warm-500 tracking-wide mt-0.5">{{ booking.booking_number }}</p>
               </div>
             </div>
-            <span :class="statusClass(booking.status)" class="capitalize text-sm self-start sm:self-center">{{ booking.status }}</span>
+            <div class="flex flex-wrap items-center gap-1.5 self-start sm:self-center">
+              <span :class="statusClass(booking.status)" class="capitalize text-sm">{{ booking.status }}</span>
+              <span v-if="booking.payment_status === 'paid'" class="badge-primary inline-flex items-center gap-1 text-sm"><AppIcon icon="circle-check" class="w-3 h-3" />Paid</span>
+              <span v-else-if="booking.payment_status === 'refunded'" class="badge-warm text-sm">Refunded</span>
+              <span v-else-if="booking.status === 'confirmed'" class="badge-accent text-sm">Unpaid</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Payment Completed Banner -->
-      <div v-if="booking.payment?.paid_at" class="flex items-center gap-3 px-5 py-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/30 mb-6">
+      <div v-if="booking.payment_status === 'paid'" class="flex items-center gap-3 px-5 py-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/30 mb-6">
         <div class="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
           <AppIcon icon="circle-check" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
         </div>
         <div>
           <span class="font-semibold text-sm text-primary-700 dark:text-primary-400">Payment Completed</span>
+          <p class="text-xs text-primary-600/80 dark:text-primary-400/70 mt-0.5">
+            PKR {{ Number(booking.payment?.amount ?? booking.total_amount).toLocaleString() }}<template v-if="booking.payment?.gateway_amount"> &mdash; charged as R{{ Number(booking.payment.gateway_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} via PayFast</template><template v-if="booking.paid_at"> &middot; {{ formatDate(booking.paid_at) }}</template>
+          </p>
           <p v-if="booking.payment?.transaction_id" class="font-mono text-xs text-primary-600/70 dark:text-primary-400/60 mt-0.5">
             Txn: {{ booking.payment.transaction_id }}
           </p>
@@ -180,7 +188,7 @@
       <div class="flex flex-wrap items-center gap-3">
         <!-- Pay Now -->
         <RouterLink
-          v-if="booking.status === 'confirmed' && !booking.payment?.paid_at"
+          v-if="booking.status === 'confirmed' && booking.payment_status === 'unpaid'"
           :to="`/customer/bookings/${booking.id}/pay`"
           class="btn-primary inline-flex items-center gap-2"
         >
@@ -190,7 +198,7 @@
 
         <!-- Cancel -->
         <button
-          v-if="['pending', 'confirmed'].includes(booking.status)"
+          v-if="['pending', 'confirmed'].includes(booking.status) && booking.payment_status !== 'paid'"
           @click="showCancel = true"
           class="btn-outline inline-flex items-center gap-2 border-coral/40 text-coral hover:bg-coral/5 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
         >

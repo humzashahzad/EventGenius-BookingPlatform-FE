@@ -51,7 +51,14 @@
           <div class="border-t border-warm-100 dark:border-warm-700 pt-4 mt-2">
             <div class="flex justify-between font-bold text-lg">
               <span class="text-warm-900">Total Amount</span>
-              <span class="text-primary-600">PKR {{ Number(booking?.total_amount).toLocaleString() }}</span>
+              <span class="text-primary-600">PKR {{ formatPkr(amount.app_amount) }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 mt-3 px-4 py-3 rounded-xl bg-warm-50 dark:bg-warm-800/60 border border-warm-100 dark:border-warm-700">
+              <span class="text-warm-500 text-xs leading-relaxed">
+                Charged as <strong class="text-warm-800 dark:text-warm-100">R{{ formatZar(amount.gateway_amount) }}</strong>
+                in PayFast{{ paymentData.sandbox ? ' sandbox' : '' }} at rate 1 PKR = {{ amount.exchange_rate }} ZAR
+              </span>
+              <span class="font-semibold text-warm-800 dark:text-warm-100 whitespace-nowrap">R{{ formatZar(amount.gateway_amount) }}</span>
             </div>
           </div>
         </div>
@@ -61,7 +68,7 @@
       <form ref="payFastForm" :action="paymentData.action_url" method="POST">
         <input v-for="(value, key) in paymentData.fields" :key="String(key)" type="hidden" :name="String(key)" :value="value" />
         <button type="submit" class="btn-primary w-full py-3.5 text-base font-semibold">
-          Pay Now &mdash; PKR {{ Number(booking?.total_amount).toLocaleString() }}
+          Pay Now &mdash; PKR {{ formatPkr(amount.app_amount) }} (R{{ formatZar(amount.gateway_amount) }})
         </button>
       </form>
 
@@ -72,7 +79,7 @@
           <div class="text-xs font-mono text-warm-500 space-y-1">
             <p>Payment ID: {{ paymentData.fields.m_payment_id }}</p>
             <p>Merchant ID: {{ paymentData.fields.merchant_id }}</p>
-            <p>Amount: {{ paymentData.fields.amount }}</p>
+            <p>Amount: {{ paymentData.fields.amount }} ZAR (PKR {{ amount.app_amount }} &times; {{ amount.exchange_rate }})</p>
             <p>Signature: {{ paymentData.fields.signature }}</p>
             <p>Action URL: {{ paymentData.action_url }}</p>
           </div>
@@ -83,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -94,6 +101,22 @@ const error = ref('')
 const booking = ref<any>(null)
 const paymentData = ref<any>(null)
 const payFastForm = ref<HTMLFormElement | null>(null)
+
+const amount = computed(() => paymentData.value?.amount ?? {
+  app_amount: Number(booking.value?.total_amount ?? 0),
+  app_currency: 'PKR',
+  gateway_amount: Number(paymentData.value?.fields?.amount ?? 0),
+  gateway_currency: 'ZAR',
+  exchange_rate: 0,
+})
+
+function formatPkr(n: number | string) {
+  return Number(n ?? 0).toLocaleString('en-PK', { maximumFractionDigits: 2 })
+}
+
+function formatZar(n: number | string) {
+  return Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 async function loadPaymentData() {
   loading.value = true

@@ -58,7 +58,12 @@
                   <span class="font-mono text-xs text-warm-400 tracking-wide uppercase">{{ b.booking_number }}</span>
                   <h3 class="font-semibold text-warm-800 truncate mt-0.5">{{ b.venue?.name }}</h3>
                 </div>
-                <span :class="statusClass(b.status)" class="capitalize flex-shrink-0">{{ b.status }}</span>
+                <div class="flex flex-wrap items-center justify-end gap-1.5 flex-shrink-0">
+                  <span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span>
+                  <span v-if="b.payment_status === 'paid'" class="badge-primary inline-flex items-center gap-1"><AppIcon icon="circle-check" class="w-3 h-3" />Paid</span>
+                  <span v-else-if="b.payment_status === 'refunded'" class="badge-warm">Refunded</span>
+                  <span v-else-if="b.status === 'confirmed'" class="badge-accent">Unpaid</span>
+                </div>
               </div>
 
               <div class="flex flex-wrap gap-3 mt-2">
