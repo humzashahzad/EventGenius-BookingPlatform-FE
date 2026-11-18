@@ -73,7 +73,8 @@ export const useAuthStore = defineStore('auth', () => {
         const { data } = await api.get('/auth/me')
         user.value = data.data
       } catch {
-        removeToken(portal)
+        // An expired token is removed by the axios 401 handler; a network error
+        // must not delete a valid token.
         user.value = null
       }
     } else if (!portalToken) {
@@ -96,7 +97,10 @@ export const useAuthStore = defineStore('auth', () => {
       const { data } = await api.get('/auth/me')
       user.value = data.data
     } catch {
-      _clearAuth()
+      // 401 → token already removed by the axios interceptor. Other errors
+      // (offline, 5xx) keep the token so the next navigation can retry.
+      user.value = null
+      stopSessionWatcher()
     } finally {
       initialized.value = true
     }
@@ -228,8 +232,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   // ── Listen for session-expired event from axios interceptor ───────────
   if (typeof window !== 'undefined') {
-    window.addEventListener('auth:session-expired', () => {
-      _clearAuth()
+    window.addEventListener('auth:session-expired', (e: Event) => {
+      // The axios interceptor already removed the expired token for its portal.
+      // Only drop the in-memory user when that is the portal we're using —
+      // never wipe a token that a sign-in just stored for another portal.
+      const portal = (e as CustomEvent<{ portal?: Portal }>).detail?.portal
+      if (portal && portal !== currentPortal.value) return
+      user.value = null
+      stopSessionWatcher()
       redirectToSignInForCurrentPath()
     })
     // Re-check session immediately when tab regains focus.

@@ -151,7 +151,11 @@ function safeRedirect(): string | null {
   const r = route.query.redirect
   if (typeof r !== 'string' || !r.startsWith('/') || r.startsWith('//')) return null
   const target = r.startsWith('/support') ? 'support' : r.startsWith('/shop') ? 'shop' : 'customer'
-  return target === portal.value ? r : null
+  // Must match the account that actually signed in (a shop owner using the
+  // customer page goes to the shop dashboard, not a customer-only page).
+  const role = authStore.user?.role
+  const accountPortal = role === 'admin' ? 'support' : role === 'store_owner' ? 'shop' : 'customer'
+  return target === portal.value && target === accountPortal ? r : null
 }
 
 const form = ref({ email: '', password: '' })
