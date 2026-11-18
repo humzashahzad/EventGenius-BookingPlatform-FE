@@ -46,25 +46,20 @@
   body {
     @apply font-sans text-warm-800 bg-warm-50 antialiased dark:bg-warm-900 dark:text-warm-100;
   }
+  /* Borders without an explicit colour (e.g. plain `border-b`) default to a light
+     grey, which shows as bright lines in dark mode. Utilities still override this. */
+  *, ::before, ::after {
+    border-color: theme('colors.warm.200');
+  }
+  .dark *, .dark ::before, .dark ::after {
+    border-color: theme('colors.warm.700');
+  }
 }
 
-/* Paper texture overlay — subtle noise grain */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.025;
-  background-image:
-    repeating-conic-gradient(rgba(120, 113, 108, 0.08) 0% 25%, transparent 0% 50%);
-  background-size: 3px 3px;
-}
-
-:root.dark body::before {
-  opacity: 0.04;
-  background-image:
-    repeating-conic-gradient(rgba(250, 250, 249, 0.06) 0% 25%, transparent 0% 50%);
+/* Visible keyboard focus everywhere (buttons, links, inputs) */
+:where(a, button, [role='button'], select, input, textarea):focus-visible {
+  outline: 2px solid theme('colors.primary.500');
+  outline-offset: 2px;
 }
 
 /* ─── Component Classes ────────────────────────────────────────────────────── */
@@ -115,21 +110,92 @@ body::before {
     background-size: 1em 1em;
   }
 
-  /* Badges */
-  .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full;
+  /* Badges — every variant carries the base pill styling, so a variant class
+     works on its own (many views apply only e.g. `badge-primary`). */
+  .badge,
+  .badge-primary,
+  .badge-success,
+  .badge-accent,
+  .badge-warning,
+  .badge-coral,
+  .badge-danger,
+  .badge-info,
+  .badge-warm {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold leading-5 rounded-full whitespace-nowrap ring-1 ring-inset;
   }
-  .badge-primary {
-    @apply bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400;
+  .badge { @apply bg-warm-100 text-warm-600 ring-warm-200 dark:bg-warm-700 dark:text-warm-300 dark:ring-warm-600; }
+  .badge-primary,
+  .badge-success {
+    @apply bg-primary-50 text-primary-700 ring-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:ring-primary-800;
   }
-  .badge-accent {
-    @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
+  .badge-accent,
+  .badge-warning {
+    @apply bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800;
   }
-  .badge-coral {
-    @apply bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400;
+  .badge-coral,
+  .badge-danger {
+    @apply bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-300 dark:ring-red-800;
+  }
+  .badge-info {
+    @apply bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:ring-sky-800;
   }
   .badge-warm {
-    @apply bg-warm-100 text-warm-600 dark:bg-warm-700 dark:text-warm-300;
+    @apply bg-warm-100 text-warm-600 ring-warm-200 dark:bg-warm-700 dark:text-warm-300 dark:ring-warm-600;
+  }
+
+  /* Page header used by portal pages */
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-warm-900 dark:text-white;
+  }
+  .page-subtitle {
+    @apply mt-1 text-sm text-warm-500 dark:text-warm-400;
+  }
+
+  /* Page header row: title block on the left, actions on the right */
+  .page-header {
+    @apply flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-6;
+  }
+
+  /* Small button modifier — combine with btn-primary/btn-outline/etc. */
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg gap-1.5;
+  }
+
+  /* Tables */
+  .table-wrapper {
+    @apply w-full overflow-x-auto;
+  }
+  .table-header {
+    @apply bg-warm-50 dark:bg-warm-800/60 text-left text-xs font-semibold uppercase tracking-wider text-warm-500 dark:text-warm-400;
+  }
+
+  /* Loading placeholders */
+  .skeleton,
+  .shimmer {
+    @apply bg-warm-200/70 dark:bg-warm-700/60 animate-pulse rounded-lg;
+  }
+  .spinner-border {
+    @apply inline-block w-5 h-5 border-2 border-current border-r-transparent rounded-full animate-spin align-middle;
+  }
+  .spinner-border-sm {
+    @apply w-3.5 h-3.5;
+  }
+  .border-3 {
+    border-width: 3px;
+  }
+
+  /* Empty states */
+  .empty-state {
+    @apply flex flex-col items-center justify-center text-center py-12 px-6;
+  }
+  .empty-state-title {
+    @apply text-base font-semibold text-warm-800 dark:text-warm-100;
+  }
+  .empty-state-desc {
+    @apply mt-1 text-sm text-warm-500 dark:text-warm-400 max-w-sm;
+  }
+  .empty-state-icon {
+    @apply w-12 h-12 rounded-2xl bg-warm-100 dark:bg-warm-700 flex items-center justify-center text-warm-400 mb-3;
   }
 
   /* Stat Cards */

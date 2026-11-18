@@ -118,8 +118,8 @@
               </div>
 
               <div class="flex-shrink-0">
-                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-lg">
-                  {{ notifStore.iconForType(n.type) }}
+                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
+                  <AppIcon :icon="notifStore.iconForType(n.type)" class="w-5 h-5" />
                 </span>
               </div>
 
@@ -129,6 +129,14 @@
                   <span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold" :class="typeBadgeClass(n.type)">{{ formatType(n.type) }}</span>
                 </div>
                 <p class="text-sm text-warm-600 dark:text-warm-300 mb-1">{{ n.body }}</p>
+                <button
+                  v-if="notifStore.linkFor(n, authStore.user?.role)"
+                  type="button"
+                  class="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline mb-1"
+                  @click="openNotif(n)"
+                >
+                  View details →
+                </button>
                 <small class="text-warm-400 dark:text-warm-500 text-xs">{{ formatDate(n.created_at) }} &bull; {{ notifStore.timeAgo(n.created_at) }}</small>
               </div>
 
@@ -182,7 +190,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore, type AppNotification } from '@/stores/notifications'
 import AppIcon from '@/components/ui/AppIcon.vue'
 
@@ -261,6 +270,15 @@ async function loadNotifications(targetPage = 1) {
 async function loadMore() {
   if (!canLoadMore.value || loadingMore.value) return
   await loadNotifications(page.value + 1)
+}
+
+const router = useRouter()
+const authStore = useAuthStore()
+
+async function openNotif(n: AppNotification) {
+  const to = notifStore.linkFor(n, authStore.user?.role)
+  if (!n.is_read) await markRead(n)
+  if (to) router.push(to)
 }
 
 async function markRead(notification: AppNotification) {

@@ -58,19 +58,20 @@
               </td>
               <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400">{{ u.email }}</td>
               <td class="px-5 py-3">
-                <span class="badge-primary capitalize">{{ roleLabels[u.role as keyof typeof roleLabels] || u.role?.replace('_', ' ') }}</span>
+                <span :class="u.role === 'admin' ? 'badge-info' : u.role === 'store_owner' ? 'badge-warning' : 'badge-warm'" class="capitalize">{{ roleLabels[u.role as keyof typeof roleLabels] || u.role?.replace('_', ' ') }}</span>
               </td>
               <td class="px-5 py-3">
-                <span :class="u.is_active ? 'badge-primary' : 'badge-coral'">{{ u.is_active ? 'Active' : 'Inactive' }}</span>
+                <span :class="u.is_active ? 'badge-success' : 'badge-danger'">{{ u.is_active ? 'Active' : 'Inactive' }}</span>
               </td>
               <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 whitespace-nowrap">{{ formatDate(u.created_at) }}</td>
               <td class="px-5 py-3 text-right">
-                <div class="flex items-center justify-end gap-2">
+                <span v-if="u.id === authStore.user?.id" class="text-xs text-warm-400">You</span>
+                <div v-else class="flex items-center justify-end gap-2">
                   <button @click="confirmToggle(u)" class="text-sm font-medium px-3 py-1.5 rounded-xl transition-all" :class="u.is_active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50'" :title="u.is_active ? 'Deactivate' : 'Activate'">
                     {{ u.is_active ? 'Deactivate' : 'Activate' }}
                   </button>
-                  <button @click="confirmDelete(u)" class="btn-danger text-sm px-3 py-1.5" title="Delete user">
-                    Delete
+                  <button @click="confirmDelete(u)" class="p-2 rounded-xl text-warm-400 hover:text-coral hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Delete user" aria-label="Delete user">
+                    <AppIcon icon="trash" class="w-4 h-4" />
                   </button>
                 </div>
               </td>
@@ -82,7 +83,7 @@
 
     <!-- Pagination -->
     <div v-if="meta.last_page > 1" class="flex flex-wrap items-center justify-between mt-6">
-      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ (meta.current_page - 1) * perPage + 1 }}--{{ Math.min(meta.current_page * perPage, meta.total) }} of {{ meta.total }} users</p>
+      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ (meta.current_page - 1) * perPage + 1 }}–{{ Math.min(meta.current_page * perPage, meta.total) }} of {{ meta.total }} users</p>
       <nav class="flex items-center gap-1">
         <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === 1 ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === 1" @click="changePage(1)">
           <AppIcon icon="chevron-left" class="w-4 h-4" />
@@ -141,6 +142,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAuthStore } from '@/stores/auth'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/lib/axios'
 import { useTopBarActionsStore } from '@/stores/topBarActions'
@@ -167,6 +169,7 @@ const meta       = ref({ current_page: 1, last_page: 1, total: 0 })
 let page = 1
 let searchTimeout: ReturnType<typeof setTimeout>
 const topBarActions = useTopBarActionsStore()
+const authStore = useAuthStore()
 
 async function load() {
   loading.value = true

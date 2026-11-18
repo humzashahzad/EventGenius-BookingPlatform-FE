@@ -37,6 +37,7 @@ const series = computed(() => [{
 
 const chartOptions = computed(() => ({
   chart: {
+    fontFamily: 'DM Sans, ui-sans-serif, system-ui, sans-serif',
     type: 'bar' as const,
     toolbar: { show: false },
     parentHeightOffset: 0,

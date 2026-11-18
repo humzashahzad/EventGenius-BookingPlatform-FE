@@ -40,7 +40,13 @@
           <span class="font-bold text-warm-800 dark:text-white">EventGenius</span>
         </div>
 
-        <h1 class="text-xl font-bold text-warm-800 dark:text-white mb-1">Create your account</h1>
+        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-sm text-warm-500 hover:text-primary-600 dark:text-warm-400 mb-8">
+
+          <AppIcon icon="arrow-left" class="w-4 h-4" /> Back to EventGenius
+
+        </RouterLink>
+
+        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-white mb-1">Create your account</h1>
         <p class="text-warm-500 dark:text-warm-400 mb-6">
           {{ portal === 'shop' ? 'Register as a store owner to list your venues.' : 'Join EventGenius to browse and book venues.' }}
         </p>
@@ -182,7 +188,10 @@ async function handleRegister() {
     canvasRef.value?.triggerPulse('success')
     setTimeout(() => {
       loading.value = false
-      router.push(authStore.defaultRoute)
+      // Customers who signed up mid-booking go straight back to it.
+      const r = route.query.redirect
+      const back = typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') && portal.value === 'customer' && !r.startsWith('/shop') && !r.startsWith('/support') ? r : null
+      router.push(back ?? authStore.defaultRoute)
     }, 600)
   } else {
     loading.value = false

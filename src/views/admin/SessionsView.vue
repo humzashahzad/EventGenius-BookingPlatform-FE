@@ -127,7 +127,7 @@
 
     <!-- Pagination -->
     <div v-if="pagination" class="flex flex-wrap items-center justify-between mt-6">
-      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ pagination.from }}--{{ pagination.to }} of {{ pagination.total }} sessions</p>
+      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ pagination.from }}–{{ pagination.to }} of {{ pagination.total }} sessions</p>
       <nav class="flex items-center gap-1">
         <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="pagination.current_page === 1 ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="pagination.current_page === 1" @click="goToPage(pagination.current_page - 1)">
           <AppIcon icon="chevron-left" class="w-4 h-4" />

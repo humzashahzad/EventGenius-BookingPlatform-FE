@@ -7,7 +7,7 @@
           <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
             <AppIcon icon="check" class="w-10 h-10 text-primary-600" />
           </div>
-          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2">Payment Successful!</h1>
+          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Payment Successful!</h1>
           <p class="text-sm text-warm-500 mb-8">PayFast has confirmed your payment. Your booking is now paid.</p>
         </template>
 
@@ -16,7 +16,7 @@
           <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-coral/10 flex items-center justify-center">
             <AppIcon icon="x" class="w-10 h-10 text-coral" />
           </div>
-          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2">Payment {{ state === 'failed' ? 'Failed' : 'Cancelled' }}</h1>
+          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Payment {{ state === 'failed' ? 'Failed' : 'Cancelled' }}</h1>
           <p class="text-sm text-warm-500 mb-8">PayFast did not complete this payment. You can try again from your booking.</p>
         </template>
 
@@ -25,7 +25,7 @@
           <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-coral/10 flex items-center justify-center">
             <AppIcon icon="alert-triangle" class="w-10 h-10 text-coral" />
           </div>
-          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2">Couldn't check payment status</h1>
+          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Couldn't check payment status</h1>
           <p class="text-sm text-warm-500 mb-8">{{ errorMessage }}</p>
         </template>
 
@@ -34,7 +34,7 @@
           <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-accent/10 flex items-center justify-center">
             <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
           </div>
-          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2">Processing Payment</h1>
+          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Processing Payment</h1>
           <p class="text-sm text-warm-500 mb-2">Waiting for PayFast to confirm your payment&hellip;</p>
           <p class="text-xs text-warm-400 mb-8">
             <template v-if="!timedOut">This usually takes a few seconds. Please keep this page open.</template>
@@ -47,13 +47,13 @@
           <div class="p-5 text-left">
             <h3 class="font-semibold text-warm-500 text-xs uppercase tracking-wider mb-4">Transaction Details</h3>
             <div class="space-y-2.5 text-sm">
-              <div class="flex justify-between"><span class="text-warm-500">Booking</span><span class="font-mono text-warm-800">{{ status.booking_number }}</span></div>
-              <div v-if="status.payment.reference" class="flex justify-between gap-3"><span class="text-warm-500">Payment ID</span><span class="font-mono text-xs text-warm-800 truncate">{{ status.payment.reference }}</span></div>
-              <div class="flex justify-between"><span class="text-warm-500">Amount</span><span class="font-semibold text-warm-800">PKR {{ Number(status.payment.amount).toLocaleString() }}</span></div>
-              <div v-if="status.payment.gateway_amount" class="flex justify-between"><span class="text-warm-500">Charged</span><span class="text-warm-800">R{{ Number(status.payment.gateway_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span></div>
+              <div class="flex justify-between"><span class="text-warm-500">Booking</span><span class="font-mono text-warm-800 dark:text-warm-100">{{ status.booking_number }}</span></div>
+              <div v-if="status.payment.reference" class="flex justify-between gap-3"><span class="text-warm-500">Payment ID</span><span class="font-mono text-xs text-warm-800 truncate dark:text-warm-100">{{ status.payment.reference }}</span></div>
+              <div class="flex justify-between"><span class="text-warm-500">Amount</span><span class="font-semibold text-warm-800 dark:text-warm-100">{{ formatPKR(status.payment.amount) }}</span></div>
+              <div v-if="status.payment.gateway_amount" class="flex justify-between"><span class="text-warm-500">Charged</span><span class="text-warm-800 dark:text-warm-100">R{{ Number(status.payment.gateway_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span></div>
               <div class="flex justify-between"><span class="text-warm-500">Status</span><span :class="state === 'paid' ? 'text-primary-600' : 'text-warm-700'" class="font-medium capitalize">{{ statusLabel }}</span></div>
-              <div v-if="state === 'paid' && status.payment.transaction_id" class="flex justify-between gap-3"><span class="text-warm-500">Transaction</span><span class="font-mono text-xs text-warm-800 truncate">{{ status.payment.transaction_id }}</span></div>
-              <div v-if="status.paid_at" class="flex justify-between"><span class="text-warm-500">Paid At</span><span class="text-warm-800">{{ formatDate(status.paid_at) }}</span></div>
+              <div v-if="state === 'paid' && status.payment.transaction_id" class="flex justify-between gap-3"><span class="text-warm-500">Transaction</span><span class="font-mono text-xs text-warm-800 truncate dark:text-warm-100">{{ status.payment.transaction_id }}</span></div>
+              <div v-if="status.paid_at" class="flex justify-between"><span class="text-warm-500">Paid At</span><span class="text-warm-800 dark:text-warm-100">{{ formatDate(status.paid_at) }}</span></div>
             </div>
           </div>
         </div>
@@ -77,6 +77,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatPKR } from '@/lib/format'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'

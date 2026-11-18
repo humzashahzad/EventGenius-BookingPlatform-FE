@@ -9,7 +9,7 @@
       <AppIcon icon="menu-2" class="w-5 h-5" />
     </button>
 
-    <h1 class="ml-3 text-sm font-semibold text-warm-800 dark:text-white truncate max-w-[120px] sm:max-w-[200px]">
+    <h1 class="ml-3 text-sm font-semibold text-warm-800 dark:text-white truncate max-w-[160px] sm:max-w-[240px]">
       {{ pageTitle }}
     </h1>
 
@@ -22,7 +22,7 @@
       </div>
 
       <!-- Theme Switcher — inline row -->
-      <div class="flex items-center rounded-xl bg-warm-100/80 dark:bg-warm-700/50 p-0.5 gap-0.5">
+      <div class="hidden sm:flex items-center rounded-xl bg-warm-100/80 dark:bg-warm-700/50 p-0.5 gap-0.5" role="group" aria-label="Theme">
         <button
           type="button"
           class="p-1.5 rounded-lg transition-all duration-200"
@@ -44,7 +44,7 @@
         <button
           type="button"
           class="p-1.5 rounded-lg transition-all duration-200"
-          :class="themeStore.themeMode === 'auto' ? 'bg-white dark:bg-warm-600 text-sky shadow-sm' : 'text-warm-400 hover:text-warm-600 dark:hover:text-warm-300'"
+          :class="themeStore.themeMode === 'auto' ? 'bg-white dark:bg-warm-600 text-sky-500 shadow-sm' : 'text-warm-400 hover:text-warm-600 dark:hover:text-warm-300'"
           aria-label="System theme"
           @click="themeStore.setThemeMode('auto')"
         >
@@ -104,7 +104,7 @@
               @keydown.enter="handleNotifClick(n)"
             >
               <span class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0">
-                {{ notifStore.iconForType(n.type) }}
+                <AppIcon :icon="notifStore.iconForType(n.type)" class="w-4 h-4" />
               </span>
               <span class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-warm-800 dark:text-white truncate" :class="{ 'font-semibold': !n.is_read }">{{ n.title }}</p>
@@ -174,6 +174,14 @@
               Dashboard
             </RouterLink>
           </div>
+          <div class="sm:hidden border-t border-warm-200 dark:border-warm-700 px-3 py-2 flex items-center justify-between">
+            <span class="text-sm text-warm-600 dark:text-warm-300">Theme</span>
+            <div class="flex items-center rounded-lg bg-warm-100 dark:bg-warm-700 p-0.5 gap-0.5">
+              <button v-for="m in themeModes" :key="m.mode" type="button" class="p-1.5 rounded-md" :class="themeStore.themeMode === m.mode ? 'bg-white dark:bg-warm-600 text-primary-600 shadow-sm' : 'text-warm-400'" :aria-label="m.label" @click="themeStore.setThemeMode(m.mode)">
+                <AppIcon :icon="m.icon" class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
           <div class="border-t border-warm-200 dark:border-warm-700 py-1">
             <button
               type="button"
@@ -209,6 +217,12 @@ const themeStore = useThemeStore()
 const route = useRoute()
 const router = useRouter()
 
+const themeModes = [
+  { mode: 'light' as const, icon: 'sun', label: 'Light mode' },
+  { mode: 'dark' as const, icon: 'moon', label: 'Dark mode' },
+  { mode: 'auto' as const, icon: 'device-desktop', label: 'System theme' },
+]
+
 const showNotif = ref(false)
 const showProfile = ref(false)
 const notifRef = ref<HTMLElement | null>(null)
@@ -235,11 +249,11 @@ const roleLabel = computed(() => {
 const routeTitles: Record<string, string> = {
   'support-dashboard': 'Dashboard', 'support-users': 'Users', 'support-stores': 'Stores', 'support-venues': 'Venues',
   'support-bookings': 'Bookings', 'support-sessions': 'Sessions', 'support-settings': 'Settings', 'support-categories': 'Categories',
-  'support-messages': 'Messages', 'support-notifications': 'Notifications',
+  'support-messages': 'Messages', 'support-notifications': 'Notifications', 'support-reviews': 'Reviews',
   'shop-dashboard': 'Dashboard', 'shop-venues': 'My Venues', 'shop-venue-create': 'Add Venue', 'shop-venue-edit': 'Edit Venue',
   'shop-venue-gallery': 'Venue Gallery', 'shop-bookings': 'Bookings', 'shop-profile': 'My Profile', 'shop-landing': 'Landing Page',
-  'shop-messages': 'Messages', 'shop-notifications': 'Notifications',
-  'customer-bookings': 'My Bookings', 'customer-booking-detail': 'Booking Details', 'customer-profile': 'My Profile',
+  'shop-messages': 'Messages', 'shop-notifications': 'Notifications', 'shop-reviews': 'Reviews', 'shop-booking-detail': 'Booking Details',
+  'customer-dashboard': 'Overview', 'customer-bookings': 'My Bookings', 'customer-booking-detail': 'Booking Details', 'customer-profile': 'My Profile',
   'customer-messages': 'Messages', 'customer-notifications': 'Notifications', 'customer-payment': 'Payment',
   'customer-payment-success': 'Payment Success', 'customer-payment-cancel': 'Payment Cancelled',
   'venue-booking': 'Book Venue',
@@ -264,7 +278,7 @@ const dashboardLink = computed(() => {
   const role = authStore.user?.role
   if (role === 'admin') return '/support/dashboard'
   if (role === 'store_owner') return '/shop/dashboard'
-  return '/customer/bookings'
+  return '/customer/dashboard'
 })
 
 const notifPageLink = computed(() => {
@@ -287,6 +301,8 @@ function toggleProfile() {
 function handleNotifClick(n: any) {
   if (!n.is_read) notifStore.markRead(n.id)
   showNotif.value = false
+  const to = notifStore.linkFor(n, authStore.user?.role)
+  if (to) router.push(to)
 }
 
 async function logout() {

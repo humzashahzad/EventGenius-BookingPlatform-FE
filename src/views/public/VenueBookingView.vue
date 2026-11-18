@@ -91,7 +91,7 @@
           <div class="selection-summary-list">
             <div v-for="slot in calendarSlots" :key="slot.date" class="selection-summary-item">
               <span class="font-medium text-warm-800 dark:text-warm-100">{{ formatSlotDate(slot.date) }}</span>
-              <span class="text-primary-500 font-semibold">{{ slot.start_time }} — {{ slot.end_time }}</span>
+              <span class="text-primary-500 font-semibold">{{ formatTimeRange(slot.start_time, slot.end_time) }}</span>
             </div>
           </div>
         </div>
@@ -176,7 +176,7 @@
             <h4 class="review-section-title">Date & Time</h4>
             <div v-for="slot in calendarSlots" :key="slot.date" class="review-slot">
               <span class="review-slot-date">{{ formatSlotDate(slot.date) }}</span>
-              <span class="review-slot-time">{{ slot.start_time }} — {{ slot.end_time }}</span>
+              <span class="review-slot-time">{{ formatTimeRange(slot.start_time, slot.end_time) }}</span>
             </div>
           </div>
 
@@ -249,6 +249,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatTime, formatTimeRange } from '@/lib/format'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'

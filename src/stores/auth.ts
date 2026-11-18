@@ -46,7 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
         return { name: 'shop-dashboard' }
       case 'client':
       default:
-        return { name: 'customer-bookings' }
+        return { name: 'customer-dashboard' }
     }
   }
 

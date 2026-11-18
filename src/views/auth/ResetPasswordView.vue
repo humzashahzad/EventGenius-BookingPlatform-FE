@@ -26,7 +26,13 @@
           <span class="font-bold text-warm-800 dark:text-white">EventGenius</span>
         </div>
 
-        <h1 class="text-xl font-bold text-warm-800 dark:text-white mb-1">Set new password</h1>
+        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-sm text-warm-500 hover:text-primary-600 dark:text-warm-400 mb-8">
+
+          <AppIcon icon="arrow-left" class="w-4 h-4" /> Back to EventGenius
+
+        </RouterLink>
+
+        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-white mb-1">Set new password</h1>
         <p class="text-warm-500 dark:text-warm-400 mb-6">Enter your new password below.</p>
 
         <!-- Success state -->
