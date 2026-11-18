@@ -253,19 +253,44 @@ export const useNotificationStore = defineStore('notifications', () => {
     }
   }
 
+  /** Lucide icon name (rendered with <AppIcon>) for a notification type. */
   function iconForType(type: string): string {
     const map: Record<string, string> = {
-      booking_created: '📅',
-      booking_confirmed: '✅',
-      booking_rejected: '❌',
-      booking_cancelled: '🚫',
-      new_booking_received: '🔔',
-      store_approved: '🏪',
-      store_suspended: '⛔',
-      chat_message: '💬',
-      session_revoked: '🔒',
+      booking_created: 'calendar-event',
+      booking_confirmed: 'calendar-check',
+      booking_rejected: 'x',
+      booking_cancelled: 'ban',
+      booking_expired: 'clock',
+      new_booking_received: 'calendar-event',
+      payment_completed: 'credit-card',
+      new_review: 'star',
+      review_reply: 'message-circle',
+      store_approved: 'building-store',
+      store_suspended: 'alert-triangle',
+      chat_message: 'message',
+      session_revoked: 'lock',
     }
-    return map[type] || '🔔'
+    return map[type] || 'bell'
+  }
+
+  /** Where clicking a notification should take the current user (null = nowhere specific). */
+  function linkFor(n: AppNotification, role?: string): string | null {
+    const data: any = (n as any).data || {}
+    const bookingId = data.booking_id
+    const prefix = role === 'admin' ? '/support' : role === 'store_owner' ? '/shop' : '/customer'
+    if (n.type === 'chat_message') return `${prefix}/messages`
+    if (n.type === 'new_review' || n.type === 'review_reply') {
+      if (role === 'store_owner') return '/shop/reviews'
+      if (role === 'admin') return '/support/reviews'
+      return bookingId ? `/customer/bookings/${bookingId}` : '/customer/bookings'
+    }
+    if (n.type === 'store_approved' || n.type === 'store_suspended') return role === 'admin' ? '/support/stores' : '/shop/dashboard'
+    if (bookingId) {
+      if (role === 'store_owner') return `/shop/bookings/${bookingId}`
+      if (role === 'admin') return '/support/bookings'
+      return `/customer/bookings/${bookingId}`
+    }
+    return null
   }
 
   function colorForType(type: string): string {
@@ -297,6 +322,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     notifications,
     unreadCount,
     bookingUnreadCount,
+    linkFor,
     loading,
     unread,
     fetchUnread,

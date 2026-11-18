@@ -33,15 +33,19 @@
       <!-- Right: Form -->
       <div class="flex-1 flex items-center justify-center p-6 sm:p-12">
         <div class="w-full max-w-[400px]">
-        <div class="lg:hidden flex items-center gap-2 mb-8">
+        <div class="lg:hidden flex items-center gap-2 mb-6">
           <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center">
             <span class="text-white font-bold text-sm">EG</span>
           </div>
           <span class="font-bold text-warm-800 dark:text-white">EventGenius</span>
         </div>
 
-        <h1 class="text-xl font-bold text-warm-800 dark:text-white mb-1">Sign in to your account</h1>
-        <p class="text-warm-500 dark:text-warm-400 mb-6">Continue to manage your venues and bookings.</p>
+        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-sm text-warm-500 hover:text-primary-600 dark:text-warm-400 mb-8">
+          <AppIcon icon="arrow-left" class="w-4 h-4" /> Back to EventGenius
+        </RouterLink>
+        <span class="badge-primary mb-3">{{ portalCopy.badge }}</span>
+        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-white mb-1">{{ portalCopy.title }}</h1>
+        <p class="text-warm-500 dark:text-warm-400 mb-6">{{ portalCopy.subtitle }}</p>
 
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div>
@@ -102,7 +106,13 @@
 
         <p v-if="portal !== 'support'" class="mt-6 text-center text-sm text-warm-500 dark:text-warm-400">
           Don't have an account?
-          <RouterLink :to="registerPath" class="ml-1 font-semibold text-primary-600 hover:text-primary-700">Register</RouterLink>
+          <RouterLink :to="{ path: registerPath, query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="ml-1 font-semibold text-primary-600 hover:text-primary-700">Create one</RouterLink>
+        </p>
+        <p v-if="portal === 'customer'" class="mt-3 text-center text-xs text-warm-400">
+          Own a venue? <RouterLink to="/shop/sign-in" class="font-semibold text-warm-600 dark:text-warm-300 hover:text-primary-600">Sign in to the shop portal</RouterLink>
+        </p>
+        <p v-else-if="portal === 'shop'" class="mt-3 text-center text-xs text-warm-400">
+          Booking an event? <RouterLink to="/customer/sign-in" class="font-semibold text-warm-600 dark:text-warm-300 hover:text-primary-600">Sign in as a customer</RouterLink>
         </p>
         </div>
       </div>
@@ -123,6 +133,11 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const portal = computed(() => (route.meta.portal as string) ?? 'customer')
+const portalCopy = computed(() => ({
+  customer: { badge: 'Customer', title: 'Welcome back', subtitle: 'Sign in to book venues and manage your events.' },
+  shop: { badge: 'Venue owner', title: 'Sign in to your shop', subtitle: 'Manage your venues, bookings and customers.' },
+  support: { badge: 'Administrator', title: 'Admin sign in', subtitle: 'Restricted to EventGenius staff.' },
+}[portal.value as 'customer' | 'shop' | 'support'] ?? { badge: 'Customer', title: 'Welcome back', subtitle: '' }))
 const registerPath = computed(() => (portal.value === 'shop' ? '/shop/sign-up' : '/customer/sign-up'))
 const forgotPasswordLink = computed(() => {
   const p = portal.value
@@ -130,6 +145,14 @@ const forgotPasswordLink = computed(() => {
   if (p === 'support') return '/forgot-password?from=support'
   return '/forgot-password?from=customer'
 })
+
+/** Internal path from ?redirect=, if it is reachable from this portal. */
+function safeRedirect(): string | null {
+  const r = route.query.redirect
+  if (typeof r !== 'string' || !r.startsWith('/') || r.startsWith('//')) return null
+  const target = r.startsWith('/support') ? 'support' : r.startsWith('/shop') ? 'shop' : 'customer'
+  return target === portal.value ? r : null
+}
 
 const form = ref({ email: '', password: '' })
 const error = ref('')
@@ -154,7 +177,7 @@ async function handleLogin() {
     // Wait for the pulse animation slightly before redirecting
     setTimeout(async () => {
       loading.value = false
-      const destination = result.redirectTo ?? authStore.defaultRoute
+      const destination = safeRedirect() ?? result.redirectTo ?? authStore.defaultRoute
       toast.success('Signed in successfully.')
       try {
         await router.replace(destination)

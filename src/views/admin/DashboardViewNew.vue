@@ -94,13 +94,27 @@
           <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
             <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Revenue Trend (Last 7 Days)</h5>
           </div>
-          <div class="p-5"><LineChart :data="revenueData" color="#10B981" /></div>
+          <div class="p-5">
+            <LineChart v-if="hasRevenue" :data="revenueData" color="#10B981" />
+            <div v-else class="empty-state h-[300px]">
+              <div class="empty-state-icon"><AppIcon icon="currency-dollar" class="w-6 h-6" /></div>
+              <p class="text-sm font-medium text-warm-700 dark:text-warm-200">No payments in the last 7 days</p>
+              <p class="text-xs text-warm-500 mt-1">Completed PayFast payments appear here.</p>
+            </div>
+          </div>
         </div>
         <div class="card">
           <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
             <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Bookings Overview (Last 7 Days)</h5>
           </div>
-          <div class="p-5"><BarChart :data="bookingsData" :colors="['#10B981', '#F97066', '#059669', '#F59E0B', '#0D9488', '#047857', '#10B981']" /></div>
+          <div class="p-5">
+            <BarChart v-if="hasBookings" :data="bookingsData" />
+            <div v-else class="empty-state h-[300px]">
+              <div class="empty-state-icon"><AppIcon icon="calendar-event" class="w-6 h-6" /></div>
+              <p class="text-sm font-medium text-warm-700 dark:text-warm-200">No bookings in the last 7 days</p>
+              <p class="text-xs text-warm-500 mt-1">New booking requests appear here.</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -110,26 +124,35 @@
           <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
             <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Booking Status Distribution</h5>
           </div>
-          <div class="p-5"><DonutChart :data="bookingStatusData" /></div>
+          <div class="p-5">
+            <DonutChart v-if="bookingStatusData.length" :data="bookingStatusData" />
+            <div v-else class="empty-state h-[300px]">
+              <div class="empty-state-icon"><AppIcon icon="calendar-event" class="w-6 h-6" /></div>
+              <p class="text-sm font-medium text-warm-700 dark:text-warm-200">No bookings yet</p>
+              <p class="text-xs text-warm-500 mt-1">Status breakdown appears once bookings exist.</p>
+            </div>
+          </div>
         </div>
         <div class="card">
           <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
             <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Recent Activity</h5>
           </div>
           <div class="p-5">
-            <div class="space-y-4">
+            <p v-if="!recentActivity.length" class="text-sm text-warm-500 py-8 text-center">No activity yet.</p>
+            <div v-else class="space-y-4">
               <div v-for="(activity, index) in recentActivity" :key="index" class="flex gap-3 relative">
                 <!-- Timeline line -->
                 <div v-if="index < recentActivity.length - 1" class="absolute left-[13px] top-8 bottom-0 w-0.5 bg-warm-100 dark:bg-warm-800"></div>
                 <!-- Indicator -->
                 <div class="w-7 h-7 rounded-full bg-primary-50 dark:bg-primary-900/30 border-2 border-white dark:border-warm-900 flex items-center justify-center flex-shrink-0 z-10 shadow-soft">
                   <AppIcon v-if="activity.type === 'booking'" icon="calendar-event" class="w-3 h-3 text-primary-600 dark:text-primary-400" />
+                  <AppIcon v-else-if="activity.type === 'payment'" icon="credit-card" class="w-3 h-3 text-primary-600 dark:text-primary-400" />
                   <AppIcon v-else-if="activity.type === 'store'" icon="building" class="w-3 h-3 text-primary-600 dark:text-primary-400" />
                   <AppIcon v-else icon="user" class="w-3 h-3 text-primary-600 dark:text-primary-400" />
                 </div>
                 <!-- Content -->
                 <div class="flex-1 pt-0.5">
-                  <p class="text-sm font-medium text-warm-800 dark:text-warm-200 mb-0.5">{{ activity.text }}</p>
+                  <RouterLink :to="activity.link" class="block text-sm font-medium text-warm-800 dark:text-warm-200 mb-0.5 hover:text-primary-600">{{ activity.text }}</RouterLink>
                   <span class="text-xs text-warm-400 dark:text-warm-500">{{ activity.time }}</span>
                 </div>
               </div>
@@ -176,7 +199,7 @@
                   </td>
                   <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400">{{ b.venue?.name }}</td>
                   <td class="px-5 py-3"><span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span></td>
-                  <td class="px-5 py-3 text-right text-sm font-medium text-warm-700 dark:text-warm-300">PKR {{ Number(b.total_amount).toLocaleString() }}</td>
+                  <td class="px-5 py-3 text-right text-sm font-medium text-warm-700 dark:text-warm-300 whitespace-nowrap">{{ formatPKR(b.total_amount) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -264,6 +287,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatPKR } from '@/lib/format'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'
@@ -281,40 +305,33 @@ const recentStores = ref<any[]>([])
 
 const today = new Date().toLocaleDateString('en-PK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-const revenueData = computed(() => [
-  { label: 'Mon', value: 12000 },
-  { label: 'Tue', value: 19000 },
-  { label: 'Wed', value: 15000 },
-  { label: 'Thu', value: 25000 },
-  { label: 'Fri', value: 22000 },
-  { label: 'Sat', value: 30000 },
-  { label: 'Sun', value: 28000 },
-])
+// Real data from GET /admin/dashboard
+const charts = ref<any>({})
+const statusCounts = ref<Record<string, number>>({})
+const activityFeed = ref<any[]>([])
 
-const bookingsData = computed(() => [
-  { label: 'Mon', value: 12 },
-  { label: 'Tue', value: 19 },
-  { label: 'Wed', value: 15 },
-  { label: 'Thu', value: 25 },
-  { label: 'Fri', value: 22 },
-  { label: 'Sat', value: 30 },
-  { label: 'Sun', value: 28 },
-])
+const revenueData = computed(() => (charts.value.revenue_trend ?? []).map((d: any) => ({ label: d.label, value: d.value })))
+const bookingsData = computed(() => (charts.value.bookings_trend ?? []).map((d: any) => ({ label: d.label, value: d.value })))
+const hasRevenue = computed(() => revenueData.value.some((d: any) => d.value > 0))
+const hasBookings = computed(() => bookingsData.value.some((d: any) => d.value > 0))
 
-const bookingStatusData = computed(() => [
-  { label: 'Confirmed', value: 45, color: '#10B981' },
-  { label: 'Pending', value: 25, color: '#F59E0B' },
-  { label: 'Completed', value: 20, color: '#059669' },
-  { label: 'Cancelled', value: 10, color: '#F97066' },
-])
+const STATUS_COLORS: Record<string, string> = {
+  confirmed: '#10B981', pending: '#F59E0B', completed: '#047857', cancelled: '#A8A29E', rejected: '#F97066',
+}
+const bookingStatusData = computed(() =>
+  Object.entries(statusCounts.value)
+    .filter(([, v]) => Number(v) > 0)
+    .map(([k, v]) => ({ label: k.charAt(0).toUpperCase() + k.slice(1), value: Number(v), color: STATUS_COLORS[k] ?? '#78716C' })),
+)
 
-const recentActivity = computed(() => [
-  { type: 'booking', text: 'New booking from John Doe', time: '2 minutes ago' },
-  { type: 'store', text: 'Store "Event Palace" submitted for approval', time: '15 minutes ago' },
-  { type: 'user', text: 'New user registration: Jane Smith', time: '1 hour ago' },
-  { type: 'booking', text: 'Booking #1234 was confirmed', time: '2 hours ago' },
-  { type: 'store', text: 'Store "Grand Hall" approved', time: '3 hours ago' },
-])
+function timeAgo(iso: string) {
+  const diff = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)} h ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+const recentActivity = computed(() => activityFeed.value.map((a: any) => ({ ...a, time: timeAgo(a.time) })))
 
 async function load() {
   loading.value = true
@@ -323,6 +340,9 @@ async function load() {
     Object.assign(stats, data.data.stats)
     recentBookings.value = data.data.recent_bookings
     recentStores.value = data.data.recent_stores
+    charts.value = data.data.charts ?? {}
+    statusCounts.value = data.data.bookings_by_status ?? {}
+    activityFeed.value = data.data.recent_activity ?? []
   } finally { loading.value = false }
 }
 

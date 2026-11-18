@@ -104,9 +104,20 @@ const chatStore = useChatStore()
 const layout = computed(() => route.meta.layout as string | undefined)
 const isMessagesRoute = computed(() => (route.name as string || '').includes('messages'))
 
-const customerCollapsed = ref(true)
-const storeCollapsed = ref(true)
-const adminCollapsed = ref(true)
+// Desktop: sidebar expanded by default, user's choice remembered.
+// Mobile: sidebar is an overlay and starts closed.
+const isDesktop = () => window.innerWidth >= 1024
+function readCollapsedPref(): boolean {
+  if (!isDesktop()) return true
+  try { return localStorage.getItem('sidebarCollapsed') === '1' } catch { return false }
+}
+const customerCollapsed = ref(readCollapsedPref())
+const storeCollapsed = ref(readCollapsedPref())
+const adminCollapsed = ref(readCollapsedPref())
+watch([customerCollapsed, storeCollapsed, adminCollapsed], () => {
+  if (!isDesktop()) return
+  try { localStorage.setItem('sidebarCollapsed', sidebarCollapsed.value ? '1' : '0') } catch { /* storage unavailable */ }
+})
 
 const sidebarCollapsed = computed(() => {
   if (layout.value === 'customer') return customerCollapsed.value

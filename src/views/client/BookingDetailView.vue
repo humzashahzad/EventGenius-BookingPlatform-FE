@@ -48,7 +48,7 @@
         <div>
           <span class="font-semibold text-sm text-primary-700 dark:text-primary-400">Payment Completed</span>
           <p class="text-xs text-primary-600/80 dark:text-primary-400/70 mt-0.5">
-            PKR {{ Number(booking.payment?.amount ?? booking.total_amount).toLocaleString() }}<template v-if="booking.payment?.gateway_amount"> &mdash; charged as R{{ Number(booking.payment.gateway_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} via PayFast</template><template v-if="booking.paid_at"> &middot; {{ formatDate(booking.paid_at) }}</template>
+            {{ formatPKR(booking.payment?.amount ?? booking.total_amount) }}<template v-if="booking.payment?.gateway_amount"> &mdash; charged as R{{ Number(booking.payment.gateway_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} via PayFast</template><template v-if="booking.paid_at"> &middot; {{ formatDate(booking.paid_at) }}</template>
           </p>
           <p v-if="booking.payment?.transaction_id" class="font-mono text-xs text-primary-600/70 dark:text-primary-400/60 mt-0.5">
             Txn: {{ booking.payment.transaction_id }}
@@ -128,7 +128,7 @@
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-sm text-warm-500 dark:text-warm-400">Time</span>
-                <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ booking.start_time }} &ndash; {{ booking.end_time }}</span>
+                <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ formatTimeRange(booking.start_time, booking.end_time) }}</span>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-sm text-warm-500 dark:text-warm-400">Duration</span>
@@ -150,20 +150,20 @@
             <div class="space-y-2.5">
               <div class="flex items-center justify-between text-sm">
                 <span class="text-warm-500 dark:text-warm-400">Base Price</span>
-                <span class="text-warm-700 dark:text-warm-300">PKR {{ Number(booking.base_price).toLocaleString() }}</span>
+                <span class="text-warm-700 dark:text-warm-300">{{ formatPKR(booking.base_price) }}</span>
               </div>
               <div v-if="Number(booking.amenities_price) > 0" class="flex items-center justify-between text-sm">
                 <span class="text-warm-500 dark:text-warm-400">Amenities</span>
-                <span class="text-warm-700 dark:text-warm-300">PKR {{ Number(booking.amenities_price).toLocaleString() }}</span>
+                <span class="text-warm-700 dark:text-warm-300">{{ formatPKR(booking.amenities_price) }}</span>
               </div>
               <div class="flex items-center justify-between text-sm">
                 <span class="text-warm-500 dark:text-warm-400">Tax (5%)</span>
-                <span class="text-warm-700 dark:text-warm-300">PKR {{ Number(booking.tax_amount).toLocaleString() }}</span>
+                <span class="text-warm-700 dark:text-warm-300">{{ formatPKR(booking.tax_amount) }}</span>
               </div>
               <div class="border-t border-warm-100 dark:border-warm-700 pt-2.5 mt-1">
                 <div class="flex items-center justify-between">
                   <span class="text-sm font-bold text-warm-900 dark:text-warm-50">Total</span>
-                  <span class="text-base font-bold text-primary-600 dark:text-primary-400">PKR {{ Number(booking.total_amount).toLocaleString() }}</span>
+                  <span class="text-base font-bold text-primary-600 dark:text-primary-400">{{ formatPKR(booking.total_amount) }}</span>
                 </div>
               </div>
             </div>
@@ -193,7 +193,7 @@
           class="btn-primary inline-flex items-center gap-2"
         >
           <AppIcon icon="credit-card" class="w-4 h-4" />
-          Pay Now &mdash; PKR {{ Number(booking.total_amount).toLocaleString() }}
+          Pay Now &mdash; {{ formatPKR(booking.total_amount) }}
         </RouterLink>
 
         <!-- Cancel -->
@@ -240,6 +240,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatTime, formatTimeRange, formatPKR } from '@/lib/format'
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'

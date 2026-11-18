@@ -11,7 +11,7 @@
       <div class="relative text-center px-4 mx-auto z-10" style="max-width:72rem;">
         <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-4 hero-trust-badge">
           <span class="trust-dot"></span>
-          Trusted by 10,000+ event planners
+          Venue booking made simple across Pakistan
         </div>
         <h1 class="hero-title">
           Find the Perfect Venue<br>
@@ -36,40 +36,13 @@
     <!-- Stats / Trust Row -->
     <section class="stats-section">
       <div class="flex flex-wrap justify-center gap-3 md:gap-4 mx-auto px-4" style="max-width:72rem;">
-        <div class="stat-card">
-          <div class="stat-icon-wrap" style="--accent: var(--color-primary);">
-            <AppIcon icon="building" class="w-5 h-5" />
+        <div v-for="st in stats" :key="st.label" class="stat-card">
+          <div class="stat-icon-wrap" :style="{ '--accent': st.color }">
+            <AppIcon :icon="st.icon" class="w-5 h-5" />
           </div>
           <div>
-            <div class="stat-number">500+</div>
-            <div class="stat-label-text">Venues Listed</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon-wrap" style="--accent: var(--color-accent);">
-            <AppIcon icon="calendar-check" class="w-5 h-5" />
-          </div>
-          <div>
-            <div class="stat-number">10,000+</div>
-            <div class="stat-label-text">Bookings Made</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon-wrap" style="--accent: #10B981;">
-            <AppIcon icon="map-pin" class="w-5 h-5" />
-          </div>
-          <div>
-            <div class="stat-number">50+</div>
-            <div class="stat-label-text">Cities Covered</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon-wrap" style="--accent: #F59E0B;">
-            <AppIcon icon="star-filled" class="w-5 h-5" />
-          </div>
-          <div>
-            <div class="stat-number">4.8</div>
-            <div class="stat-label-text">Avg. Rating</div>
+            <div class="stat-number">{{ st.value }}</div>
+            <div class="stat-label-text">{{ st.label }}</div>
           </div>
         </div>
       </div>
@@ -179,30 +152,21 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
+    <!-- Why EventGenius -->
     <section class="py-16 px-4" style="background: var(--color-bg-elevated);">
       <div class="mx-auto" style="max-width:80rem;">
         <div class="text-center mb-12">
-          <span class="section-badge">Testimonials</span>
-          <h2 class="section-heading">What Our Users Say</h2>
-          <p class="section-subheading mx-auto">Trusted by thousands of event planners and venue owners</p>
+          <span class="section-badge">Why EventGenius</span>
+          <h2 class="section-heading">Everything you need to book with confidence</h2>
+          <p class="section-subheading mx-auto">Built for customers planning an event and for the venues hosting them</p>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div v-for="t in testimonials" :key="t.name">
-            <div class="testimonial-card">
-              <div class="testimonial-quote-mark">"</div>
-              <div class="testimonial-stars">
-                <AppIcon v-for="i in 5" :key="i" icon="star-filled" class="w-3.5 h-3.5" style="color: #F59E0B;" />
-              </div>
-              <p class="testimonial-text">"{{ t.quote }}"</p>
-              <div class="testimonial-author">
-                <div class="testimonial-avatar">{{ t.name.charAt(0) }}</div>
-                <div>
-                  <div class="testimonial-name">{{ t.name }}</div>
-                  <div class="testimonial-role">{{ t.role }}</div>
-                </div>
-              </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div v-for="f in features" :key="f.title" class="testimonial-card">
+            <div class="w-11 h-11 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center mb-4">
+              <AppIcon :icon="f.icon" class="w-5 h-5" />
             </div>
+            <h3 class="font-semibold text-warm-900 dark:text-white mb-1.5">{{ f.title }}</h3>
+            <p class="text-sm text-warm-500 dark:text-warm-400 leading-relaxed">{{ f.text }}</p>
           </div>
         </div>
       </div>
@@ -232,7 +196,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
@@ -242,22 +206,22 @@ import PixelCanvas from '@/components/ui/PixelCanvas.vue'
 const featuredVenues = ref<any[]>([])
 const loadingVenues = ref(false)
 
-const testimonials = [
-  {
-    name: 'Ayesha Khan',
-    role: 'Wedding Planner',
-    quote: 'EventGenius made finding the perfect wedding venue so easy. The booking process was smooth and the venue owner was incredibly responsive.',
-  },
-  {
-    name: 'Usman Ali',
-    role: 'Corporate Event Manager',
-    quote: 'We use EventGenius for all our corporate events now. The multi-day booking feature is a game-changer for conferences.',
-  },
-  {
-    name: 'Fatima Rizvi',
-    role: 'Venue Owner',
-    quote: 'Since listing on EventGenius, our bookings have increased by 40%. The platform makes managing everything effortless.',
-  },
+const totalVenues = ref<number | null>(null)
+const totalCategories = ref<number | null>(null)
+
+// Real numbers only — no invented marketing figures.
+const stats = computed(() => [
+  { icon: 'building', label: 'Venues listed', value: totalVenues.value ?? '—', color: 'var(--color-primary)' },
+  { icon: 'tags', label: 'Event types', value: totalCategories.value ?? '—', color: 'var(--color-accent)' },
+  { icon: 'credit-card', label: 'Secure payments', value: 'PayFast', color: '#10B981' },
+  { icon: 'message', label: 'Chat with owners', value: 'Live', color: '#F59E0B' },
+])
+
+const features = [
+  { icon: 'calendar-check', title: 'Real-time availability', text: 'See booked slots on the calendar and pick a time that is actually free — no double bookings.' },
+  { icon: 'shield', title: 'Verified venues', text: 'Every shop is reviewed and approved by our team before its venues appear here.' },
+  { icon: 'credit-card', title: 'Secure checkout', text: 'Pay online through PayFast once the venue confirms your request.' },
+  { icon: 'star', title: 'Genuine reviews', text: 'Only customers who held an event at a venue can review it.' },
 ]
 
 function formatPrice(v: any) {
@@ -268,8 +232,19 @@ function formatPrice(v: any) {
 async function fetchFeaturedVenues() {
   loadingVenues.value = true
   try {
-    const { data } = await api.get('/venues', { params: { limit: 6, sort: 'rating' } })
-    featuredVenues.value = (data.data || data || []).slice(0, 6)
+    // Prefer featured venues; fall back to the best-rated / newest ones.
+    const featured = await api.get('/venues', { params: { featured: 1, per_page: 6 } })
+    let list: any[] = featured.data?.data?.data ?? []
+    if (list.length < 3) {
+      const latest = await api.get('/venues', { params: { per_page: 6, sort_by: 'avg_rating', sort_dir: 'desc' } })
+      const extra: any[] = latest.data?.data?.data ?? []
+      list = [...list, ...extra.filter(v => !list.some(l => l.id === v.id))].slice(0, 6)
+      totalVenues.value = latest.data?.data?.total ?? null
+    } else {
+      totalVenues.value = featured.data?.data?.total ?? null
+    }
+    featuredVenues.value = list
+    api.get('/categories').then(r => { totalCategories.value = (r.data?.data ?? []).length }).catch(() => {})
   } catch {
     featuredVenues.value = []
   } finally {

@@ -40,6 +40,7 @@ const series = computed(() => [{
 
 const chartOptions = computed(() => ({
   chart: {
+    fontFamily: 'DM Sans, ui-sans-serif, system-ui, sans-serif',
     type: 'line' as const,
     toolbar: { show: false },
     sparkline: { enabled: false },

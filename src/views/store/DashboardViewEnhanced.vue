@@ -116,13 +116,27 @@
           <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
             <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Revenue Trend (Last 7 Days)</h5>
           </div>
-          <div class="p-5"><LineChart :data="revenueData" color="#10B981" /></div>
+          <div class="p-5">
+            <LineChart v-if="hasRevenue" :data="revenueData" color="#10B981" />
+            <div v-else class="empty-state h-[300px]">
+              <div class="empty-state-icon"><AppIcon icon="currency-dollar" class="w-6 h-6" /></div>
+              <p class="text-sm font-medium text-warm-700 dark:text-warm-200">No payments in the last 7 days</p>
+              <p class="text-xs text-warm-500 mt-1">Revenue appears here once customers pay for confirmed bookings.</p>
+            </div>
+          </div>
         </div>
         <div class="card">
           <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
             <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Bookings by Venue</h5>
           </div>
-          <div class="p-5"><BarChart :data="venueBookingsData" /></div>
+          <div class="p-5">
+            <BarChart v-if="venueBookingsData.length" :data="venueBookingsData" />
+            <div v-else class="empty-state h-[300px]">
+              <div class="empty-state-icon"><AppIcon icon="calendar-event" class="w-6 h-6" /></div>
+              <p class="text-sm font-medium text-warm-700 dark:text-warm-200">No bookings yet</p>
+              <p class="text-xs text-warm-500 mt-1">Bookings per venue will show here.</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -165,7 +179,7 @@
                 <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400">{{ b.venue?.name }}</td>
                 <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 whitespace-nowrap">{{ formatDate(b.event_date) }}</td>
                 <td class="px-5 py-3"><span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span></td>
-                <td class="px-5 py-3 text-right text-sm font-medium text-warm-700 dark:text-warm-300">PKR {{ Number(b.total_amount).toLocaleString() }}</td>
+                <td class="px-5 py-3 text-right text-sm font-medium text-warm-700 dark:text-warm-300 whitespace-nowrap">{{ formatPKR(b.total_amount) }}</td>
               </tr>
             </tbody>
           </table>
@@ -209,6 +223,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatPKR } from '@/lib/format'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'
@@ -219,23 +234,10 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 const loading = ref(true)
 const data = ref<any>(null)
 
-const revenueData = computed(() => [
-  { label: 'Mon', value: 8000 },
-  { label: 'Tue', value: 12000 },
-  { label: 'Wed', value: 10000 },
-  { label: 'Thu', value: 15000 },
-  { label: 'Fri', value: 18000 },
-  { label: 'Sat', value: 22000 },
-  { label: 'Sun', value: 20000 },
-])
-
-const venueBookingsData = computed(() => [
-  { label: 'Grand Hall', value: 25 },
-  { label: 'Garden View', value: 18 },
-  { label: 'Rooftop', value: 15 },
-  { label: 'Conference', value: 12 },
-  { label: 'Banquet', value: 8 },
-])
+// Real series from GET /store/dashboard → data.charts
+const revenueData = computed(() => (data.value?.charts?.revenue_trend ?? []).map((d: any) => ({ label: d.label, value: d.value })))
+const venueBookingsData = computed(() => data.value?.charts?.bookings_by_venue ?? [])
+const hasRevenue = computed(() => revenueData.value.some((d: any) => d.value > 0))
 
 async function load() {
   loading.value = true

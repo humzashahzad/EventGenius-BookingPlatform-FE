@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
       <div>
-        <h1 class="text-2xl font-bold text-warm-900 tracking-tight">Welcome back, {{ authStore.user?.name?.split(' ')[0] || 'there' }}</h1>
+        <h1 class="page-title">Welcome back, {{ authStore.user?.name?.split(' ')[0] || 'there' }}</h1>
         <p class="text-sm text-warm-500 mt-1">{{ today }} &middot; Here's your booking overview.</p>
       </div>
       <RouterLink to="/venues" class="btn-primary gap-2">
@@ -23,36 +23,21 @@
     <template v-else>
       <!-- KPI Stat Cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div class="gradient-stat-card bg-gradient-to-br from-primary-700 to-primary-500">
-          <div class="gradient-stat-icon">
-            <AppIcon icon="calendar-event" class="w-5 h-5" />
-          </div>
-          <div class="gradient-stat-value">{{ stats.total_bookings }}</div>
-          <div class="gradient-stat-label">Total Bookings</div>
+        <div class="stat-card">
+          <div class="stat-icon bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"><AppIcon icon="calendar-event" class="w-5 h-5" /></div>
+          <div><div class="stat-value">{{ stats.total_bookings }}</div><div class="stat-label">Total bookings</div></div>
         </div>
-
-        <div class="gradient-stat-card bg-gradient-to-br from-amber-700 to-accent">
-          <div class="gradient-stat-icon">
-            <AppIcon icon="clock" class="w-5 h-5" />
-          </div>
-          <div class="gradient-stat-value">{{ stats.upcoming_bookings }}</div>
-          <div class="gradient-stat-label">Upcoming</div>
+        <div class="stat-card">
+          <div class="stat-icon bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"><AppIcon icon="clock" class="w-5 h-5" /></div>
+          <div><div class="stat-value">{{ stats.upcoming_bookings }}</div><div class="stat-label">Upcoming</div></div>
         </div>
-
-        <div class="gradient-stat-card bg-gradient-to-br from-primary-800 to-primary-400">
-          <div class="gradient-stat-icon">
-            <AppIcon icon="circle-check" class="w-5 h-5" />
-          </div>
-          <div class="gradient-stat-value">{{ stats.completed_bookings }}</div>
-          <div class="gradient-stat-label">Completed</div>
+        <div class="stat-card">
+          <div class="stat-icon bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400"><AppIcon icon="circle-check" class="w-5 h-5" /></div>
+          <div><div class="stat-value">{{ stats.completed_bookings }}</div><div class="stat-label">Completed</div></div>
         </div>
-
-        <div class="gradient-stat-card bg-gradient-to-br from-red-700 to-coral">
-          <div class="gradient-stat-icon">
-            <AppIcon icon="x" class="w-5 h-5" />
-          </div>
-          <div class="gradient-stat-value">{{ stats.cancelled_bookings }}</div>
-          <div class="gradient-stat-label">Cancelled</div>
+        <div class="stat-card">
+          <div class="stat-icon bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"><AppIcon icon="x" class="w-5 h-5" /></div>
+          <div><div class="stat-value">{{ stats.cancelled_bookings }}</div><div class="stat-label">Cancelled</div></div>
         </div>
       </div>
 
@@ -61,8 +46,14 @@
         <!-- Booking Activity -->
         <div class="card">
           <div class="p-5">
-            <h2 class="text-sm font-semibold text-warm-800 uppercase tracking-wider mb-4">Your Booking Activity</h2>
-            <BarChart :data="bookingActivityData" />
+            <h2 class="text-sm font-semibold text-warm-800 uppercase tracking-wider mb-4 dark:text-warm-100">Your Booking Activity</h2>
+            <BarChart v-if="stats.total_bookings > 0" :data="bookingActivityData" />
+            <div v-else class="empty-state h-[300px]">
+              <div class="empty-state-icon"><AppIcon icon="calendar-event" class="w-6 h-6" /></div>
+              <p class="empty-state-title">No bookings yet</p>
+              <p class="empty-state-desc">Find a venue and send your first booking request.</p>
+              <RouterLink to="/venues" class="btn-primary btn-sm mt-4">Browse venues</RouterLink>
+            </div>
           </div>
         </div>
 
@@ -70,7 +61,7 @@
         <div class="card">
           <div class="p-5">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-sm font-semibold text-warm-800 uppercase tracking-wider">Upcoming Events</h2>
+              <h2 class="text-sm font-semibold text-warm-800 uppercase tracking-wider dark:text-warm-100">Upcoming Events</h2>
               <RouterLink to="/customer/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1 transition-colors">
                 View all
                 <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
@@ -78,14 +69,14 @@
             </div>
 
             <div v-if="upcomingEvents.length === 0" class="text-center py-8">
-              <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-warm-100 flex items-center justify-center">
+              <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-warm-100 flex items-center justify-center dark:bg-warm-700">
                 <AppIcon icon="calendar-event" class="w-8 h-8 text-warm-400" />
               </div>
               <p class="text-sm text-warm-500">No upcoming events</p>
             </div>
 
             <div v-else class="space-y-3">
-              <div v-for="event in upcomingEvents" :key="event.id" class="event-card">
+              <RouterLink v-for="event in upcomingEvents" :key="event.id" :to="`/customer/bookings/${event.id}`" class="event-card block hover:border-primary-300 transition-colors">
                 <div class="event-date">
                   <div class="event-month">{{ formatMonth(event.event_date) }}</div>
                   <div class="event-day">{{ formatDay(event.event_date) }}</div>
@@ -96,16 +87,16 @@
                   <div class="flex items-center gap-3 text-xs text-warm-500 mt-1">
                     <span class="flex items-center gap-1">
                       <AppIcon icon="clock" class="w-3.5 h-3.5" />
-                      {{ event.start_time }}
+                      {{ formatTime(event.start_time) }}
                     </span>
                     <span class="flex items-center gap-1">
                       <AppIcon icon="users" class="w-3.5 h-3.5" />
-                      {{ event.guests_count }} guests
+                      {{ event.expected_guests ?? event.guests_count }} guests
                     </span>
                   </div>
                 </div>
                 <span :class="statusClass(event.status)" class="capitalize self-start">{{ event.status }}</span>
-              </div>
+              </RouterLink>
             </div>
           </div>
         </div>
@@ -114,10 +105,10 @@
       <!-- Booking progress bar -->
       <div class="card p-5 mb-8" v-if="stats.total_bookings > 0">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="text-sm font-semibold text-warm-700">Booking Completion Rate</h3>
+          <h3 class="text-sm font-semibold text-warm-700 dark:text-warm-200">Booking Completion Rate</h3>
           <span class="text-sm font-bold text-primary-600">{{ completionRate }}%</span>
         </div>
-        <div class="h-2 bg-warm-100 rounded-full overflow-hidden">
+        <div class="h-2 bg-warm-100 rounded-full overflow-hidden dark:bg-warm-700">
           <div class="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full transition-all duration-500" :style="{ width: completionRate + '%' }"></div>
         </div>
         <div class="flex justify-between mt-2 text-xs text-warm-400">
@@ -130,7 +121,7 @@
       <div class="card mb-8">
         <div class="p-5">
           <div class="flex items-center justify-between mb-5">
-            <h2 class="text-sm font-semibold text-warm-800 uppercase tracking-wider">Recent Bookings</h2>
+            <h2 class="text-sm font-semibold text-warm-800 uppercase tracking-wider dark:text-warm-100">Recent Bookings</h2>
             <RouterLink to="/customer/bookings" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1 transition-colors">
               View all
               <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
@@ -139,10 +130,10 @@
 
           <!-- Empty state -->
           <div v-if="recentBookings.length === 0" class="text-center py-12">
-            <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-warm-100 flex items-center justify-center">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-warm-100 flex items-center justify-center dark:bg-warm-700">
               <AppIcon icon="calendar-event" class="w-8 h-8 text-warm-400" />
             </div>
-            <p class="text-sm font-medium text-warm-700">No bookings yet</p>
+            <p class="text-sm font-medium text-warm-700 dark:text-warm-200">No bookings yet</p>
             <p class="text-xs text-warm-500 mt-1">Find and book the perfect venue for your next event.</p>
             <RouterLink to="/venues" class="btn-primary mt-4 inline-flex">Browse Venues</RouterLink>
           </div>
@@ -151,7 +142,7 @@
           <div v-else class="overflow-x-auto -mx-5">
             <table class="w-full text-left">
               <thead>
-                <tr class="border-b border-warm-200">
+                <tr class="border-b border-warm-200 dark:border-warm-700">
                   <th class="px-5 py-3 text-xs font-semibold text-warm-500 uppercase tracking-wider">Booking #</th>
                   <th class="px-5 py-3 text-xs font-semibold text-warm-500 uppercase tracking-wider">Venue</th>
                   <th class="px-5 py-3 text-xs font-semibold text-warm-500 uppercase tracking-wider">Event Date</th>
@@ -159,8 +150,8 @@
                   <th class="px-5 py-3 text-xs font-semibold text-warm-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-warm-100">
-                <tr v-for="b in recentBookings" :key="b.id" class="cursor-pointer hover:bg-primary-50/30 transition-colors">
+              <tbody class="divide-y divide-warm-100 dark:divide-warm-700">
+                <tr v-for="b in recentBookings" :key="b.id" class="cursor-pointer hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-colors" @click="router.push(`/customer/bookings/${b.id}`)">
                   <td class="px-5 py-3">
                     <RouterLink :to="`/customer/bookings/${b.id}`" class="font-mono text-xs text-primary-600 font-semibold hover:text-primary-700">
                       {{ b.booking_number }}
@@ -168,15 +159,15 @@
                   </td>
                   <td class="px-5 py-3">
                     <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-warm-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <div class="w-8 h-8 rounded-lg bg-warm-100 flex items-center justify-center overflow-hidden flex-shrink-0 dark:bg-warm-700">
                         <img v-if="b.venue?.thumbnail" :src="getImageUrl(b.venue.thumbnail)" class="w-full h-full object-cover" />
                         <AppIcon v-else icon="map-pin" class="w-4 h-4 text-warm-400" />
                       </div>
-                      <span class="font-medium text-warm-800 text-sm">{{ b.venue?.name }}</span>
+                      <span class="font-medium text-warm-800 text-sm dark:text-warm-100">{{ b.venue?.name }}</span>
                     </div>
                   </td>
                   <td class="px-5 py-3 text-warm-500 text-sm whitespace-nowrap">{{ formatDate(b.event_date) }}</td>
-                  <td class="px-5 py-3 font-semibold text-warm-800 text-sm">PKR {{ Number(b.total_amount).toLocaleString() }}</td>
+                  <td class="px-5 py-3 font-semibold text-warm-800 text-sm dark:text-warm-100">{{ formatPKR(b.total_amount) }}</td>
                   <td class="px-5 py-3"><span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span></td>
                 </tr>
               </tbody>
@@ -188,31 +179,31 @@
       <!-- Quick Actions -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <RouterLink to="/venues" class="card-hover flex items-center gap-4 p-4 no-underline group">
-          <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center group-hover:bg-primary-200 transition-colors flex-shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center group-hover:bg-primary-200 transition-colors flex-shrink-0 dark:bg-primary-900/30">
             <AppIcon icon="search" class="w-5 h-5 text-primary-600" />
           </div>
           <div>
-            <p class="text-sm font-semibold text-warm-800">Browse Venues</p>
+            <p class="text-sm font-semibold text-warm-800 dark:text-warm-100">Browse Venues</p>
             <p class="text-xs text-warm-500">Discover new places</p>
           </div>
         </RouterLink>
 
         <RouterLink to="/customer/bookings" class="card-hover flex items-center gap-4 p-4 no-underline group">
-          <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors flex-shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors flex-shrink-0 dark:bg-primary-900/30">
             <AppIcon icon="calendar-event" class="w-5 h-5 text-primary-700" />
           </div>
           <div>
-            <p class="text-sm font-semibold text-warm-800">My Bookings</p>
+            <p class="text-sm font-semibold text-warm-800 dark:text-warm-100">My Bookings</p>
             <p class="text-xs text-warm-500">View all your bookings</p>
           </div>
         </RouterLink>
 
         <RouterLink to="/customer/profile" class="card-hover flex items-center gap-4 p-4 no-underline group">
-          <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors flex-shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors flex-shrink-0 dark:bg-primary-900/30">
             <AppIcon icon="user" class="w-5 h-5 text-primary-700" />
           </div>
           <div>
-            <p class="text-sm font-semibold text-warm-800">My Profile</p>
+            <p class="text-sm font-semibold text-warm-800 dark:text-warm-100">My Profile</p>
             <p class="text-xs text-warm-500">Update your information</p>
           </div>
         </RouterLink>
@@ -222,8 +213,9 @@
 </template>
 
 <script setup lang="ts">
+import { formatTime, formatTimeRange, formatPKR } from '@/lib/format'
 import { ref, reactive, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
 import { useAuthStore } from '@/stores/auth'
@@ -231,6 +223,7 @@ import BarChart from '@/components/charts/BarChart.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 
 const authStore = useAuthStore()
+const router = useRouter()
 const loading = ref(true)
 const stats = reactive({ total_bookings: 0, upcoming_bookings: 0, completed_bookings: 0, cancelled_bookings: 0 })
 const recentBookings = ref<any[]>([])
@@ -244,11 +237,12 @@ const completionRate = computed(() => {
 })
 
 // Chart data for booking activity by status
+// Real counts only — no placeholder numbers when the customer has no bookings.
 const bookingActivityData = computed(() => [
-  { label: 'Pending', value: stats.total_bookings > 0 ? Math.max(stats.total_bookings - stats.upcoming_bookings - stats.completed_bookings - stats.cancelled_bookings, 0) : 5 },
-  { label: 'Upcoming', value: stats.upcoming_bookings || 8 },
-  { label: 'Completed', value: stats.completed_bookings || 12 },
-  { label: 'Cancelled', value: stats.cancelled_bookings || 2 },
+  { label: 'Upcoming', value: stats.upcoming_bookings || 0 },
+  { label: 'Completed', value: stats.completed_bookings || 0 },
+  { label: 'Cancelled', value: stats.cancelled_bookings || 0 },
+  { label: 'Other', value: Math.max((stats.total_bookings || 0) - (stats.upcoming_bookings || 0) - (stats.completed_bookings || 0) - (stats.cancelled_bookings || 0), 0) },
 ])
 
 async function load() {
@@ -351,14 +345,14 @@ onMounted(load)
   gap: 1rem;
   padding: 1rem;
   border-radius: 0.75rem;
-  border: 1px solid var(--color-warm-200, #e7e5e4);
+  border: 1px solid var(--color-border-light);
   background: var(--color-bg, #FAFAF9);
   transition: all 0.2s ease;
 }
 
 .event-card:hover {
   border-color: #6ee7b7;
-  background: #f5f5f4;
+  background: var(--color-bg-hover);
   transform: translateY(-2px);
   box-shadow: var(--shadow-card);
 }
@@ -407,7 +401,7 @@ onMounted(load)
 
 .event-venue {
   font-size: 0.75rem;
-  color: var(--color-warm-500, #78716c);
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

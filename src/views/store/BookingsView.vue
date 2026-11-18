@@ -48,7 +48,7 @@
           </thead>
           <tbody class="divide-y divide-warm-200 dark:divide-warm-700">
             <tr v-for="b in bookings" :key="b.id" class="hover:bg-warm-50 dark:hover:bg-warm-800/30 transition-colors">
-              <td class="px-5 py-3.5"><span class="font-mono text-xs text-primary-600 dark:text-primary-400 font-semibold whitespace-nowrap">{{ b.booking_number }}</span></td>
+              <td class="px-5 py-3.5"><RouterLink :to="`/shop/bookings/${b.id}`" class="font-mono text-xs text-primary-600 dark:text-primary-400 font-semibold whitespace-nowrap hover:underline">{{ b.booking_number }}</RouterLink></td>
               <td class="px-5 py-3.5">
                 <p class="font-medium text-warm-800 dark:text-warm-200 text-sm">{{ b.event_name }}</p>
                 <p class="text-warm-500 dark:text-warm-400 text-xs capitalize">{{ b.event_type?.replace(/_/g, ' ') }}</p>
@@ -57,10 +57,10 @@
               <td class="px-5 py-3.5 text-warm-500 dark:text-warm-400">{{ b.venue?.name }}</td>
               <td class="px-5 py-3.5 text-warm-500 dark:text-warm-400 text-xs whitespace-nowrap">
                 <p>{{ formatDate(b.event_date) }}</p>
-                <p class="text-warm-400 dark:text-warm-500">{{ b.start_time }} – {{ b.end_time }}</p>
+                <p class="text-warm-400 dark:text-warm-500">{{ formatTimeRange(b.start_time, b.end_time) }}</p>
               </td>
               <td class="px-5 py-3.5 text-center text-warm-700 dark:text-warm-300">{{ b.expected_guests }}</td>
-              <td class="px-5 py-3.5 text-right font-semibold text-warm-800 dark:text-warm-200">PKR {{ Number(b.total_amount).toLocaleString() }}</td>
+              <td class="px-5 py-3.5 text-right font-semibold text-warm-800 dark:text-warm-200">{{ formatPKR(b.total_amount) }}</td>
               <td class="px-5 py-3.5">
                 <div class="flex flex-wrap items-center gap-1.5">
                   <span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span>
@@ -74,7 +74,7 @@
                   <button @click="doConfirm(b.id)" :disabled="acting" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/30 border border-primary-200 dark:border-primary-800 transition-colors">Confirm</button>
                   <button @click="openReject(b)" :disabled="acting" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-coral/10 dark:bg-coral/20 text-coral hover:bg-coral/20 dark:hover:bg-coral/30 border border-coral/20 dark:border-coral/30 transition-colors">Reject</button>
                 </div>
-                <span v-else class="text-warm-400 dark:text-warm-500 text-xs">—</span>
+                <RouterLink v-else :to="`/shop/bookings/${b.id}`" class="btn-ghost btn-sm">View</RouterLink>
               </td>
             </tr>
           </tbody>
@@ -106,6 +106,8 @@
 </template>
 
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
+import { formatTime, formatTimeRange, formatPKR } from '@/lib/format'
 import { ref, onMounted, onUnmounted } from 'vue'
 import api from '@/lib/axios'
 import { useTopBarActionsStore } from '@/stores/topBarActions'

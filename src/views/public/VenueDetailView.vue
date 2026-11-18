@@ -71,7 +71,7 @@
             <h2 class="detail-title">{{ venue.name }}</h2>
             <p class="detail-location">
               <AppIcon icon="map-pin" class="w-3.5 h-3.5" />
-              {{ venue.address }}, {{ venue.city }}, {{ venue.country }}
+              {{ formatAddress(venue) }}
             </p>
             <RouterLink
               v-if="venue.store?.id"
@@ -155,7 +155,7 @@
             <div v-for="amenity in venue.amenities" :key="amenity.id" class="amenity-item">
               <AppIcon icon="circle-check" class="w-4 h-4 text-[#10B981]" />
               <span class="amenity-name">{{ amenity.name }}</span>
-              <span v-if="amenity.is_paid" class="amenity-price">PKR {{ amenity.price }}</span>
+              <span v-if="amenity.is_paid" class="amenity-price">{{ formatPKR(amenity.price) }}</span>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@
 
           <div v-else>
             <p class="booking-note" style="margin-bottom:0.75rem;">Sign in to book this venue</p>
-            <RouterLink to="/customer/sign-in" class="booking-btn">Sign In to Book</RouterLink>
+            <RouterLink :to="{ path: '/customer/sign-in', query: { redirect: `/venues/${route.params.id}/book` } }" class="booking-btn">Sign In to Book</RouterLink>
           </div>
         </div>
       </div>
@@ -231,6 +231,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatPKR, formatAddress } from '@/lib/format'
 import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
@@ -333,8 +334,10 @@ onMounted(loadVenue)
 
 .gallery-main {
   position: relative;
-  aspect-ratio: 16/9;
-  max-height: 480px;
+  width: 100%;
+  /* Full width at every size; height scales with the viewport (was a capped
+     16:9 box that left an empty strip beside the photo on wide screens). */
+  height: clamp(240px, 42vw, 520px);
   background: var(--color-bg-hover);
 }
 

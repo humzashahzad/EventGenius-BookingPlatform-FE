@@ -704,6 +704,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useChatStore, type Chat, type ChatMessage, type ChatUser } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/lib/axios'
@@ -714,6 +715,8 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 
 // ── Role-based chat restrictions ────────────────────────────────────────
 const userRole = computed(() => authStore.user?.role || 'client')
@@ -1246,6 +1249,15 @@ onMounted(async () => {
   chatStore.connect()
   await chatStore.fetchChats()
   await fetchEligibleContacts()
+  // Deep link: /…/messages?with=<userId> opens (or creates) the chat with that user,
+  // e.g. "Message customer" on a booking page.
+  const withId = Number(route.query.with)
+  if (withId) {
+    const chat = await chatStore.getOrCreateChat(withId)
+    if (chat) await openChat(chat.id)
+    else toast.error('Could not open this conversation.')
+    router.replace({ query: {} })
+  }
 })
 
 onBeforeUnmount(() => {

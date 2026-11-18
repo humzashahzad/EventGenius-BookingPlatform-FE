@@ -35,6 +35,7 @@ const total = computed(() => props.data.reduce((sum, item) => sum + item.value, 
 const chartOptions = computed(() => ({
   chart: {
     type: 'donut' as const,
+    fontFamily: 'DM Sans, ui-sans-serif, system-ui, sans-serif',
   },
   labels: props.data.map(d => d.label),
   colors: props.data.map((d, i) => d.color || props.colors[i % props.colors.length]),
@@ -42,7 +43,7 @@ const chartOptions = computed(() => ({
   legend: {
     position: 'right' as const,
     fontSize: '14px',
-    fontFamily: 'Public Sans',
+    fontFamily: 'DM Sans, ui-sans-serif, system-ui, sans-serif',
     markers: { width: 12, height: 12, radius: 12 },
     itemMargin: { horizontal: 0, vertical: 6 },
     formatter: (seriesName: string, opts: any) => {

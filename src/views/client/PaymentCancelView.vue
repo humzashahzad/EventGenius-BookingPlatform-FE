@@ -7,7 +7,7 @@
           <AppIcon icon="x" class="w-10 h-10 text-coral" />
         </div>
 
-        <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2">Payment Cancelled</h1>
+        <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Payment Cancelled</h1>
         <p class="text-sm text-warm-500 mb-8">
           Your payment was cancelled. No charges were made and your booking remains unpaid.<br />
           You can try again from your booking details page.
@@ -17,7 +17,7 @@
         <div v-if="bookingId" class="card bg-warm-50 dark:bg-warm-800 max-w-sm mx-auto mb-8">
           <div class="p-4">
             <p class="text-sm text-warm-500">
-              Booking ID: <span class="font-mono font-medium text-warm-700">#{{ bookingId }}</span>
+              Booking ID: <span class="font-mono font-medium text-warm-700 dark:text-warm-200">#{{ bookingId }}</span>
             </p>
           </div>
         </div>

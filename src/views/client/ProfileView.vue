@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
       <div>
-        <h1 class="text-2xl font-bold text-warm-900 tracking-tight">My Profile</h1>
+        <h1 class="text-2xl font-bold text-warm-900 tracking-tight dark:text-white">My Profile</h1>
         <p class="text-sm text-warm-500 mt-1">Manage your personal information and account security.</p>
       </div>
       <button @click="saveProfile" :disabled="saving" class="btn-primary inline-flex items-center gap-2">
@@ -40,7 +40,7 @@
             </div>
             <ProfileAvatarUpload :current-avatar="authStore.user?.avatar" @update="onAvatarUpdate" />
             <div class="mt-4">
-              <h3 class="text-lg font-semibold text-warm-900 mb-1">{{ form.name || 'Your Name' }}</h3>
+              <h3 class="text-lg font-semibold text-warm-900 mb-1 dark:text-white">{{ form.name || 'Your Name' }}</h3>
               <p class="text-sm text-warm-500 mb-3">{{ form.email || authStore.user?.email }}</p>
               <span class="badge-primary capitalize">{{ authStore.user?.role?.replace('_', ' ') || 'Client' }}</span>
             </div>
@@ -54,11 +54,11 @@
             <div class="space-y-3">
               <div class="flex items-center gap-3">
                 <AppIcon icon="mail" class="w-4 h-4 text-warm-400 flex-shrink-0" />
-                <span class="text-sm text-warm-700 truncate">{{ form.email || 'No email' }}</span>
+                <span class="text-sm text-warm-700 truncate dark:text-warm-200">{{ form.email || 'No email' }}</span>
               </div>
               <div class="flex items-center gap-3">
                 <AppIcon icon="phone" class="w-4 h-4 text-warm-400 flex-shrink-0" />
-                <span class="text-sm text-warm-700">{{ form.phone || 'No phone set' }}</span>
+                <span class="text-sm text-warm-700 dark:text-warm-200">{{ form.phone || 'No phone set' }}</span>
               </div>
             </div>
           </div>
@@ -73,7 +73,7 @@
             <div class="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
               <AppIcon icon="user" class="w-4 h-4 text-primary-600" />
             </div>
-            <h2 class="text-sm font-semibold text-warm-800">Personal Information</h2>
+            <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-100">Personal Information</h2>
           </div>
           <div class="p-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -101,7 +101,7 @@
               <div class="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center">
                 <AppIcon icon="lock" class="w-4 h-4 text-accent" />
               </div>
-              <h2 class="text-sm font-semibold text-warm-800">Change Password</h2>
+              <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-100">Change Password</h2>
             </div>
             <span class="text-xs text-warm-400">Leave blank to keep current password</span>
           </div>
@@ -126,7 +126,7 @@
                 <span class="text-warm-500">Password strength</span>
                 <span :class="passwordStrength.color" class="font-medium">{{ passwordStrength.label }}</span>
               </div>
-              <div class="h-1.5 bg-warm-100 rounded-full overflow-hidden">
+              <div class="h-1.5 bg-warm-100 rounded-full overflow-hidden dark:bg-warm-700">
                 <div class="h-full rounded-full transition-all duration-300" :class="passwordStrength.barColor" :style="{ width: passwordStrength.percent + '%' }"></div>
               </div>
             </div>

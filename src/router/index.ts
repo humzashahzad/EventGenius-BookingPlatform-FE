@@ -64,6 +64,24 @@ const router = createRouter({
       meta: { layout: 'auth', guestOnly: true, portal: 'customer' },
     },
     {
+      path: '/customer/dashboard',
+      name: 'customer-dashboard',
+      component: () => import('@/views/client/DashboardViewEnhanced.vue'),
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
+    },
+    {
+      path: '/customer',
+      redirect: '/customer/dashboard',
+    },
+    {
+      path: '/shop',
+      redirect: '/shop/dashboard',
+    },
+    {
+      path: '/support',
+      redirect: '/support/dashboard',
+    },
+    {
       path: '/customer/bookings',
       name: 'customer-bookings',
       component: () => import('@/views/client/BookingsViewEnhanced.vue'),
@@ -161,6 +179,12 @@ const router = createRouter({
       path: '/shop/bookings',
       name: 'shop-bookings',
       component: () => import('@/views/store/BookingsView.vue'),
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
+    },
+    {
+      path: '/shop/bookings/:id',
+      name: 'shop-booking-detail',
+      component: () => import('@/views/store/BookingDetailView.vue'),
       meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
@@ -298,7 +322,8 @@ router.beforeEach(async (to) => {
 
   // Not logged in trying to access a protected route → send to the right login page
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    return loginRouteForPath(to.path)
+    // Remember the destination so sign-in can send the user straight back.
+    return { ...loginRouteForPath(to.path), query: { redirect: to.fullPath } }
   }
 
   // Already logged in trying to access a guest-only page → go to dashboard
