@@ -262,8 +262,8 @@ function statusClass(s: string) {
   const m: Record<string, string> = {
     pending: 'badge-accent',
     confirmed: 'badge-primary',
-    completed: 'badge-primary',
-    cancelled: 'badge-coral',
+    completed: 'badge-info',
+    cancelled: 'badge-warm',
     rejected: 'badge-coral',
   }
   return m[s] || 'badge-warm'

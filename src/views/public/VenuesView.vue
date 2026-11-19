@@ -1,606 +1,273 @@
 <template>
-  <div class="font-['DM_Sans']">
-    <!-- Hero Header -->
-    <div class="venues-hero">
-      <div class="venues-hero-bg"></div>
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-[2]">
-        <h1 class="venues-hero-title">Explore Venues</h1>
-        <p class="venues-hero-subtitle">Find the perfect space for your next unforgettable event</p>
-      </div>
-    </div>
+  <div class="venues-page">
+    <div class="venues-inner">
+      <!-- Header -->
+      <header class="venues-head">
+        <div>
+          <h1 class="venues-title">{{ heading }}</h1>
+          <p class="venues-sub">
+            <template v-if="loading">Finding venues…</template>
+            <template v-else>{{ meta.total }} {{ meta.total === 1 ? 'venue' : 'venues' }} {{ hasFilters ? 'match your search' : 'across Pakistan' }}</template>
+          </p>
+        </div>
+      </header>
 
-    <div class="max-w-7xl mx-auto flex-grow px-4 py-8">
       <!-- Filters -->
-      <div class="filter-bar">
-        <div class="filter-search">
-          <AppIcon icon="search" class="w-[18px] h-[18px] filter-search-icon" />
-          <input v-model="filters.search" @input="debouncedSearch" type="text" class="filter-search-input" placeholder="Search venues..." />
-        </div>
-        <div class="filter-divider"></div>
-        <div class="filter-group">
-          <input v-model="filters.city" @change="loadVenues" type="text" class="filter-input" placeholder="City" />
-        </div>
-        <div class="filter-divider"></div>
-        <div class="filter-group">
-          <select v-model="filters.event_type" @change="loadVenues" class="filter-select">
-            <option value="">All Types</option>
-            <option value="wedding">Wedding</option>
-            <option value="corporate">Corporate</option>
-            <option value="birthday">Birthday</option>
-            <option value="film_shoot">Film Shoot</option>
-            <option value="concert">Concert</option>
-            <option value="exhibition">Exhibition</option>
-            <option value="other">Other</option>
+      <form class="filter-bar" role="search" @submit.prevent="apply()">
+        <label class="filter-field filter-search">
+          <AppIcon icon="search" class="w-[18px] h-[18px] filter-icon" />
+          <span class="sr-only">Search venues</span>
+          <input v-model="filters.search" type="search" placeholder="Search by venue or area" @input="debouncedApply" />
+        </label>
+        <label class="filter-field">
+          <AppIcon icon="map-pin" class="w-[18px] h-[18px] filter-icon" />
+          <span class="sr-only">City</span>
+          <input v-model="filters.city" type="text" list="venue-cities" placeholder="Any city" @change="apply()" />
+          <datalist id="venue-cities">
+            <option v-for="c in knownCities" :key="c" :value="c" />
+          </datalist>
+        </label>
+        <label class="filter-field">
+          <AppIcon icon="sparkles" class="w-[18px] h-[18px] filter-icon" />
+          <span class="sr-only">Event type</span>
+          <select v-model="filters.event_type" @change="apply()">
+            <option value="">Any event</option>
+            <option v-for="c in categories" :key="c.slug" :value="c.slug">{{ c.name }}</option>
           </select>
-        </div>
-        <div class="filter-divider"></div>
-        <div class="filter-group">
-          <select v-model="filters.sort_by" @change="loadVenues" class="filter-select">
+        </label>
+        <label class="filter-field filter-sort">
+          <span class="sr-only">Sort by</span>
+          <select v-model="filters.sort_by" @change="apply()">
             <option value="created_at">Newest</option>
-            <option value="avg_rating">Top Rated</option>
-            <option value="price_per_head">Price (Low-High)</option>
+            <option value="avg_rating">Top rated</option>
+            <option value="price_per_head">Lowest price</option>
           </select>
-        </div>
-      </div>
+        </label>
+      </form>
 
-      <!-- Results Count -->
-      <div v-if="!loading && venues.length > 0" class="mb-6">
-        <span class="text-sm font-semibold text-warm-500">{{ meta.total }} venues found</span>
+      <div v-if="hasFilters" class="active-filters">
+        <span v-if="filters.search" class="active-chip">“{{ filters.search }}”</span>
+        <span v-if="filters.city" class="active-chip">{{ filters.city }}</span>
+        <span v-if="filters.event_type" class="active-chip">{{ categoryName(filters.event_type) }}</span>
+        <button type="button" class="btn-ghost btn-sm" @click="clearFilters">Clear filters</button>
       </div>
 
       <!-- Loading -->
-      <div v-if="loading">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="i in 6" :key="i" class="venue-skeleton">
-            <div class="venue-skeleton-img shimmer"></div>
-            <div class="venue-skeleton-body">
-              <div class="shimmer" style="height:16px;width:75%;border-radius:8px;margin-bottom:8px;"></div>
-              <div class="shimmer" style="height:12px;width:50%;border-radius:8px;margin-bottom:16px;"></div>
-              <div class="shimmer" style="height:14px;width:40%;border-radius:8px;"></div>
-            </div>
+      <div v-if="loading" class="venue-grid" aria-busy="true">
+        <div v-for="i in 6" :key="i" class="card overflow-hidden">
+          <div class="skeleton" style="aspect-ratio: 3 / 2; border-radius: 0"></div>
+          <div class="p-5 flex flex-col gap-2">
+            <div class="skeleton h-5 w-2/3"></div>
+            <div class="skeleton h-4 w-1/2"></div>
+            <div class="skeleton h-4 w-1/3 mt-3"></div>
           </div>
         </div>
       </div>
 
-      <!-- Empty state -->
-      <div v-else-if="venues.length === 0" class="empty-state">
-        <div class="empty-state-icon">
-          <AppIcon icon="map-pin-off" class="w-8 h-8" />
-        </div>
-        <p class="empty-state-title">No venues found</p>
-        <p class="empty-state-desc">Try adjusting your search or filters to find what you're looking for.</p>
+      <!-- Empty -->
+      <div v-else-if="venues.length === 0" class="card empty-state">
+        <div class="empty-state-icon"><AppIcon icon="map-pin-off" class="w-6 h-6" /></div>
+        <p class="empty-state-title">{{ hasFilters ? 'No matching venues' : 'No venues listed yet' }}</p>
+        <p class="empty-state-desc">
+          {{ hasFilters ? 'Try another city or event type, or clear the filters to see every venue.' : 'Venues appear here once a store is approved.' }}
+        </p>
+        <button v-if="hasFilters" type="button" class="btn-secondary btn-sm mt-4" @click="clearFilters">Clear filters</button>
       </div>
 
-      <!-- Venue Grid -->
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
-        <div v-for="venue in venues" :key="venue.id" class="animate-fade-in-up">
-          <RouterLink :to="`/venues/${venue.id}`" class="browse-venue-card">
-            <div class="browse-venue-img">
-              <img
-                v-if="venueCardImage(venue)"
-                :src="getImageUrl(venueCardImage(venue)!)"
-                :alt="venue.name"
-                @error="imgError"
-              />
-              <div v-else class="browse-venue-placeholder">
-                <AppIcon icon="image" class="w-10 h-10 text-[var(--color-text-muted)]" />
-              </div>
-              <div v-if="venue.is_featured" class="browse-venue-featured">
-                <AppIcon icon="sparkles" class="w-3 h-3" />
-                Featured
-              </div>
-              <div class="browse-venue-rating-badge" v-if="venue.avg_rating">
-                <AppIcon icon="star-filled" class="w-2.5 h-2.5 text-[#F59E0B]" />
-                {{ venue.avg_rating?.toFixed(1) }}
-              </div>
-            </div>
-            <div class="browse-venue-body">
-              <h3 class="browse-venue-name">{{ venue.name }}</h3>
-              <p class="browse-venue-location">
-                <AppIcon icon="map-pin" class="w-3 h-3" />
-                {{ venue.city }}, {{ venue.country }}
-              </p>
-              <p class="browse-venue-desc">{{ venue.description }}</p>
-              <div class="browse-venue-footer">
-                <div>
-                  <span class="browse-venue-price">PKR {{ formatPrice(venue) }}</span>
-                  <span class="browse-venue-price-label"> / head</span>
-                </div>
-                <div class="browse-venue-tags">
-                  <span v-for="type in (venue.event_types || []).slice(0, 2)" :key="type" class="browse-venue-tag">{{ type.replace('_', ' ') }}</span>
-                </div>
-              </div>
-            </div>
-          </RouterLink>
-        </div>
+      <!-- Grid -->
+      <div v-else class="venue-grid">
+        <VenueCard v-for="venue in venues" :key="venue.id" :venue="venue" />
       </div>
 
       <!-- Pagination -->
-      <div v-if="meta.last_page > 1" class="pagination-bar">
-        <p class="pagination-info">Page {{ meta.current_page }} of {{ meta.last_page }} ({{ meta.total }} venues)</p>
-        <nav>
-          <ul class="flex items-center gap-1">
-            <li>
-              <button
-                class="pagination-btn"
-                :class="{ 'opacity-40 pointer-events-none': meta.current_page === 1 }"
-                :disabled="meta.current_page === 1"
-                @click="changePage(meta.current_page - 1)"
-              >
-                <AppIcon icon="chevron-left" class="w-3.5 h-3.5" />
-              </button>
-            </li>
-            <li v-for="page in visiblePages" :key="page">
-              <button
-                class="pagination-btn"
-                :class="{ 'pagination-btn--active': page === meta.current_page }"
-                @click="changePage(page)"
-              >{{ page }}</button>
-            </li>
-            <li>
-              <button
-                class="pagination-btn"
-                :class="{ 'opacity-40 pointer-events-none': meta.current_page === meta.last_page }"
-                :disabled="meta.current_page === meta.last_page"
-                @click="changePage(meta.current_page + 1)"
-              >
-                <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
-              </button>
-            </li>
-          </ul>
-        </nav>
-      </div>
+      <nav v-if="meta.last_page > 1" class="pager" aria-label="Pagination">
+        <p class="pager-info">Page {{ meta.current_page }} of {{ meta.last_page }}</p>
+        <ul class="pager-list">
+          <li>
+            <button class="pager-btn" :disabled="meta.current_page === 1" aria-label="Previous page" @click="changePage(meta.current_page - 1)">
+              <AppIcon icon="chevron-left" class="w-4 h-4" />
+            </button>
+          </li>
+          <li v-for="page in visiblePages" :key="page">
+            <button
+              class="pager-btn"
+              :aria-current="page === meta.current_page ? 'page' : undefined"
+              @click="changePage(page)"
+            >{{ page }}</button>
+          </li>
+          <li>
+            <button class="pager-btn" :disabled="meta.current_page === meta.last_page" aria-label="Next page" @click="changePage(meta.current_page + 1)">
+              <AppIcon icon="chevron-right" class="w-4 h-4" />
+            </button>
+          </li>
+        </ul>
+      </nav>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
-import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import VenueCard from '@/components/venue/VenueCard.vue'
+
+const route = useRoute()
+const router = useRouter()
 
 const venues = ref<any[]>([])
+const categories = ref<any[]>([])
+const knownCities = ref<string[]>([])
 const loading = ref(false)
 const meta = ref({ current_page: 1, last_page: 1, total: 0 })
 let searchTimeout: ReturnType<typeof setTimeout>
 
-const filters = reactive({
-  search: '',
-  city: '',
-  event_type: '',
-  sort_by: 'created_at',
-  page: 1,
+const filters = reactive({ search: '', city: '', event_type: '', sort_by: 'created_at', page: 1 })
+
+const hasFilters = computed(() => !!(filters.search || filters.city || filters.event_type))
+const heading = computed(() => {
+  const type = filters.event_type ? categoryName(filters.event_type).toLowerCase() : ''
+  if (type && filters.city) return `Venues for ${type} in ${filters.city}`
+  if (type) return `Venues for ${type}`
+  if (filters.city) return `Venues in ${filters.city}`
+  return 'Find a venue'
 })
 
 const visiblePages = computed(() => {
   const pages: number[] = []
-  const total = meta.value.last_page
-  const current = meta.value.current_page
-  const start = Math.max(1, current - 2)
-  const end = Math.min(total, current + 2)
-  for (let i = start; i <= end; i++) pages.push(i)
+  const { last_page: total, current_page: current } = meta.value
+  for (let i = Math.max(1, current - 2); i <= Math.min(total, current + 2); i++) pages.push(i)
   return pages
 })
+
+function categoryName(slug: string) {
+  return categories.value.find(c => c.slug === slug)?.name ?? slug.replace(/_/g, ' ')
+}
+
+// Filters live in the URL, so searches from the home page and shared links open filtered.
+function readQuery() {
+  const q = route.query
+  filters.search = typeof q.search === 'string' ? q.search : ''
+  filters.city = typeof q.city === 'string' ? q.city : ''
+  filters.event_type = typeof q.event_type === 'string' ? q.event_type : ''
+  filters.sort_by = typeof q.sort === 'string' ? q.sort : 'created_at'
+  filters.page = Number(q.page) > 0 ? Number(q.page) : 1
+}
+
+function apply(resetPage = true) {
+  if (resetPage) filters.page = 1
+  const query: Record<string, string> = {}
+  if (filters.search) query.search = filters.search
+  if (filters.city) query.city = filters.city
+  if (filters.event_type) query.event_type = filters.event_type
+  if (filters.sort_by !== 'created_at') query.sort = filters.sort_by
+  if (filters.page > 1) query.page = String(filters.page)
+  router.replace({ query })
+}
+
+function debouncedApply() {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => apply(), 400)
+}
+
+function clearFilters() {
+  filters.search = ''
+  filters.city = ''
+  filters.event_type = ''
+  apply()
+}
+
+function changePage(page: number) {
+  filters.page = page
+  apply(false)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 async function loadVenues() {
   loading.value = true
   try {
     const params: Record<string, any> = { per_page: 12, page: filters.page, sort_by: filters.sort_by }
+    if (filters.sort_by === 'avg_rating') params.sort_dir = 'desc'
+    if (filters.sort_by === 'price_per_head') params.sort_dir = 'asc'
     if (filters.search) params.search = filters.search
     if (filters.city) params.city = filters.city
     if (filters.event_type) params.event_type = filters.event_type
-
     const { data } = await api.get('/venues', { params })
     venues.value = data.data.data
-    meta.value = {
-      current_page: data.data.current_page,
-      last_page: data.data.last_page,
-      total: data.data.total,
-    }
-  } catch (e) {
+    meta.value = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total }
+  } catch {
     venues.value = []
+    meta.value = { current_page: 1, last_page: 1, total: 0 }
   } finally {
     loading.value = false
   }
 }
 
-function debouncedSearch() {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => loadVenues(), 400)
-}
+watch(() => route.query, () => { readQuery(); loadVenues() })
 
-function changePage(page: number) {
-  filters.page = page
+onMounted(() => {
+  readQuery()
   loadVenues()
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-function formatPrice(venue: any) {
-  const price = venue.price_per_head
-  return price ? Number(price).toLocaleString() : 'Contact'
-}
-
-function venueCardImage(venue: any): string | null {
-  return venue.thumbnail || venue.images?.[0]?.path || null
-}
-
-function getImageUrl(path: string) {
-  return getStorageUrl(path)
-}
-
-function imgError(e: Event) {
-  (e.target as HTMLImageElement).style.display = 'none'
-}
-
-onMounted(loadVenues)
+  api.get('/categories').then(r => { categories.value = (r.data?.data ?? []).filter((c: any) => c.is_active) }).catch(() => {})
+  api.get('/venues', { params: { per_page: 100 } })
+    .then(r => { knownCities.value = [...new Set<string>((r.data?.data?.data ?? []).map((v: any) => v.city).filter(Boolean))].sort() })
+    .catch(() => {})
+})
 </script>
 
 <style scoped>
-/* ─── Hero ─────────────────────────────────────────────────────────────────── */
-.venues-hero {
-  position: relative;
-  padding: 4rem 1rem 3rem;
-  background: linear-gradient(145deg, #064E3B, #065F46, #047857);
-  overflow: hidden;
+.venues-page { background: var(--canvas); padding: 40px 16px 64px; }
+.venues-inner { max-width: 80rem; margin: 0 auto; }
+.venues-head { margin-bottom: 24px; }
+.venues-title {
+  margin: 0; font-family: var(--font-display); font-size: 36px; line-height: 42px; font-weight: 700;
+  letter-spacing: -0.025em; color: var(--ink);
 }
+.venues-sub { margin: 6px 0 0; font-size: 15px; color: var(--ink-muted); }
 
-.venues-hero-bg {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
-  background-size: 32px 32px;
-}
-
-.venues-hero-title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 2.25rem;
-  font-weight: 800;
-  color: white;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
-}
-
-.venues-hero-subtitle {
-  color: rgba(255,255,255,0.6);
-  font-size: 1rem;
-  margin-bottom: 0;
-}
-
-/* ─── Filter Bar ───────────────────────────────────────────────────────────── */
 .filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,0.08));
-  padding: 0.375rem;
-  margin-top: -1.5rem;
-  margin-bottom: 2rem;
-  position: relative;
-  z-index: 10;
+  display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+  position: sticky; top: 72px; z-index: 20;
+}
+.filter-field { position: relative; display: flex; align-items: center; min-width: 0; }
+.filter-field + .filter-field { border-left: 1px solid var(--line); }
+.filter-icon { position: absolute; left: 14px; color: var(--ink-muted); pointer-events: none; }
+.filter-field input, .filter-field select {
+  width: 100%; height: 44px; padding: 0 14px 0 42px; border: 0; border-radius: var(--radius-md);
+  background: transparent; color: var(--ink); font-size: 15px; outline-offset: -2px;
+}
+.filter-field select { appearance: none; cursor: pointer; }
+.filter-field input::placeholder { color: var(--ink-muted); }
+.filter-field input:hover, .filter-field select:hover { background: var(--surface-hover); }
+.filter-sort select { padding-left: 14px; padding-right: 32px; font-weight: 500; }
+
+.active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
+.active-chip {
+  display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 9999px;
+  background: var(--brand-soft); color: var(--brand-text); font-size: 13px; font-weight: 500;
 }
 
-.filter-search {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1.5;
-  padding: 0.5rem 1rem;
+.venue-grid { margin-top: 28px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
+.empty-state.card { margin-top: 28px; }
+
+.pager { margin-top: 40px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.pager-info { margin: 0; font-size: 14px; color: var(--ink-muted); }
+.pager-list { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.pager-btn {
+  min-width: 40px; height: 40px; padding: 0 10px; display: grid; place-items: center; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-secondary); font-weight: 500; cursor: pointer;
 }
+.pager-btn:hover:not(:disabled) { background: var(--surface-hover); color: var(--ink); }
+.pager-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pager-btn[aria-current='page'] { background: var(--brand-strong); border-color: var(--brand-strong); color: var(--on-brand); }
 
-.filter-search-icon {
-  color: var(--color-text-muted);
-  font-size: 1.125rem;
-}
-
-.filter-search-input {
-  border: none;
-  background: transparent;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.875rem;
-  color: var(--color-text);
-  outline: none;
-  width: 100%;
-}
-
-.filter-search-input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.filter-divider {
-  width: 1px;
-  height: 28px;
-  background: var(--color-border-light);
-  flex-shrink: 0;
-}
-
-.filter-group {
-  flex: 1;
-  padding: 0 0.25rem;
-}
-
-.filter-input,
-.filter-select {
-  border: none;
-  background: transparent;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.875rem;
-  color: var(--color-text);
-  padding: 0.5rem 0.75rem;
-  width: 100%;
-  outline: none;
-  cursor: pointer;
-  border-radius: 0.75rem;
-  transition: background 0.15s;
-}
-
-.filter-input:focus,
-.filter-select:focus {
-  background: var(--color-bg-hover);
-}
-
-.filter-input::placeholder {
-  color: var(--color-text-muted);
-}
-
-/* ─── Skeleton ─────────────────────────────────────────────────────────────── */
-.venue-skeleton {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  overflow: hidden;
-}
-
-.venue-skeleton-img {
-  aspect-ratio: 16/10;
-  background: var(--color-bg-hover);
-}
-
-.venue-skeleton-body {
-  padding: 1.25rem;
-}
-
-/* ─── Venue Cards ──────────────────────────────────────────────────────────── */
-.browse-venue-card {
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  overflow: hidden;
-  text-decoration: none;
-  transition: all 0.35s ease;
-  height: 100%;
-  box-shadow: var(--shadow-soft, 0 1px 2px rgba(0,0,0,0.05));
-}
-
-.browse-venue-card:hover {
-  border-color: #6EE7B7;
-  box-shadow: var(--shadow-elevated, 0 10px 40px rgba(0,0,0,0.1));
-  transform: translateY(-6px);
-}
-
-.browse-venue-img {
-  position: relative;
-  aspect-ratio: 16/10;
-  background: var(--color-bg-hover);
-  overflow: hidden;
-}
-
-.browse-venue-img img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.browse-venue-card:hover .browse-venue-img img {
-  transform: scale(1.06);
-}
-
-.browse-venue-placeholder {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-}
-
-.browse-venue-featured {
-  position: absolute;
-  top: 12px; left: 12px;
-  display: flex; align-items: center; gap: 4px;
-  padding: 4px 10px;
-  background: linear-gradient(135deg, #F59E0B, #D97706);
-  color: #1C1917;
-  border-radius: 9999px;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.browse-venue-rating-badge {
-  position: absolute;
-  top: 12px; right: 12px;
-  display: flex; align-items: center; gap: 3px;
-  padding: 4px 8px;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(8px);
-  border-radius: 0.375rem;
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.browse-venue-body {
-  padding: 1.125rem 1.25rem 1.375rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.browse-venue-name {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1.0625rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 0.25rem;
-  letter-spacing: -0.01em;
-}
-
-.browse-venue-location {
-  display: flex; align-items: center; gap: 0.375rem;
-  font-size: 0.8125rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 0.5rem;
-}
-
-.browse-venue-desc {
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin-bottom: 1rem;
-}
-
-.browse-venue-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
-}
-
-.browse-venue-price {
-  font-weight: 800;
-  color: #10B981;
-  font-size: 1rem;
-  letter-spacing: -0.02em;
-}
-
-.browse-venue-price-label {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  font-weight: 400;
-}
-
-.browse-venue-tags {
-  display: flex; gap: 0.375rem;
-}
-
-.browse-venue-tag {
-  padding: 0.2rem 0.5rem;
-  background: #ECFDF5;
-  color: #10B981;
-  border-radius: 9999px;
-  font-size: 0.625rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-:root.dark .browse-venue-tag {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34D399;
-}
-
-/* ─── Pagination ───────────────────────────────────────────────────────────── */
-.pagination-bar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 2.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border-light);
-}
-
-.pagination-info {
-  font-size: 0.8125rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 0;
-}
-
-.pagination-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  height: 36px;
-  padding: 0 0.5rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--color-border-light);
-  background: var(--color-bg-card);
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pagination-btn:hover {
-  border-color: #10B981;
-  color: #10B981;
-  background: #ECFDF5;
-}
-
-.pagination-btn--active {
-  background: #10B981;
-  border-color: #10B981;
-  color: white;
-}
-
-.pagination-btn--active:hover {
-  background: #059669;
-  border-color: #059669;
-  color: white;
-}
-
-:root.dark .pagination-btn:hover {
-  background: rgba(16, 185, 129, 0.15);
-}
-
-:root.dark .pagination-btn--active {
-  background: #10B981;
-  border-color: #10B981;
-  color: white;
-}
-
-/* ─── Responsive ───────────────────────────────────────────────────────────── */
-@media (max-width: 767.98px) {
-  .filter-bar {
-    flex-direction: column;
-    gap: 0;
-    border-radius: 0.75rem;
-  }
-
-  .filter-search {
-    width: 100%;
-  }
-
-  .filter-divider {
-    width: 100%;
-    height: 1px;
-  }
-
-  .filter-group {
-    width: 100%;
-  }
-
-  .venues-hero-title {
-    font-size: 1.75rem;
-  }
-
-  .venues-hero-subtitle {
-    font-size: 0.875rem;
-  }
-}
-
-@media (max-width: 400px) {
-  .venues-hero-title {
-    font-size: 1.5rem;
-  }
+@media (max-width: 767px) {
+  .filter-bar { grid-template-columns: 1fr 1fr; position: static; }
+  .filter-search { grid-column: span 2; }
+  .filter-field + .filter-field { border-left: 0; }
+  .filter-field:nth-child(n + 2) { border-top: 1px solid var(--line); }
+  .venues-title { font-size: 28px; line-height: 34px; }
 }
 </style>

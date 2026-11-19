@@ -78,17 +78,17 @@
           <div class="inline-flex rounded-xl overflow-hidden border border-warm-200 dark:border-warm-700">
             <button
               class="px-4 py-2 text-sm font-semibold transition-all"
-              :class="filter === 'all' ? 'bg-primary-500 text-white' : 'bg-warm-50 dark:bg-warm-800 text-warm-600 dark:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-700'"
+              :class="filter === 'all' ? 'bg-primary-600 text-white' : 'bg-warm-50 dark:bg-warm-800 text-warm-600 dark:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-700'"
               @click="filter = 'all'"
             >All</button>
             <button
               class="px-4 py-2 text-sm font-semibold transition-all border-x border-warm-200 dark:border-warm-700"
-              :class="filter === 'unread' ? 'bg-primary-500 text-white' : 'bg-warm-50 dark:bg-warm-800 text-warm-600 dark:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-700'"
+              :class="filter === 'unread' ? 'bg-primary-600 text-white' : 'bg-warm-50 dark:bg-warm-800 text-warm-600 dark:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-700'"
               @click="filter = 'unread'"
             >Unread</button>
             <button
               class="px-4 py-2 text-sm font-semibold transition-all"
-              :class="filter === 'read' ? 'bg-primary-500 text-white' : 'bg-warm-50 dark:bg-warm-800 text-warm-600 dark:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-700'"
+              :class="filter === 'read' ? 'bg-primary-600 text-white' : 'bg-warm-50 dark:bg-warm-800 text-warm-600 dark:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-700'"
               @click="filter = 'read'"
             >Read</button>
           </div>

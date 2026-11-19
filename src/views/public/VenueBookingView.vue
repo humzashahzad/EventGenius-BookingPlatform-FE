@@ -11,7 +11,7 @@
     <!-- Not found -->
     <div v-else-if="!venue" class="text-center py-24">
       <h5 class="font-semibold text-warm-800 dark:text-warm-200">Venue not found</h5>
-      <RouterLink to="/venues" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-soft hover:shadow-elevated">Browse Venues</RouterLink>
+      <RouterLink to="/venues" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-soft hover:shadow-elevated">Browse Venues</RouterLink>
     </div>
 
     <!-- Wizard -->

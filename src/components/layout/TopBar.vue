@@ -119,7 +119,7 @@
           <div class="p-3 border-t border-warm-200 dark:border-warm-700">
             <RouterLink
               :to="notifPageLink"
-              class="block w-full py-2 text-center text-sm font-medium rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition-colors"
+              class="block w-full py-2 text-center text-sm font-medium rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors"
               @click="showNotif = false"
             >
               View all notifications

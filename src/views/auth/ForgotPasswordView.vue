@@ -41,7 +41,7 @@
           <p class="text-sm text-primary-600 dark:text-primary-400 mb-4">Check your inbox for the reset link.</p>
           <RouterLink
             :to="loginBackLink"
-            class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-all duration-200 text-sm shadow-soft"
+            class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-all duration-200 text-sm shadow-soft"
           >
             Back to Login
           </RouterLink>
@@ -62,7 +62,7 @@
           <button
             type="submit"
             :disabled="loading"
-            class="w-full py-3 rounded-xl font-semibold text-white bg-primary-500 hover:bg-primary-600 focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 shadow-soft hover:shadow-card"
+            class="w-full py-3 rounded-xl font-semibold text-white bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 shadow-soft hover:shadow-card"
           >
             <span v-if="loading" class="inline-flex items-center justify-center gap-2">
               <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
