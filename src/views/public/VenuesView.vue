@@ -14,28 +14,25 @@
       <div class="filter-bar">
         <div class="filter-search">
           <AppIcon icon="search" class="w-[18px] h-[18px] filter-search-icon" />
-          <input v-model="filters.search" @input="debouncedSearch" type="text" class="filter-search-input" placeholder="Search venues..." />
+          <input v-model="filters.search" @input="debouncedSearch" @keydown.enter.prevent="applyFilters" type="search" class="filter-search-input" placeholder="Search by venue, area or store..." aria-label="Search venues" />
         </div>
         <div class="filter-divider"></div>
         <div class="filter-group">
-          <input v-model="filters.city" @change="loadVenues" type="text" class="filter-input" placeholder="City" />
+          <input v-model="filters.city" @change="applyFilters" type="text" list="venue-cities" class="filter-input" placeholder="City" aria-label="City" />
+          <datalist id="venue-cities">
+            <option v-for="c in knownCities" :key="c" :value="c" />
+          </datalist>
         </div>
         <div class="filter-divider"></div>
         <div class="filter-group">
-          <select v-model="filters.event_type" @change="loadVenues" class="filter-select">
+          <select v-model="filters.event_type" @change="applyFilters" class="filter-select" aria-label="Event type">
             <option value="">All Types</option>
-            <option value="wedding">Wedding</option>
-            <option value="corporate">Corporate</option>
-            <option value="birthday">Birthday</option>
-            <option value="film_shoot">Film Shoot</option>
-            <option value="concert">Concert</option>
-            <option value="exhibition">Exhibition</option>
-            <option value="other">Other</option>
+            <option v-for="c in categories" :key="c.slug" :value="c.slug">{{ c.name }}</option>
           </select>
         </div>
         <div class="filter-divider"></div>
         <div class="filter-group">
-          <select v-model="filters.sort_by" @change="loadVenues" class="filter-select">
+          <select v-model="filters.sort_by" @change="applyFilters" class="filter-select" aria-label="Sort by">
             <option value="created_at">Newest</option>
             <option value="avg_rating">Top Rated</option>
             <option value="price_per_head">Price (Low-High)</option>
@@ -44,8 +41,10 @@
       </div>
 
       <!-- Results Count -->
-      <div v-if="!loading && venues.length > 0" class="mb-6">
-        <span class="text-sm font-semibold text-warm-500">{{ meta.total }} venues found</span>
+      <div v-if="hasFilters || (!loading && venues.length > 0)" class="mb-6 min-h-[20px]">
+        <span v-if="loading" class="text-sm font-semibold text-warm-500">Searching…</span>
+        <span v-else class="text-sm font-semibold text-warm-500">{{ meta.total }} {{ meta.total === 1 ? 'venue' : 'venues' }} found</span>
+        <button v-if="hasFilters" type="button" class="ml-3 text-sm font-semibold text-primary-700 hover:underline" @click="clearFilters">Clear filters</button>
       </div>
 
       <!-- Loading -->
@@ -155,13 +154,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
 
+const route = useRoute()
+const router = useRouter()
+
 const venues = ref<any[]>([])
+const categories = ref<any[]>([])
+const knownCities = ref<string[]>([])
 const loading = ref(false)
 const meta = ref({ current_page: 1, last_page: 1, total: 0 })
 let searchTimeout: ReturnType<typeof setTimeout>
@@ -184,15 +188,24 @@ const visiblePages = computed(() => {
   return pages
 })
 
+const hasFilters = computed(() => !!(filters.search.trim() || filters.city.trim() || filters.event_type))
+
+// Only the newest request may update the list, so a slow older search can't overwrite it.
+let requestId = 0
+
 async function loadVenues() {
+  const id = ++requestId
   loading.value = true
   try {
     const params: Record<string, any> = { per_page: 12, page: filters.page, sort_by: filters.sort_by }
-    if (filters.search) params.search = filters.search
-    if (filters.city) params.city = filters.city
+    if (filters.sort_by === 'price_per_head') params.sort_dir = 'asc'
+    if (filters.sort_by === 'avg_rating') params.sort_dir = 'desc'
+    if (filters.search.trim()) params.search = filters.search.trim()
+    if (filters.city.trim()) params.city = filters.city.trim()
     if (filters.event_type) params.event_type = filters.event_type
 
     const { data } = await api.get('/venues', { params })
+    if (id !== requestId) return
     venues.value = data.data.data
     meta.value = {
       current_page: data.data.current_page,
@@ -200,22 +213,71 @@ async function loadVenues() {
       total: data.data.total,
     }
   } catch (e) {
+    if (id !== requestId) return
     venues.value = []
+    meta.value = { current_page: 1, last_page: 1, total: 0 }
   } finally {
-    loading.value = false
+    if (id === requestId) loading.value = false
   }
+}
+
+// Keep filters in the URL so links from the home page and refreshes keep the search.
+function readQuery() {
+  const q = route.query
+  filters.search = typeof q.search === 'string' ? q.search : ''
+  filters.city = typeof q.city === 'string' ? q.city : ''
+  filters.event_type = typeof q.event_type === 'string' ? q.event_type : ''
+  filters.sort_by = typeof q.sort === 'string' && ['created_at', 'avg_rating', 'price_per_head'].includes(q.sort) ? q.sort : 'created_at'
+  filters.page = Number(q.page) > 0 ? Math.floor(Number(q.page)) : 1
+}
+
+let lastWritten = ''
+function writeQuery() {
+  const query: Record<string, string> = {}
+  if (filters.search.trim()) query.search = filters.search.trim()
+  if (filters.city.trim()) query.city = filters.city.trim()
+  if (filters.event_type) query.event_type = filters.event_type
+  if (filters.sort_by !== 'created_at') query.sort = filters.sort_by
+  if (filters.page > 1) query.page = String(filters.page)
+  lastWritten = JSON.stringify(query)
+  router.replace({ query })
+}
+
+// Any filter change starts again from page 1.
+function applyFilters() {
+  clearTimeout(searchTimeout)
+  filters.page = 1
+  writeQuery()
+  loadVenues()
 }
 
 function debouncedSearch() {
   clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => loadVenues(), 400)
+  searchTimeout = setTimeout(applyFilters, 400)
+}
+
+function clearFilters() {
+  filters.search = ''
+  filters.city = ''
+  filters.event_type = ''
+  applyFilters()
 }
 
 function changePage(page: number) {
+  if (page < 1 || page > meta.value.last_page || page === meta.value.current_page) return
   filters.page = page
+  writeQuery()
   loadVenues()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+// Back/forward or a new link to this page: reload from the URL.
+watch(() => route.fullPath, () => {
+  if (route.path !== '/venues') return
+  if (JSON.stringify(route.query) === lastWritten) return
+  readQuery()
+  loadVenues()
+})
 
 function formatPrice(venue: any) {
   const price = venue.price_per_head
@@ -234,7 +296,18 @@ function imgError(e: Event) {
   (e.target as HTMLImageElement).style.display = 'none'
 }
 
-onMounted(loadVenues)
+onMounted(() => {
+  readQuery()
+  loadVenues()
+  api.get('/categories')
+    .then(r => { categories.value = (r.data?.data ?? []).filter((c: any) => c.is_active !== false) })
+    .catch(() => {})
+  api.get('/venues', { params: { per_page: 100 } })
+    .then(r => {
+      knownCities.value = [...new Set<string>((r.data?.data?.data ?? []).map((v: any) => v.city).filter(Boolean))].sort()
+    })
+    .catch(() => {})
+})
 </script>
 
 <style scoped>
