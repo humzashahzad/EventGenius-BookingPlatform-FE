@@ -7,7 +7,7 @@
           <h1 class="venues-title">{{ heading }}</h1>
           <p class="venues-sub">
             <template v-if="loading">Finding venues…</template>
-            <template v-else>{{ meta.total }} {{ meta.total === 1 ? 'venue' : 'venues' }} {{ hasFilters ? 'match your search' : 'across Pakistan' }}</template>
+            <template v-else>{{ meta.total }} {{ meta.total === 1 ? 'venue' : 'venues' }} {{ hasFilters ? (meta.total === 1 ? 'matches your search' : 'match your search') : 'across Pakistan' }}</template>
           </p>
         </div>
       </header>
@@ -125,7 +125,7 @@ let searchTimeout: ReturnType<typeof setTimeout>
 
 const filters = reactive({ search: '', city: '', event_type: '', sort_by: 'created_at', page: 1 })
 
-const hasFilters = computed(() => !!(filters.search || filters.city || filters.event_type))
+const hasFilters = computed(() => !!(filters.search.trim() || filters.city.trim() || filters.event_type))
 const heading = computed(() => {
   const type = filters.event_type ? categoryName(filters.event_type).toLowerCase() : ''
   if (type && filters.city) return `Venues for ${type} in ${filters.city}`
@@ -151,18 +151,24 @@ function readQuery() {
   filters.search = typeof q.search === 'string' ? q.search : ''
   filters.city = typeof q.city === 'string' ? q.city : ''
   filters.event_type = typeof q.event_type === 'string' ? q.event_type : ''
-  filters.sort_by = typeof q.sort === 'string' ? q.sort : 'created_at'
+  filters.sort_by = typeof q.sort === 'string' && ['created_at', 'avg_rating', 'price_per_head'].includes(q.sort) ? q.sort : 'created_at'
   filters.page = Number(q.page) > 0 ? Number(q.page) : 1
 }
 
+let lastWritten = ''
+// Only the newest request may update the list, so a slow older search can't overwrite it.
+let requestId = 0
+
 function apply(resetPage = true) {
+  clearTimeout(searchTimeout)
   if (resetPage) filters.page = 1
   const query: Record<string, string> = {}
-  if (filters.search) query.search = filters.search
-  if (filters.city) query.city = filters.city
+  if (filters.search.trim()) query.search = filters.search.trim()
+  if (filters.city.trim()) query.city = filters.city.trim()
   if (filters.event_type) query.event_type = filters.event_type
   if (filters.sort_by !== 'created_at') query.sort = filters.sort_by
   if (filters.page > 1) query.page = String(filters.page)
+  lastWritten = JSON.stringify(query)
   router.replace({ query })
 }
 
@@ -185,26 +191,36 @@ function changePage(page: number) {
 }
 
 async function loadVenues() {
+  const id = ++requestId
   loading.value = true
   try {
     const params: Record<string, any> = { per_page: 12, page: filters.page, sort_by: filters.sort_by }
     if (filters.sort_by === 'avg_rating') params.sort_dir = 'desc'
     if (filters.sort_by === 'price_per_head') params.sort_dir = 'asc'
-    if (filters.search) params.search = filters.search
-    if (filters.city) params.city = filters.city
+    if (filters.search.trim()) params.search = filters.search.trim()
+    if (filters.city.trim()) params.city = filters.city.trim()
     if (filters.event_type) params.event_type = filters.event_type
     const { data } = await api.get('/venues', { params })
+    if (id !== requestId) return
     venues.value = data.data.data
     meta.value = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total }
   } catch {
+    if (id !== requestId) return
     venues.value = []
     meta.value = { current_page: 1, last_page: 1, total: 0 }
   } finally {
-    loading.value = false
+    if (id === requestId) loading.value = false
   }
 }
 
-watch(() => route.query, () => { readQuery(); loadVenues() })
+// Back/forward or a new link: reload from the URL. Skip URLs this page just wrote,
+// so the search box isn't rewritten (e.g. a trailing space dropped) while typing.
+watch(() => route.fullPath, () => {
+  if (route.path !== '/venues') return
+  if (JSON.stringify(route.query) === lastWritten) { loadVenues(); return }
+  readQuery()
+  loadVenues()
+})
 
 onMounted(() => {
   readQuery()
