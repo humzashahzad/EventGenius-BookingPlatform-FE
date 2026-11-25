@@ -78,6 +78,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { hrefFor } from '@/lib/portalHost'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { useAuthStore } from '@/stores/auth'
@@ -171,7 +172,7 @@ async function handleLogin() {
       try {
         await router.replace(destination)
       } catch {
-        window.location.href = router.resolve(destination).fullPath
+        window.location.href = hrefFor(router.resolve(destination).fullPath)
       }
     }, 600)
   } else {

@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
+import { hrefFor } from '@/lib/portalHost'
 import { currentPortal, detectPortalFromPath, getToken, setToken, removeToken, type Portal } from '@/lib/portalToken'
 
 const api = axios.create({
@@ -65,7 +66,7 @@ api.interceptors.response.use(
         window.dispatchEvent(new CustomEvent('auth:session-expired', { detail: { portal } }))
         const path = window.location.pathname
         if (!path.includes('/sign-in') && !path.includes('/sign-up')) {
-          window.location.href = portal === 'support' ? '/support/sign-in' : portal === 'shop' ? '/shop/sign-in' : '/customer/sign-in'
+          window.location.href = hrefFor(portal === 'support' ? '/support/sign-in' : portal === 'shop' ? '/shop/sign-in' : '/customer/sign-in')
         }
       }
     }
