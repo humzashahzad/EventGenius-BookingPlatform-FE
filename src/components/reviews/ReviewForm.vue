@@ -51,53 +51,26 @@
 
     <!-- New review form -->
     <form v-else class="card-body space-y-5" novalidate @submit.prevent="submit">
-      <div>
-        <p id="rating-label" class="form-label">Overall rating <span class="req">*</span></p>
-        <StarInput
-          v-model="form.rating"
-          name="rating"
-          labelledby="rating-label"
-          :describedby="errors.rating || ratingTouched ? 'rating-error' : undefined"
-          size="lg"
-          show-text
-        />
-        <p v-if="errors.rating" id="rating-error" class="form-error">{{ errors.rating[0] }}</p>
-        <p v-else-if="ratingTouched && !form.rating" id="rating-error" class="form-error">Choose a star rating to continue.</p>
-      </div>
+      <FormField id="review-rating" label="Overall rating" required group :error="errors.rating || (ratingTouched && !form.rating ? 'Choose a star rating to continue.' : '')">
+        <RatingInput :model-value="form.rating" name="rating" size="lg" show-text @update:model-value="v => (form.rating = v ?? 0)" />
+      </FormField>
 
       <fieldset>
-        <legend class="form-label">Rate the details <span class="text-ink-muted font-normal">(optional)</span></legend>
-        <div class="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-6 gap-y-3">
+        <legend class="form-label">Rate the details <span class="form-optional">(optional)</span></legend>
+        <div class="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-6 gap-y-1">
           <div v-for="sub in subRatings" :key="sub.key" class="flex items-center justify-between gap-3">
             <span :id="`sub-${sub.key}`" class="text-sm text-ink-secondary">{{ sub.label }}</span>
-            <StarInput v-model="form[sub.key]" :name="sub.key" :labelledby="`sub-${sub.key}`" size="sm" />
+            <RatingInput v-model="form[sub.key]" :name="sub.key" :labelledby="`sub-${sub.key}`" size="sm" />
           </div>
         </div>
       </fieldset>
 
-      <div>
-        <label for="review-title-input" class="form-label">Title <span class="text-ink-muted font-normal">(optional)</span></label>
-        <input id="review-title-input" v-model="form.title" maxlength="255" class="form-input" placeholder="Sum up your event in a few words" :aria-invalid="!!errors.title" />
-        <p v-if="errors.title" class="form-error">{{ errors.title[0] }}</p>
-      </div>
-      <div>
-        <label for="review-comment" class="form-label">Your review <span class="text-ink-muted font-normal">(optional)</span></label>
-        <textarea
-          id="review-comment"
-          v-model="form.comment"
-          rows="4"
-          maxlength="5000"
-          class="form-textarea"
-          placeholder="What went well? How were the food, decor and staff? What could be better?"
-          :aria-invalid="!!errors.comment"
-          aria-describedby="review-comment-hint"
-        ></textarea>
-        <p v-if="errors.comment" class="form-error">{{ errors.comment[0] }}</p>
-        <p v-else id="review-comment-hint" class="form-hint flex justify-between gap-2">
-          <span>Reviews are public and show your first name.</span>
-          <span class="num">{{ form.comment.length }}/5000</span>
-        </p>
-      </div>
+      <FormField id="review-title-input" label="Title" optional :error="errors.title">
+        <TextInput v-model="form.title" :maxlength="255" placeholder="Sum up your event in a few words" />
+      </FormField>
+      <FormField id="review-comment" label="Your review" optional :error="errors.comment" hint="Reviews are public and show your first name." :count="form.comment.length" :maxlength="5000">
+        <TextareaInput v-model="form.comment" :rows="4" :maxlength="5000" auto-grow placeholder="What went well? How were the food, decor and staff? What could be better?" />
+      </FormField>
 
       <div v-if="errorMsg" class="alert-danger" role="alert">
         <AppIcon icon="alert-circle" class="w-5 h-5 shrink-0" />
@@ -120,7 +93,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import StarInput from '@/components/client/StarInput.vue'
+import { FormField, RatingInput, TextInput, TextareaInput } from '@/components/forms'
 
 const props = defineProps<{ bookingId: number | string; venueName?: string }>()
 const emit = defineEmits<{ submitted: [review: any]; loaded: [state: { eligible: boolean; review: any | null }] }>()

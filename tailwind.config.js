@@ -10,6 +10,8 @@ export default {
     './index.html',
     './src/**/*.{vue,js,ts,jsx,tsx}',
   ],
+  // Size modifiers are built dynamically (`control-${size}`) by src/components/forms.
+  safelist: ['control-sm', 'control-md', 'control-lg', 'btn-icon-sm', 'btn-icon-lg', 'badge-sm'],
   darkMode: 'class',
   theme: {
     extend: {
@@ -93,6 +95,20 @@ export default {
         sans: ['DM Sans', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
         display: ['Bricolage Grotesque', 'DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['DM Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'Consolas', 'monospace'],
+      },
+      // Control sizes (see --control-h-* in main.css): h-control-md, w-control-sm, min-h-control-lg…
+      spacing: {
+        'control-xs': 'var(--control-h-xs)',
+        'control-sm': 'var(--control-h-sm)',
+        'control-md': 'var(--control-h-md)',
+        'control-lg': 'var(--control-h-lg)',
+        'badge-sm': 'var(--badge-h-sm)',
+        'badge-md': 'var(--badge-h-md)',
+      },
+      minHeight: {
+        'control-sm': 'var(--control-h-sm)',
+        'control-md': 'var(--control-h-md)',
+        'control-lg': 'var(--control-h-lg)',
       },
       boxShadow: {
         xs: 'var(--shadow-xs)',

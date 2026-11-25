@@ -4,14 +4,20 @@
       Showing <span class="font-medium text-ink">{{ from }}–{{ to }}</span> of <span class="font-medium text-ink">{{ total.toLocaleString('en-PK') }}</span>
     </p>
     <div class="flex items-center gap-2">
-      <select v-if="perPageOptions?.length" class="form-select !w-auto !min-h-0 h-8 py-0 text-sm" :value="perPage" aria-label="Rows per page" @change="$emit('update:perPage', Number(($event.target as HTMLSelectElement).value))">
-        <option v-for="n in perPageOptions" :key="n" :value="n">{{ n }} / page</option>
-      </select>
-      <button type="button" class="btn-secondary btn-sm" :disabled="page <= 1" aria-label="Previous page" @click="$emit('update:page', page - 1)">
+      <SelectInput
+        v-if="perPageOptions?.length"
+        :model-value="perPage"
+        :options="perPageOptions.map(n => ({ value: n, label: `${n} / page` }))"
+        size="sm"
+        class="!w-auto"
+        aria-label="Rows per page"
+        @update:model-value="v => $emit('update:perPage', Number(v))"
+      />
+      <button type="button" class="btn-secondary btn-icon btn-icon-sm" :disabled="page <= 1" aria-label="Previous page" @click="$emit('update:page', page - 1)">
         <AppIcon icon="chevron-left" class="w-4 h-4" />
       </button>
       <span class="num text-ink-secondary whitespace-nowrap">Page {{ page }} of {{ lastPage }}</span>
-      <button type="button" class="btn-secondary btn-sm" :disabled="page >= lastPage" aria-label="Next page" @click="$emit('update:page', page + 1)">
+      <button type="button" class="btn-secondary btn-icon btn-icon-sm" :disabled="page >= lastPage" aria-label="Next page" @click="$emit('update:page', page + 1)">
         <AppIcon icon="chevron-right" class="w-4 h-4" />
       </button>
     </div>
@@ -21,6 +27,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import { SelectInput } from '@/components/forms'
 
 const props = defineProps<{ page: number; perPage: number; total: number; perPageOptions?: number[] }>()
 defineEmits<{ 'update:page': [n: number]; 'update:perPage': [n: number] }>()

@@ -12,11 +12,7 @@
 
     <section class="card overflow-hidden">
       <DataToolbar v-model:search="search" placeholder="Search name or slug" :count="store.loading ? undefined : filteredCategories.length" noun="categories">
-        <div class="segmented" role="group" aria-label="Status">
-          <button type="button" :aria-pressed="statusFilter === ''" @click="statusFilter = ''">All</button>
-          <button type="button" :aria-pressed="statusFilter === 'active'" @click="statusFilter = 'active'">Active</button>
-          <button type="button" :aria-pressed="statusFilter === 'inactive'" @click="statusFilter = 'inactive'">Inactive</button>
-        </div>
+        <SegmentedControl v-model="statusFilter" aria-label="Status" :options="[{ value: '', label: 'All' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]" />
       </DataToolbar>
 
       <div v-if="store.loading" class="p-4 space-y-3" aria-busy="true"><div v-for="i in 6" :key="i" class="skeleton h-10 w-full" /></div>
@@ -82,23 +78,16 @@
     <!-- Create/Edit Modal -->
     <VuexyModal v-model:visible="showModal" :title="editingId ? 'Edit category' : 'Add category'" width="28rem">
       <form id="cat-form" @submit.prevent="handleSave" class="space-y-4">
-        <div>
-          <label for="cat-name" class="form-label">Name <span class="req">*</span></label>
-          <input id="cat-name" v-model="form.name" type="text" required class="form-input" placeholder="e.g. Wedding" />
-        </div>
-        <div>
-          <label for="cat-slug" class="form-label">Slug <span class="req">*</span></label>
-          <input id="cat-slug" v-model="form.slug" type="text" required class="form-input ref" placeholder="e.g. wedding" aria-describedby="cat-slug-hint" />
-          <p id="cat-slug-hint" class="form-hint">URL-friendly identifier, generated from the name for new categories.</p>
-        </div>
-        <div>
-          <label for="cat-emoji" class="form-label">Icon (optional)</label>
-          <input id="cat-emoji" v-model="form.emoji" type="text" class="form-input" placeholder="Single emoji" maxlength="4" />
-        </div>
-        <label class="flex items-center gap-2.5 text-sm text-ink">
-          <input v-model="form.is_active" type="checkbox" id="cat-active" class="form-check" />
-          Active — shown to shop owners and in search filters
-        </label>
+        <FormField id="cat-name" label="Name" required>
+          <TextInput v-model="form.name" required placeholder="e.g. Wedding" />
+        </FormField>
+        <FormField id="cat-slug" label="Slug" required hint="URL-friendly identifier, generated from the name for new categories.">
+          <TextInput v-model="form.slug" required class="ref" placeholder="e.g. wedding" />
+        </FormField>
+        <FormField id="cat-emoji" label="Icon" optional>
+          <TextInput v-model="form.emoji" placeholder="Single emoji" :maxlength="4" />
+        </FormField>
+        <SwitchInput id="cat-active" v-model="form.is_active" label="Active" description="Shown to shop owners and in search filters." />
         <p v-if="formError" class="alert-danger !text-sm" role="alert">{{ formError }}</p>
       </form>
       <template #footer>
@@ -119,6 +108,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput, SwitchInput, SegmentedControl } from '@/components/forms'
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useCategoriesStore, type Category } from '@/stores/categories'
 import AppIcon from '@/components/ui/AppIcon.vue'

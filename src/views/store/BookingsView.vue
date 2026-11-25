@@ -33,37 +33,18 @@
 
       <!-- Toolbar -->
       <div class="flex flex-col lg:flex-row lg:items-center gap-3 p-3 sm:p-4 border-b border-line">
-        <div class="relative flex-1 min-w-0">
-          <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
-          <input
-            v-model="search"
-            type="search"
-            class="form-input !pl-9"
-            placeholder="Search booking #, event, client or venue"
-            aria-label="Search bookings"
+        <TextInput v-model="search" type="search" prefix-icon="search" clearable clear-label="Clear search" class="flex-1 min-w-0" placeholder="Search booking #, event, client or venue" aria-label="Search bookings" />
+        <div class="grid grid-cols-2 sm:flex gap-2 sm:items-center">
+          <SelectInput v-model="venueFilter" class="sm:!w-48" aria-label="Venue" :options="[{ value: '', label: 'All venues' }, ...venueOptions.map(v => ({ value: String(v.id), label: v.name }))]" />
+          <SelectInput
+            v-model="datePreset"
+            class="sm:!w-44"
+            aria-label="Event date"
+            :options="[{ value: '', label: 'Any event date' }, { value: 'upcoming', label: 'Upcoming' }, { value: '7', label: 'Next 7 days' }, { value: '30', label: 'Next 30 days' }, { value: 'past', label: 'Past events' }, { value: 'custom', label: 'Custom range…' }]"
           />
         </div>
-        <div class="grid grid-cols-2 sm:flex gap-2 sm:items-center">
-          <select v-model="venueFilter" class="form-select sm:w-48" aria-label="Venue">
-            <option value="">All venues</option>
-            <option v-for="v in venueOptions" :key="v.id" :value="String(v.id)">{{ v.name }}</option>
-          </select>
-          <select v-model="datePreset" class="form-select sm:w-44" aria-label="Event date">
-            <option value="">Any event date</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="7">Next 7 days</option>
-            <option value="30">Next 30 days</option>
-            <option value="past">Past events</option>
-            <option value="custom">Custom range…</option>
-          </select>
-        </div>
-        <div v-if="datePreset === 'custom'" class="grid grid-cols-2 gap-2">
-          <label class="sr-only" for="bk-from">From</label>
-          <input id="bk-from" v-model="dateFrom" type="date" class="form-input" aria-label="From date" />
-          <label class="sr-only" for="bk-to">To</label>
-          <input id="bk-to" v-model="dateTo" type="date" class="form-input" aria-label="To date" />
-        </div>
-        <button v-if="hasFilters" class="btn-ghost btn-sm self-start lg:self-auto" @click="clearFilters">
+        <DateRangePicker v-if="datePreset === 'custom'" id="bk-dates" v-model:start="dateFrom" v-model:end="dateTo" class="lg:!w-64" placeholder="Pick dates" aria-label="Custom event date range" />
+        <button v-if="hasFilters" class="btn-ghost self-start lg:self-auto" @click="clearFilters">
           <AppIcon icon="x" class="w-4 h-4" />Clear
         </button>
       </div>
@@ -179,10 +160,9 @@
         <p class="font-medium text-ink text-sm mt-0.5">{{ rejectTarget?.event_name }}</p>
         <p class="text-xs text-ink-muted mt-0.5">{{ rejectTarget?.client?.name }} · {{ formatDate(rejectTarget?.event_date) }}</p>
       </div>
-      <label for="reject-reason" class="form-label">Rejection reason <span class="req">*</span></label>
-      <textarea id="reject-reason" v-model="rejectReason" class="form-textarea" rows="3" placeholder="Explain why this booking is being rejected…" :aria-invalid="!!rejectError" />
-      <p v-if="rejectError" class="form-error">{{ rejectError }}</p>
-      <p v-else class="form-hint">The customer will see this reason.</p>
+      <FormField id="reject-reason" label="Rejection reason" required :error="rejectError" hint="The customer will see this reason.">
+        <TextareaInput v-model="rejectReason" :rows="3" auto-grow placeholder="Explain why this booking is being rejected…" />
+      </FormField>
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showRejectDialog = false">Cancel</button>
@@ -197,6 +177,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput, SelectInput, DateRangePicker, TextareaInput } from '@/components/forms'
 import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'

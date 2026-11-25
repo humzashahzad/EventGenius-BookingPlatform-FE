@@ -38,15 +38,12 @@
           <section id="sec-basics" class="card scroll-mt-28">
             <div class="card-header"><div><h2 class="card-title">Basic information</h2><p class="card-subtitle">What guests see first.</p></div></div>
             <div class="card-body space-y-4">
-              <div>
-                <label for="vf-name" class="form-label">Venue name <span class="req">*</span></label>
-                <input id="vf-name" v-model="form.name" required class="form-input" placeholder="e.g. Grand Marquee Hall" />
-              </div>
-              <div>
-                <label for="vf-desc" class="form-label">Description</label>
-                <textarea id="vf-desc" v-model="form.description" class="form-textarea" rows="5" placeholder="Describe your venue — features, ambience, what makes it unique…" aria-describedby="vf-desc-hint"></textarea>
-                <p id="vf-desc-hint" class="form-hint">{{ (form.description || '').length }} characters. Mention parking, catering, decor and accessibility.</p>
-              </div>
+              <FormField id="vf-name" label="Venue name" required>
+                <TextInput v-model="form.name" required placeholder="e.g. Grand Marquee Hall" />
+              </FormField>
+              <FormField id="vf-desc" label="Description" hint="Mention parking, catering, decor and accessibility." :count="(form.description || '').length">
+                <TextareaInput v-model="form.description" :rows="5" auto-grow placeholder="Describe your venue — features, ambience, what makes it unique…" />
+              </FormField>
             </div>
           </section>
 
@@ -55,20 +52,19 @@
             <div class="card-header"><div><h2 class="card-title">Location</h2><p class="card-subtitle">Used for search, distance and directions.</p></div></div>
             <div class="card-body space-y-5">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label for="vf-country" class="form-label">Country <span class="req">*</span></label>
-                  <select id="vf-country" v-model="form.country" @change="onCountryChange" class="form-select" required>
-                    <option value="" disabled>Select country</option>
-                    <option v-for="c in countriesList" :key="c.code" :value="c.name">{{ c.name }}</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="vf-city" class="form-label">City <span class="req">*</span></label>
-                  <select id="vf-city" v-model="form.city" class="form-select" required :disabled="!form.country || loadingCities">
-                    <option value="" disabled>{{ loadingCities ? 'Loading cities…' : 'Select city' }}</option>
-                    <option v-for="city in citiesList" :key="city" :value="city">{{ city }}</option>
-                  </select>
-                </div>
+                <FormField id="vf-country" label="Country" required>
+                  <SelectInput
+                    :model-value="form.country"
+                    :options="countriesList.map(c => c.name)"
+                    placeholder="Select country"
+                    placeholder-disabled
+                    required
+                    @update:model-value="v => { form.country = v; onCountryChange() }"
+                  />
+                </FormField>
+                <FormField id="vf-city" label="City" required :hint="loadingCities ? 'Loading cities…' : ''">
+                  <Combobox v-model="form.city" :options="citiesList" :placeholder="loadingCities ? 'Loading cities…' : 'Search a city'" required :disabled="!form.country || loadingCities" />
+                </FormField>
               </div>
 
               <div>
@@ -94,22 +90,18 @@
           <section id="sec-capacity" class="card scroll-mt-28">
             <div class="card-header"><div><h2 class="card-title">Capacity &amp; size</h2><p class="card-subtitle">Guests can only book within this range.</p></div></div>
             <div class="card-body grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label for="vf-cmin" class="form-label">Min guests</label>
-                <input id="vf-cmin" v-model.number="form.capacity_min" type="number" min="1" class="form-input num" placeholder="10" />
-              </div>
-              <div>
-                <label for="vf-cmax" class="form-label">Max guests <span class="req">*</span></label>
-                <input id="vf-cmax" v-model.number="form.capacity_max" required type="number" min="1" class="form-input num" placeholder="500" :aria-invalid="capacityInvalid" />
-              </div>
-              <div>
-                <label for="vf-area" class="form-label">Area (sq ft)</label>
-                <input id="vf-area" v-model.number="form.area_sqft" type="number" min="0" class="form-input num" placeholder="2000" />
-              </div>
-              <div>
-                <label for="vf-floors" class="form-label">Floors</label>
-                <input id="vf-floors" v-model.number="form.floors" type="number" min="1" class="form-input num" placeholder="1" />
-              </div>
+              <FormField id="vf-cmin" label="Min guests">
+                <NumberInput v-model="form.capacity_min" :min="1" :step="10" placeholder="10" />
+              </FormField>
+              <FormField id="vf-cmax" label="Max guests" required>
+                <NumberInput v-model="form.capacity_max" :min="1" :step="10" required placeholder="500" :invalid="capacityInvalid" />
+              </FormField>
+              <FormField id="vf-area" label="Area">
+                <NumberInput v-model="form.area_sqft" :min="0" :step="100" :stepper="false" suffix="sq ft" placeholder="2000" />
+              </FormField>
+              <FormField id="vf-floors" label="Floors">
+                <NumberInput v-model="form.floors" :min="1" placeholder="1" />
+              </FormField>
               <p v-if="capacityInvalid" class="form-error col-span-full !mt-0">Max guests should be at least the minimum.</p>
             </div>
           </section>
@@ -118,13 +110,9 @@
           <section id="sec-pricing" class="card scroll-mt-28">
             <div class="card-header"><div><h2 class="card-title">Pricing</h2><p class="card-subtitle">Total = price per head × number of guests (+ paid amenities and tax).</p></div></div>
             <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-              <div>
-                <label for="vf-price" class="form-label">Price per head (PKR) <span class="req">*</span></label>
-                <div class="relative">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-muted pointer-events-none">PKR</span>
-                  <input id="vf-price" v-model.number="form.price_per_head" type="number" min="0" step="0.01" required class="form-input !pl-12 num" placeholder="2500" />
-                </div>
-              </div>
+              <FormField id="vf-price" label="Price per head" required>
+                <CurrencyInput v-model="form.price_per_head" :decimals="2" suffix="/ head" required placeholder="2,500" />
+              </FormField>
               <div v-if="form.price_per_head" class="panel-sunken p-3 text-sm">
                 <p class="text-ink-muted text-xs mb-1">Example</p>
                 <p class="text-ink num">{{ exampleGuests }} guests × {{ formatPKR(form.price_per_head) }} = <strong>{{ formatPKR(exampleGuests * Number(form.price_per_head)) }}</strong></p>
@@ -140,17 +128,7 @@
             </div>
             <div class="card-body">
               <div v-if="!eventTypes.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2"><div v-for="i in 6" :key="i" class="skeleton h-11" /></div>
-              <div v-else class="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-3 gap-2">
-                <label
-                  v-for="et in eventTypes" :key="et.value"
-                  class="choice"
-                  :class="form.event_types.includes(et.value) && 'is-checked'"
-                >
-                  <input type="checkbox" :value="et.value" v-model="form.event_types" class="form-check" />
-                  <span v-if="et.emoji" class="text-sm" aria-hidden="true">{{ et.emoji }}</span>
-                  <span class="text-sm text-ink">{{ et.label }}</span>
-                </label>
-              </div>
+              <CheckboxGroup v-else v-model="form.event_types" :options="eventTypes.map(e => ({ value: e.value, label: e.label, icon: e.emoji }))" variant="cards" :columns="3" aria-label="Event types" />
             </div>
           </section>
 
@@ -158,33 +136,24 @@
           <section id="sec-hours" class="card scroll-mt-28">
             <div class="card-header"><div><h2 class="card-title">Operating hours</h2><p class="card-subtitle">Customers can only book slots inside this range (24-hour clock).</p></div></div>
             <div class="card-body grid grid-cols-2 gap-4">
-              <div>
-                <label for="vf-open" class="form-label">Opens</label>
-                <select id="vf-open" v-model="form.operating_start" class="form-select num">
-                  <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
-                </select>
-              </div>
-              <div>
-                <label for="vf-close" class="form-label">Closes</label>
-                <select id="vf-close" v-model="form.operating_end" class="form-select num">
-                  <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
-                </select>
-              </div>
+              <FormField id="vf-open" label="Opens">
+                <TimePicker v-model="form.operating_start" :options="timeSlots" />
+              </FormField>
+              <FormField id="vf-close" label="Closes">
+                <TimePicker v-model="form.operating_end" :options="timeSlots" />
+              </FormField>
             </div>
           </section>
 
           <!-- Visibility (edit only) -->
           <section v-if="isEdit" id="sec-visibility" class="card scroll-mt-28">
             <div class="card-header"><div><h2 class="card-title">Visibility</h2><p class="card-subtitle">Inactive venues are hidden from search and can't be booked.</p></div></div>
-            <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <label class="choice" :class="form.status === 'active' && 'is-checked'">
-                <input v-model="form.status" type="radio" value="active" class="form-check" />
-                <span><span class="block text-sm font-medium text-ink">Active</span><span class="block text-xs text-ink-muted">Visible to clients</span></span>
-              </label>
-              <label class="choice" :class="form.status === 'inactive' && 'is-checked'">
-                <input v-model="form.status" type="radio" value="inactive" class="form-check" />
-                <span><span class="block text-sm font-medium text-ink">Inactive</span><span class="block text-xs text-ink-muted">Hidden from listings</span></span>
-              </label>
+            <div class="card-body">
+              <RadioCards
+                v-model="form.status"
+                aria-label="Visibility"
+                :options="[{ value: 'active', label: 'Active', description: 'Visible to clients', icon: 'eye' }, { value: 'inactive', label: 'Inactive', description: 'Hidden from listings', icon: 'eye-off' }]"
+              />
             </div>
           </section>
         </form>
@@ -207,19 +176,18 @@
         </section>
 
         <!-- Sticky save bar -->
-        <div class="save-bar" role="region" aria-label="Save changes">
-          <div class="min-w-0 flex-1 text-sm" aria-live="polite">
-            <p v-if="errorMsg" class="flex items-center gap-2 text-danger-text font-medium"><AppIcon icon="alert-circle" class="w-4 h-4 shrink-0" /><span class="truncate">{{ errorMsg }}</span></p>
-            <p v-else-if="successMsg" class="flex items-center gap-2 text-success-text font-medium"><AppIcon icon="circle-check" class="w-4 h-4 shrink-0" /><span class="truncate">{{ successMsg }}</span></p>
-            <p v-else-if="dirty" class="flex items-center gap-2 text-ink-secondary"><span class="w-2 h-2 rounded-full bg-warning shrink-0" aria-hidden="true" />Unsaved changes</p>
-            <p v-else class="text-ink-muted hidden sm:block">{{ isEdit ? 'All changes saved' : 'Fields marked * are required' }}</p>
-          </div>
-          <RouterLink :to="{ name: 'shop-venues' }" class="btn-secondary">Cancel</RouterLink>
-          <button type="submit" form="venue-form" :disabled="saving" class="btn-primary">
-            <AppIcon :icon="saving ? 'loader' : 'check'" :class="saving ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
-            {{ saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create venue' }}
-          </button>
-        </div>
+        <FormActions
+          sticky
+          form-id="venue-form"
+          cancel-label="Cancel"
+          :cancel-to="{ name: 'shop-venues' }"
+          :saving="saving"
+          :dirty="dirty"
+          :error="errorMsg"
+          :success="successMsg"
+          :idle-text="isEdit ? 'All changes saved' : 'Fields marked * are required'"
+          :save-label="isEdit ? 'Save changes' : 'Create venue'"
+        />
       </div>
     </div>
 
@@ -236,16 +204,13 @@
         </div>
 
         <div class="px-4 py-3 border-b border-line">
-          <div class="relative">
-            <AppIcon icon="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted pointer-events-none" />
-            <input
-              type="search"
-              placeholder="Search for an address or landmark, then press Enter"
-              class="form-input !pl-9"
-              aria-label="Search location"
-              @keyup.enter="searchLocation(($event.target as HTMLInputElement).value)"
-            />
-          </div>
+          <TextInput
+            type="search"
+            prefix-icon="search"
+            placeholder="Search for an address or landmark, then press Enter"
+            aria-label="Search location"
+            @keyup.enter="searchLocation(($event.target as HTMLInputElement).value)"
+          />
         </div>
 
         <div class="flex-1 relative min-h-[320px] sm:min-h-[420px]">
@@ -279,6 +244,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AmenityEditor from '@/components/amenities/AmenityEditor.vue'
 import { formatPKR } from '@/lib/format'
+import { FormField, TextInput, TextareaInput, SelectInput, Combobox, NumberInput, CurrencyInput, CheckboxGroup, TimePicker, RadioCards, FormActions } from '@/components/forms'
 
 const route  = useRoute()
 const router = useRouter()
@@ -628,19 +594,4 @@ onBeforeUnmount(() => observer?.disconnect())
   color: var(--ink-secondary); border: 1px solid var(--line); background: var(--surface);
 }
 .section-chip[aria-current='true'] { color: var(--brand-text); border-color: var(--brand-text); background: var(--brand-soft); font-weight: 600; }
-.choice {
-  display: flex; align-items: center; gap: 0.625rem;
-  padding: 0.625rem 0.75rem; border-radius: var(--radius-md);
-  border: 1px solid var(--line); cursor: pointer;
-  transition: border-color .15s ease, background-color .15s ease;
-}
-.choice:hover { border-color: rgb(var(--c-line-strong) / 0.6); }
-.choice.is-checked { border-color: var(--brand-text); background-color: var(--brand-soft); }
-.save-bar {
-  position: sticky; bottom: 0; z-index: var(--z-sticky);
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem;
-  padding: 0.75rem 1rem; margin-top: 0.5rem;
-  background-color: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-}
 </style>

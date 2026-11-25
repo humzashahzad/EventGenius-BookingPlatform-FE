@@ -32,18 +32,16 @@
 
     <template v-else>
       <!-- Drop zone -->
-      <label
-        class="dropzone"
-        :class="dragOver && 'is-over'"
-        @dragover.prevent="dragOver = true"
-        @dragleave.prevent="dragOver = false"
-        @drop.prevent="onDrop"
-      >
-        <span class="icon-chip tone-brand"><AppIcon icon="cloud-upload" class="w-5 h-5" /></span>
-        <span class="text-sm font-medium text-ink">Drag photos here or <span class="text-brand-text underline underline-offset-2">browse</span></span>
-        <span class="text-xs text-ink-muted">JPG or PNG, landscape works best. You can select several at once.</span>
-        <input type="file" multiple accept="image/*" class="sr-only" @change="handleUpload" />
-      </label>
+      <FileUpload
+        accept="image/*"
+        multiple
+        instant
+        icon="cloud-upload"
+        title="Drag photos here or"
+        hint="JPG or PNG, landscape works best. You can select several at once."
+        :disabled="uploading"
+        @select="uploadFiles"
+      />
 
       <section v-if="images.length" class="card">
         <div class="card-header">
@@ -115,6 +113,7 @@
 </template>
 
 <script setup lang="ts">
+import { FileUpload } from '@/components/forms'
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
@@ -180,13 +179,6 @@ async function loadVenue() {
   }
 }
 
-const dragOver = ref(false)
-
-function onDrop(e: DragEvent) {
-  dragOver.value = false
-  const files = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'))
-  if (files.length) uploadFiles(files)
-}
 
 async function handleUpload(event: Event) {
   const input = event.target as HTMLInputElement
@@ -253,15 +245,3 @@ async function confirmDelete() {
 
 onMounted(loadVenue)
 </script>
-
-<style scoped>
-.dropzone {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.375rem;
-  padding: 1.5rem 1rem; text-align: center; cursor: pointer;
-  border: 2px dashed rgb(var(--c-line-strong) / 0.55); border-radius: var(--radius-lg);
-  background-color: var(--surface);
-  transition: border-color .15s ease, background-color .15s ease;
-}
-.dropzone:hover, .dropzone.is-over { border-color: var(--brand-text); background-color: var(--brand-soft); }
-.dropzone:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-</style>

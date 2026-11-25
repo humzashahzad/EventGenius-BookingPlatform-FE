@@ -195,10 +195,9 @@
     </template>
 
     <VuexyModal v-model:visible="showReject" title="Reject booking" width="28rem">
-      <label for="reject-reason" class="form-label">Reason <span class="req">*</span></label>
-      <textarea id="reject-reason" v-model="rejectReason" class="form-textarea" rows="3" placeholder="Let the customer know why…" :aria-invalid="!!rejectError" />
-      <p v-if="rejectError" class="form-error">{{ rejectError }}</p>
-      <p v-else class="form-hint">The customer will see this reason.</p>
+      <FormField id="reject-reason" label="Reason" required :error="rejectError" hint="The customer will see this reason.">
+        <TextareaInput v-model="rejectReason" :rows="3" auto-grow placeholder="Let the customer know why…" />
+      </FormField>
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showReject = false">Cancel</button>
@@ -210,6 +209,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextareaInput } from '@/components/forms'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'

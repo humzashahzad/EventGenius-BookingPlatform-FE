@@ -9,22 +9,14 @@
           </p>
         </div>
         <div class="flex flex-col sm:flex-row gap-2">
-          <div class="relative sm:w-64">
-            <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
-            <input v-model="filter" class="form-input !pl-9" placeholder="Filter by name, city or store" aria-label="Filter venues" />
-          </div>
-          <select v-model="sortKey" class="form-select sm:w-48" aria-label="Sort venues">
-            <option value="name">Sort: Name</option>
-            <option value="impressions">Sort: Impressions</option>
-            <option value="clicks">Sort: Clicks</option>
-            <option value="ctr">Sort: CTR</option>
-            <option value="avg_rating">Sort: Rating</option>
-            <option value="search_boost">Sort: Boost</option>
-          </select>
-          <label class="inline-flex items-center gap-2 text-sm text-ink-secondary whitespace-nowrap px-1">
-            <input v-model="onlyBoosted" type="checkbox" class="rounded border-warm-300 text-primary-600 focus:ring-primary-500" />
-            Only adjusted
-          </label>
+          <TextInput v-model="filter" prefix-icon="search" clearable class="sm:!w-64" placeholder="Filter by name, city or store" aria-label="Filter venues" />
+          <SelectInput
+            v-model="sortKey"
+            class="sm:!w-48"
+            aria-label="Sort venues"
+            :options="[{ value: 'name', label: 'Sort: Name' }, { value: 'impressions', label: 'Sort: Impressions' }, { value: 'clicks', label: 'Sort: Clicks' }, { value: 'ctr', label: 'Sort: CTR' }, { value: 'avg_rating', label: 'Sort: Rating' }, { value: 'search_boost', label: 'Sort: Boost' }]"
+          />
+          <CheckboxInput v-model="onlyBoosted" label="Only adjusted" class="whitespace-nowrap px-1 items-center" />
         </div>
       </div>
     </div>
@@ -62,7 +54,7 @@
                 <p class="text-sm font-medium text-ink flex items-center gap-1.5">
                   {{ v.name }}
                   <AppIcon v-if="v.is_featured" icon="star-filled" class="w-3.5 h-3.5 text-amber-500" title="Featured" />
-                  <span v-if="v.status !== 'active'" class="badge-warm !text-[10px] !py-0">{{ v.status }}</span>
+                  <span v-if="v.status !== 'active'" class="badge-warm badge-sm">{{ v.status }}</span>
                 </p>
                 <p class="text-xs text-ink-muted">{{ v.city || '—' }} · {{ v.store_name || '—' }}</p>
               </td>
@@ -107,6 +99,7 @@
 </template>
 
 <script setup lang="ts">
+import { TextInput, SelectInput, CheckboxInput } from '@/components/forms'
 import { computed, reactive, ref } from 'vue'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'

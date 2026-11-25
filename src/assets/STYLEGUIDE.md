@@ -176,7 +176,43 @@ Generic badges still exist: `badge` / `badge-warm` / `badge-neutral` (grey),
 `badge-primary`/`badge-success`, `badge-accent`/`badge-warning`,
 `badge-coral`/`badge-danger`, `badge-info`. Small counts: `count-badge`.
 
-### Forms
+### Control sizes (one scale for everything)
+
+| size | height | token / utility | classes |
+|---|---|---|---|
+| sm | 32px | `--control-h-sm`, `h-control-sm` | `btn-sm`, `btn-icon-sm`, `control-sm` |
+| md (default) | 40px, **44px on touch** | `--control-h-md`, `h-control-md` | `btn-*`, `btn-icon`, `form-input`, `form-select`, `segmented` |
+| lg | 48px | `--control-h-lg`, `h-control-lg` | `btn-lg`, `btn-icon-lg`, `control-lg` |
+
+Inputs, selects, buttons, square icon buttons, segmented controls and input
+add-ons all read `--control-h`, so they line up. **Controls in the same row use
+the same size** — never mix a 40px input with a 32px button; never set one-off
+heights (`h-[42px]`, `!min-h-[36px]`, `py-2.5` on buttons). Put `control-sm` /
+`control-lg` on a `form-input`, `form-select`, `segmented` or `.control` box to
+resize it. Buttons inset inside a field are 8px shorter with a 4px gap.
+Icon-only buttons are at least 32px (`btn-icon-sm`); text-like buttons use
+`btn-link` (32px hit area). `btn-secondary btn-icon` = bordered square icon button.
+
+Badges: md 24px (default) and `badge-sm` 20px (`--badge-h-md/sm`); `count-badge` is 20px.
+Radius: controls `--control-radius` (8px, 6px for sm). Focus: `--control-ring`.
+
+### Forms — use the components
+
+**Build every form with `src/components/forms`** (`FormField`, `TextInput`,
+`PasswordInput`, `NumberInput`, `CurrencyInput`, `PhoneInput`, `SelectInput`,
+`Combobox`, `DatePicker`, `TimePicker`, `CheckboxGroup`, `RadioCards`,
+`FileUpload`, `FormActions`, …). They handle labels, hints, errors, ids,
+`aria-describedby`, `aria-invalid`, sizes and dark mode. Docs:
+`src/components/forms/README.md`; live gallery: `/dev/forms`.
+
+```vue
+<FormField label="Guests" required :error="errors.guests" hint="Between 50 and 1,000.">
+  <NumberInput v-model="form.guests" :min="50" :max="1000" :step="10" />
+</FormField>
+<FormActions sticky form-id="venue-form" :saving="saving" :dirty="dirty" cancel-label="Cancel" />
+```
+
+The raw classes below still exist for the rare case a component doesn't fit:
 ```html
 <div>
   <label for="guests" class="form-label">Guests <span class="req">*</span></label>

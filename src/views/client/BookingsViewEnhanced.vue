@@ -33,27 +33,17 @@
         </button>
       </nav>
       <div class="flex flex-col sm:flex-row gap-3 p-3 sm:p-4">
-        <div class="relative flex-1 min-w-0">
+        <div class="flex-1 min-w-0">
           <label for="booking-search" class="sr-only">Search bookings</label>
-          <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
-          <input
-            id="booking-search"
-            v-model="search"
-            type="search"
-            class="form-input !pl-9"
-            placeholder="Search by event, venue, city or booking number"
-            autocomplete="off"
-          />
+          <TextInput id="booking-search" v-model="search" type="search" prefix-icon="search" clearable clear-label="Clear search" placeholder="Search by event, venue, city or booking number" autocomplete="off" />
         </div>
         <div class="flex items-center gap-2 sm:w-64">
           <label for="booking-sort" class="text-sm text-ink-muted whitespace-nowrap">Sort</label>
-          <select id="booking-sort" v-model="sort" class="form-select">
-            <option value="date_asc">Event date: soonest first</option>
-            <option value="date_desc">Event date: latest first</option>
-            <option value="created_desc">Recently booked</option>
-            <option value="amount_desc">Total: high to low</option>
-            <option value="amount_asc">Total: low to high</option>
-          </select>
+          <SelectInput
+            id="booking-sort"
+            v-model="sort"
+            :options="[{ value: 'date_asc', label: 'Event date: soonest first' }, { value: 'date_desc', label: 'Event date: latest first' }, { value: 'created_desc', label: 'Recently booked' }, { value: 'amount_desc', label: 'Total: high to low' }, { value: 'amount_asc', label: 'Total: low to high' }]"
+          />
         </div>
       </div>
     </div>
@@ -144,19 +134,19 @@
       <nav v-if="lastPage > 1" class="flex flex-wrap items-center justify-between gap-3" aria-label="Pagination">
         <p class="text-sm text-ink-muted num">Showing {{ (page - 1) * PER_PAGE + 1 }}–{{ Math.min(page * PER_PAGE, filtered.length) }} of {{ filtered.length }}</p>
         <div class="flex items-center gap-1">
-          <button type="button" class="btn-icon" :disabled="page === 1" aria-label="Previous page" @click="page--">
+          <button type="button" class="btn-secondary btn-icon btn-icon-sm" :disabled="page === 1" aria-label="Previous page" @click="page--">
             <AppIcon icon="chevron-left" class="w-4 h-4" />
           </button>
           <button
             v-for="p in lastPage"
             :key="p"
             type="button"
-            class="btn-sm min-w-[2.25rem]"
+            class="btn-sm min-w-control-sm !px-2"
             :class="p === page ? 'btn-primary' : 'btn-ghost'"
             :aria-current="p === page ? 'page' : undefined"
             @click="page = p"
           >{{ p }}</button>
-          <button type="button" class="btn-icon" :disabled="page === lastPage" aria-label="Next page" @click="page++">
+          <button type="button" class="btn-secondary btn-icon btn-icon-sm" :disabled="page === lastPage" aria-label="Next page" @click="page++">
             <AppIcon icon="chevron-right" class="w-4 h-4" />
           </button>
         </div>
@@ -166,6 +156,7 @@
 </template>
 
 <script setup lang="ts">
+import { TextInput, SelectInput } from '@/components/forms'
 import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'

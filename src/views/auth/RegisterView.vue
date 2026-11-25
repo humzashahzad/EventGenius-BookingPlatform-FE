@@ -10,33 +10,17 @@
     :features="features"
   >
     <form class="space-y-4" novalidate @submit.prevent="onSubmit">
-      <div>
-        <label for="reg-name" class="form-label">Full name <span class="req" aria-hidden="true">*</span></label>
-        <input
-          id="reg-name" v-model="form.name" type="text" required class="form-input" placeholder="e.g. Ayesha Khan" autocomplete="name"
-          :aria-invalid="!!fieldError('name')" :aria-describedby="fieldError('name') ? 'reg-name-error' : undefined" @blur="touched.name = true"
-        />
-        <p v-if="fieldError('name')" id="reg-name-error" class="form-error">{{ fieldError('name') }}</p>
-      </div>
+      <FormField id="reg-name" label="Full name" required :error="fieldError('name')">
+        <TextInput v-model="form.name" required placeholder="e.g. Ayesha Khan" autocomplete="name" @blur="touched.name = true" />
+      </FormField>
 
-      <div>
-        <label for="reg-email" class="form-label">Email address <span class="req" aria-hidden="true">*</span></label>
-        <input
-          id="reg-email" v-model="form.email" type="email" required class="form-input" placeholder="you@example.com" autocomplete="email" inputmode="email"
-          :aria-invalid="!!fieldError('email')" :aria-describedby="fieldError('email') ? 'reg-email-error' : undefined" @blur="touched.email = true"
-        />
-        <p v-if="fieldError('email')" id="reg-email-error" class="form-error">{{ fieldError('email') }}</p>
-      </div>
+      <FormField id="reg-email" label="Email address" required :error="fieldError('email')">
+        <TextInput v-model="form.email" type="email" required placeholder="you@example.com" autocomplete="email" inputmode="email" @blur="touched.email = true" />
+      </FormField>
 
-      <div v-if="portal === 'shop'">
-        <label for="reg-store" class="form-label">Store name <span class="req" aria-hidden="true">*</span></label>
-        <input
-          id="reg-store" v-model="form.store_name" type="text" required class="form-input" placeholder="e.g. Shalimar Banquets" autocomplete="organization"
-          :aria-invalid="!!fieldError('store_name')" :aria-describedby="fieldError('store_name') ? 'reg-store-error' : 'reg-store-hint'" @blur="touched.store_name = true"
-        />
-        <p v-if="fieldError('store_name')" id="reg-store-error" class="form-error">{{ fieldError('store_name') }}</p>
-        <p v-else id="reg-store-hint" class="form-hint">The business name customers will see.</p>
-      </div>
+      <FormField v-if="portal === 'shop'" id="reg-store" label="Store name" required :error="fieldError('store_name')" hint="The business name customers will see.">
+        <TextInput v-model="form.store_name" required placeholder="e.g. Shalimar Banquets" autocomplete="organization" @blur="touched.store_name = true" />
+      </FormField>
 
       <PasswordField
         id="reg-password"
@@ -89,6 +73,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput } from '@/components/forms'
 import { ref, reactive, computed, watch } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
