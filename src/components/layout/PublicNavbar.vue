@@ -77,6 +77,7 @@ const scrolled = ref(false)
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/venues', label: 'Venues' },
+  { to: '/shops', label: 'Shops' },
   { to: '/shop/sign-up', label: 'For Shop Owners' },
 ]
 
