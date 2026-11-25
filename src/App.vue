@@ -1,16 +1,20 @@
 <template>
-  <!-- Loading spinner while auth initializes -->
+  <!-- Loading screen while auth initializes -->
   <div
     v-if="!authStore.initialized"
-    class="flex items-center justify-center min-h-screen bg-warm-50 dark:bg-warm-900"
+    class="flex items-center justify-center min-h-screen bg-canvas"
+    role="status"
+    aria-live="polite"
   >
-    <div class="flex flex-col items-center gap-4">
-      <AppLogo class="w-12 h-12" title="EventGenius" />
-      <div
-        class="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"
-        role="status"
-        aria-label="Loading"
-      />
+    <div class="flex flex-col items-center gap-5">
+      <div class="flex items-center gap-2.5">
+        <AppLogo class="w-10 h-10" title="EventGenius" />
+        <span class="font-display font-bold text-xl text-ink tracking-tight">EventGenius</span>
+      </div>
+      <div class="w-40 h-1 rounded-full bg-surface-sunken overflow-hidden" aria-hidden="true">
+        <div class="eg-loading-bar h-full w-1/3 rounded-full bg-brand-strong" />
+      </div>
+      <span class="sr-only">Loading</span>
     </div>
   </div>
 
@@ -27,7 +31,7 @@
 
     <!-- Customer / Shop / Support: floating sidebar + main -->
     <template v-else-if="layout === 'customer' || layout === 'shop' || layout === 'support'">
-      <div class="flex bg-warm-100 dark:bg-warm-900" :class="isMessagesRoute ? 'h-screen overflow-hidden' : 'min-h-screen'">
+      <div class="flex bg-canvas" :class="isMessagesRoute ? 'h-screen overflow-hidden' : 'min-h-screen'">
         <!-- Sidebar -->
         <CustomerSidebar
           v-if="layout === 'customer'"
@@ -45,28 +49,29 @@
         <!-- Overlay on mobile when sidebar open -->
         <div
           v-if="sidebarOpen"
-          class="fixed inset-0 z-30 bg-warm-900/50 backdrop-blur-sm lg:hidden"
+          class="fixed inset-0 z-30 bg-warm-900/50 lg:hidden"
           aria-hidden="true"
           @click="closeSidebar"
         />
 
         <!-- Main content -->
         <div
-          class="flex-1 flex flex-col min-w-0 transition-[margin] duration-300 ease-out"
+          class="flex-1 flex flex-col min-w-0 transition-[margin] duration-200 ease-out"
           :class="sidebarMarginClass"
         >
-          <div class="px-3 pt-3 shrink-0">
-            <TopBar
-              :sidebar-collapsed="sidebarCollapsed"
-              @toggle-sidebar="toggleSidebar"
-            />
-          </div>
-          <div
+          <TopBar
+            :sidebar-collapsed="sidebarCollapsed"
+            @toggle-sidebar="toggleSidebar"
+          />
+          <main
             class="flex-1 min-h-0"
-            :class="isMessagesRoute ? 'overflow-hidden' : 'p-4 sm:p-6 overflow-auto'"
+            :class="isMessagesRoute ? 'overflow-hidden' : 'px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8'"
           >
-            <RouterView />
-          </div>
+            <div v-if="!isMessagesRoute" class="mx-auto w-full max-w-[1440px]">
+              <RouterView />
+            </div>
+            <RouterView v-else />
+          </main>
         </div>
       </div>
     </template>
@@ -75,7 +80,7 @@
       <RouterView />
     </template>
 
-    <Toaster position="top-right" rich-colors close-button :duration="3200" />
+    <Toaster position="top-right" rich-colors close-button :duration="3200" :theme="toastTheme" />
   </div>
 </template>
 
@@ -100,6 +105,9 @@ const notifStore = useNotificationStore()
 const chatStore = useChatStore()
 const layout = computed(() => route.meta.layout as string | undefined)
 const isMessagesRoute = computed(() => (route.name as string || '').includes('messages'))
+const toastTheme = ref<'light' | 'dark'>('light')
+// Follow the <html class="dark"> switch (set by the theme store) for toasts.
+let themeObserver: MutationObserver | null = null
 
 // Desktop: sidebar expanded by default, user's choice remembered.
 // Mobile: sidebar is an overlay and starts closed.
@@ -127,7 +135,7 @@ const sidebarOpen = computed(() => !sidebarCollapsed.value)
 
 const sidebarMarginClass = computed(() => {
   const c = sidebarCollapsed.value
-  return c ? 'lg:ml-[5.5rem]' : 'lg:ml-[17.5rem]'
+  return c ? 'lg:ml-[4.5rem]' : 'lg:ml-64'
 })
 
 function closeSidebar() {
@@ -178,6 +186,23 @@ watch(
   { immediate: true }
 )
 
-onMounted(() => window.addEventListener('keydown', handleGlobalKeydown))
-onBeforeUnmount(() => window.removeEventListener('keydown', handleGlobalKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+  const sync = () => { toastTheme.value = document.documentElement.classList.contains('dark') ? 'dark' : 'light' }
+  sync()
+  themeObserver = new MutationObserver(sync)
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+  themeObserver?.disconnect()
+})
 </script>
+
+<style>
+.eg-loading-bar { animation: eg-loading 1.1s ease-in-out infinite; }
+@keyframes eg-loading {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+</style>

@@ -1,17 +1,20 @@
 <template>
   <nav
-    class="sticky top-0 z-[1000] px-4 py-3 bg-white/80 dark:bg-warm-900/80 backdrop-blur-xl border-b border-transparent transition-all duration-300"
-    :class="{ 'bg-white/95 dark:bg-warm-900/95 border-warm-200 dark:border-warm-700 shadow-soft': scrolled }"
+    class="sticky top-0 z-[1000] bg-surface border-b transition-shadow duration-200"
+    :class="scrolled ? 'border-line shadow-sm' : 'border-line/70'"
+    aria-label="Main"
   >
-    <div class="content-container flex items-center justify-between">
-      <RouterLink to="/" class="flex items-center gap-2.5 shrink-0">
-        <AppLogo class="w-9 h-9" />
-        <span class="font-extrabold text-base sm:text-lg text-warm-800 dark:text-white tracking-tight">EventGenius</span>
+    <div class="content-container flex items-center justify-between h-16">
+      <RouterLink to="/" class="flex items-center gap-2.5 shrink-0 rounded-md" @click="mobileOpen = false">
+        <AppLogo class="w-8 h-8" />
+        <span class="font-display font-bold text-[1.0625rem] text-ink tracking-tight">EventGenius</span>
       </RouterLink>
 
       <button
         type="button"
-        class="lg:hidden p-2.5 rounded-xl border border-warm-200 dark:border-warm-700 bg-white dark:bg-warm-800 text-warm-600 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-warm-700"
+        class="lg:hidden btn-icon border-line"
+        :aria-expanded="mobileOpen"
+        aria-controls="public-nav-menu"
         aria-label="Toggle navigation"
         @click="mobileOpen = !mobileOpen"
       >
@@ -19,48 +22,38 @@
       </button>
 
       <div
-        class="flex-1 flex items-center justify-between ml-6 max-lg:ml-0 max-lg:absolute max-lg:left-0 max-lg:right-0 max-lg:top-full max-lg:bg-white max-lg:dark:bg-warm-900 max-lg:border-b max-lg:border-warm-200 max-lg:dark:border-warm-700 max-lg:shadow-elevated max-lg:flex-col max-lg:p-4 max-lg:gap-4 max-lg:flex-1 max-lg:max-h-[80vh] max-lg:overflow-y-auto"
+        id="public-nav-menu"
+        class="flex-1 flex items-center justify-between ml-10 max-lg:ml-0 max-lg:absolute max-lg:left-0 max-lg:right-0 max-lg:top-full max-lg:bg-surface max-lg:border-b max-lg:border-line max-lg:shadow-lg max-lg:flex-col max-lg:items-stretch max-lg:px-4 max-lg:pt-2 max-lg:pb-4 max-lg:gap-3 max-lg:max-h-[calc(100vh-4rem)] max-lg:overflow-y-auto"
         :class="mobileOpen ? 'max-lg:flex' : 'max-lg:hidden'"
       >
-        <div class="flex items-center gap-1 max-lg:flex-col max-lg:w-full">
+        <div class="flex items-center gap-1 max-lg:flex-col max-lg:items-stretch">
           <RouterLink
             v-for="link in navLinks"
             :key="link.to"
             :to="link.to"
-            class="px-4 py-2 text-sm font-medium rounded-xl transition-colors"
+            class="relative inline-flex items-center px-3 h-10 max-lg:h-11 text-sm font-medium rounded-md transition-colors"
             :class="isActive(link.to)
-              ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
-              : 'text-warm-600 dark:text-warm-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/10'"
+              ? 'text-ink lg:after:absolute lg:after:left-3 lg:after:right-3 lg:after:-bottom-[13px] lg:after:h-0.5 lg:after:bg-brand-strong max-lg:bg-brand-soft max-lg:text-brand-text'
+              : 'text-ink-secondary hover:text-ink hover:bg-surface-hover'"
+            :aria-current="isActive(link.to) ? 'page' : undefined"
             @click="mobileOpen = false"
           >
             {{ link.label }}
           </RouterLink>
         </div>
-        <div class="flex items-center gap-2 max-lg:w-full max-lg:flex-col">
+        <div class="flex items-center gap-2 max-lg:flex-col max-lg:items-stretch max-lg:pt-3 max-lg:border-t max-lg:border-line">
           <template v-if="authStore.isLoggedIn">
-            <RouterLink
-              :to="authStore.defaultRoute"
-              class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-400 rounded-xl shadow-md shadow-primary-500/20 hover:shadow-lg transition-all"
-              @click="mobileOpen = false"
-            >
+            <RouterLink :to="authStore.defaultRoute" class="btn-primary" @click="mobileOpen = false">
               <AppIcon icon="layout-dashboard" class="w-4 h-4" />
               Dashboard
             </RouterLink>
           </template>
           <template v-else>
-            <RouterLink
-              to="/customer/sign-in"
-              class="px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold text-warm-600 dark:text-warm-400 hover:text-primary-600 dark:hover:text-primary-400 rounded-xl transition-colors"
-              @click="mobileOpen = false"
-            >
-              Sign In
+            <RouterLink to="/customer/sign-in" class="btn-ghost" @click="mobileOpen = false">
+              Sign in
             </RouterLink>
-            <RouterLink
-              to="/customer/sign-up"
-              class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-400 rounded-xl shadow-md shadow-primary-500/20 hover:shadow-lg transition-all"
-              @click="mobileOpen = false"
-            >
-              Get Started
+            <RouterLink to="/customer/sign-up" class="btn-primary" @click="mobileOpen = false">
+              Get started
             </RouterLink>
           </template>
         </div>

@@ -1,17 +1,22 @@
 <template>
-  <header class="flex items-center h-14 px-3 sm:px-4 bg-white/80 dark:bg-warm-800/80 backdrop-blur-xl border border-warm-200/60 dark:border-warm-700/60 rounded-2xl shadow-card shrink-0">
+  <header class="sticky top-0 z-20 flex items-center h-16 px-3 sm:px-4 lg:px-6 bg-surface border-b border-line shrink-0">
     <button
       type="button"
-      class="p-2 -ml-2 rounded-lg hover:bg-warm-100 dark:hover:bg-warm-700 text-warm-500 dark:text-warm-400"
-      aria-label="Toggle menu"
+      class="btn-icon -ml-1"
+      :aria-label="props.sidebarCollapsed ? 'Open menu' : 'Collapse menu'"
+      :aria-expanded="!props.sidebarCollapsed"
+      title="Toggle menu (Ctrl+B)"
       @click="emit('toggle-sidebar')"
     >
       <AppIcon icon="menu-2" class="w-5 h-5" />
     </button>
 
-    <h1 class="ml-3 text-sm font-semibold text-warm-800 dark:text-white truncate max-w-[160px] sm:max-w-[240px]">
-      {{ pageTitle }}
-    </h1>
+    <div class="hidden sm:block h-6 w-px bg-line mx-3" aria-hidden="true" />
+    <p class="ml-2 sm:ml-0 min-w-0 flex items-center gap-1.5 text-sm truncate">
+      <span class="hidden md:inline text-ink-muted">{{ portalName }}</span>
+      <AppIcon icon="chevron-right" class="hidden md:inline w-3.5 h-3.5 text-ink-muted shrink-0" />
+      <span class="font-semibold text-ink truncate max-w-[150px] sm:max-w-[260px]">{{ pageTitle }}</span>
+    </p>
 
     <div class="flex-1 min-w-0"></div>
 
@@ -22,33 +27,18 @@
       </div>
 
       <!-- Theme Switcher — inline row -->
-      <div class="hidden sm:flex items-center rounded-xl bg-warm-100/80 dark:bg-warm-700/50 p-0.5 gap-0.5" role="group" aria-label="Theme">
+      <div class="hidden sm:inline-flex segmented !p-0.5" role="group" aria-label="Theme">
         <button
+          v-for="m in themeModes"
+          :key="m.mode"
           type="button"
-          class="p-1.5 rounded-lg transition-all duration-200"
-          :class="themeStore.themeMode === 'light' ? 'bg-white dark:bg-warm-600 text-amber-500 shadow-sm' : 'text-warm-400 hover:text-warm-600 dark:hover:text-warm-300'"
-          aria-label="Light mode"
-          @click="themeStore.setThemeMode('light')"
+          class="!min-h-[30px] !px-2"
+          :aria-pressed="themeStore.themeMode === m.mode"
+          :aria-label="m.label"
+          :title="m.label"
+          @click="themeStore.setThemeMode(m.mode)"
         >
-          <AppIcon icon="sun" class="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          class="p-1.5 rounded-lg transition-all duration-200"
-          :class="themeStore.themeMode === 'dark' ? 'bg-white dark:bg-warm-600 text-primary-500 shadow-sm' : 'text-warm-400 hover:text-warm-600 dark:hover:text-warm-300'"
-          aria-label="Dark mode"
-          @click="themeStore.setThemeMode('dark')"
-        >
-          <AppIcon icon="moon" class="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          class="p-1.5 rounded-lg transition-all duration-200"
-          :class="themeStore.themeMode === 'auto' ? 'bg-white dark:bg-warm-600 text-sky-500 shadow-sm' : 'text-warm-400 hover:text-warm-600 dark:hover:text-warm-300'"
-          aria-label="System theme"
-          @click="themeStore.setThemeMode('auto')"
-        >
-          <AppIcon icon="device-desktop" class="w-4 h-4" />
+          <AppIcon :icon="m.icon" class="w-4 h-4" />
         </button>
       </div>
 
@@ -56,32 +46,35 @@
       <div class="relative" ref="notifRef">
         <button
           type="button"
-          class="relative p-2 rounded-lg hover:bg-warm-100 dark:hover:bg-warm-700 text-warm-500 dark:text-warm-400"
-          aria-label="Notifications"
+          class="btn-icon relative"
+          :aria-label="notifStore.unreadCount > 0 ? `Notifications, ${notifStore.unreadCount} unread` : 'Notifications'"
+          :aria-expanded="showNotif"
           @click="toggleNotif"
         >
           <AppIcon icon="bell" class="w-5 h-5" />
           <span
             v-if="notifStore.unreadCount > 0"
-            class="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-xs font-bold rounded-full bg-coral text-white"
+            class="count-badge absolute top-0.5 right-0.5 !min-w-[18px] !h-[18px] !px-1 ring-2 ring-surface"
           >
             {{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}
           </span>
         </button>
         <div
           v-if="showNotif"
-          class="absolute right-0 top-full mt-2 w-80 sm:w-[22rem] max-w-[calc(100vw-1rem)] bg-white dark:bg-warm-800 rounded-2xl border border-warm-200 dark:border-warm-700 shadow-elevated z-50 overflow-hidden"
+          class="menu absolute right-0 top-full mt-2 w-80 sm:w-[22rem] max-w-[calc(100vw-1rem)] z-50"
         >
-          <div class="flex items-center justify-between p-3 border-b border-warm-200 dark:border-warm-700">
-            <span class="font-semibold text-warm-800 dark:text-white">Notifications</span>
+          <div class="flex items-center justify-between px-4 py-3 border-b border-line">
+            <span class="font-semibold text-ink">Notifications</span>
             <div class="flex items-center gap-2">
-              <span v-if="notifStore.unreadCount > 0" class="px-2 py-0.5 text-xs font-medium rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
-                {{ notifStore.unreadCount }} New
+              <span v-if="notifStore.unreadCount > 0" class="badge-success">
+                {{ notifStore.unreadCount }} new
               </span>
               <button
                 v-if="notifStore.unreadCount > 0"
                 type="button"
-                class="p-1 rounded-lg hover:bg-warm-100 dark:hover:bg-warm-700"
+                class="btn-icon btn-icon-sm"
+                aria-label="Mark all as read"
+                title="Mark all as read"
                 @click="notifStore.markAllRead()"
               >
                 <AppIcon icon="mail-opened" class="w-4 h-4" />
@@ -89,37 +82,39 @@
             </div>
           </div>
           <div class="max-h-80 overflow-y-auto scrollbar-thin">
-            <div v-if="!notifStore.notifications.length" class="text-center py-8 text-warm-500 dark:text-warm-400">
-              <AppIcon icon="bell-off" class="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p class="text-sm">No notifications yet</p>
+            <div v-if="!notifStore.notifications.length" class="empty-state !py-8">
+              <div class="empty-state-icon"><AppIcon icon="bell-off" class="w-5 h-5" /></div>
+              <p class="empty-state-title !text-sm">No notifications yet</p>
+              <p class="empty-state-desc !text-xs">Booking updates and messages will show up here.</p>
             </div>
             <div
               v-for="n in notifStore.notifications.slice(0, 20)"
               :key="n.id"
               role="button"
               tabindex="0"
-              class="w-full flex items-start gap-3 p-3 text-left cursor-pointer hover:bg-warm-50 dark:hover:bg-warm-700/50 border-b border-warm-100 dark:border-warm-700/50"
-              :class="{ 'bg-primary-50/50 dark:bg-primary-900/10': !n.is_read }"
+              class="relative w-full flex items-start gap-3 px-4 py-3 text-left cursor-pointer hover:bg-surface-hover border-b border-line last:border-b-0"
+              :class="{ 'bg-brand-soft/60': !n.is_read }"
               @click="handleNotifClick(n)"
               @keydown.enter="handleNotifClick(n)"
             >
-              <span class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 shrink-0">
+              <span v-if="!n.is_read" class="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-brand" aria-hidden="true" />
+              <span class="icon-chip icon-chip-sm tone-brand">
                 <AppIcon :icon="notifStore.iconForType(n.type)" class="w-4 h-4" />
               </span>
               <span class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-warm-800 dark:text-white truncate" :class="{ 'font-semibold': !n.is_read }">{{ n.title }}</p>
-                <p class="text-xs text-warm-500 dark:text-warm-400 line-clamp-2">{{ n.body }}</p>
-                <p class="text-xs text-warm-400 dark:text-warm-500 mt-0.5">{{ notifStore.timeAgo(n.created_at) }}</p>
+                <p class="text-sm font-medium text-ink truncate" :class="{ 'font-semibold': !n.is_read }">{{ n.title }}</p>
+                <p class="text-xs text-ink-secondary line-clamp-2">{{ n.body }}</p>
+                <p class="text-xs text-ink-muted mt-0.5">{{ notifStore.timeAgo(n.created_at) }}</p>
               </span>
-              <button type="button" class="p-1 rounded-lg hover:bg-warm-200 dark:hover:bg-warm-600 shrink-0" @click.stop="notifStore.remove(n.id)">
+              <button type="button" class="btn-icon btn-icon-sm !w-7 !h-7" aria-label="Remove notification" @click.stop="notifStore.remove(n.id)">
                 <AppIcon icon="x" class="w-4 h-4" />
               </button>
             </div>
           </div>
-          <div class="p-3 border-t border-warm-200 dark:border-warm-700">
+          <div class="p-3 border-t border-line bg-surface-sunken">
             <RouterLink
               :to="notifPageLink"
-              class="block w-full py-2 text-center text-sm font-medium rounded-xl bg-primary-500 text-white hover:bg-primary-600 transition-colors"
+              class="btn-secondary btn-sm w-full"
               @click="showNotif = false"
             >
               View all notifications
@@ -132,34 +127,36 @@
       <div class="relative" ref="profileRef">
         <button
           type="button"
-          class="flex items-center p-1 rounded-lg hover:bg-warm-100 dark:hover:bg-warm-700"
+          class="flex items-center gap-2 h-10 pl-1 pr-1 sm:pr-2 rounded-md hover:bg-surface-hover"
+          :aria-expanded="showProfile"
+          aria-label="Account menu"
           @click="toggleProfile"
         >
           <img
             v-if="avatarUrl"
             :src="avatarUrl"
             alt=""
-            class="w-8 h-8 rounded-full object-cover ring-2 ring-warm-200 dark:ring-warm-600"
+            class="w-8 h-8 rounded-full object-cover border border-line"
           />
-          <span
-            v-else
-            class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-sm font-semibold"
-          >
-            {{ userInitials }}
+          <span v-else class="avatar !w-8 !h-8 !text-xs">{{ userInitials }}</span>
+          <span class="hidden md:block text-left leading-tight max-w-[140px]">
+            <span class="block text-sm font-semibold text-ink truncate">{{ authStore.user?.name }}</span>
+            <span class="block text-[11px] text-ink-muted capitalize truncate">{{ roleLabel }}</span>
           </span>
+          <AppIcon icon="chevron-down" class="hidden md:block w-4 h-4 text-ink-muted" />
         </button>
         <div
           v-if="showProfile"
-          class="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-warm-800 rounded-2xl border border-warm-200 dark:border-warm-700 shadow-elevated z-50 overflow-hidden"
+          class="menu absolute right-0 top-full mt-2 w-60 z-50"
         >
-          <div class="p-3 border-b border-warm-200 dark:border-warm-700">
-            <p class="font-medium text-warm-800 dark:text-white truncate">{{ authStore.user?.name }}</p>
-            <p class="text-xs text-warm-500 dark:text-warm-400 capitalize">{{ roleLabel }}</p>
+          <div class="px-4 py-3 border-b border-line">
+            <p class="font-semibold text-sm text-ink truncate">{{ authStore.user?.name }}</p>
+            <p class="text-xs text-ink-muted truncate">{{ authStore.user?.email }}</p>
           </div>
           <div class="py-1">
             <RouterLink
               :to="profileLink"
-              class="flex items-center gap-2 px-3 py-2 text-sm text-warm-600 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-warm-700 transition-colors"
+              class="menu-item"
               @click="showProfile = false"
             >
               <AppIcon icon="user" class="w-4 h-4" />
@@ -167,25 +164,25 @@
             </RouterLink>
             <RouterLink
               :to="dashboardLink"
-              class="flex items-center gap-2 px-3 py-2 text-sm text-warm-600 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-warm-700 transition-colors"
+              class="menu-item"
               @click="showProfile = false"
             >
               <AppIcon icon="layout-grid" class="w-4 h-4" />
               Dashboard
             </RouterLink>
           </div>
-          <div class="sm:hidden border-t border-warm-200 dark:border-warm-700 px-3 py-2 flex items-center justify-between">
-            <span class="text-sm text-warm-600 dark:text-warm-300">Theme</span>
-            <div class="flex items-center rounded-lg bg-warm-100 dark:bg-warm-700 p-0.5 gap-0.5">
-              <button v-for="m in themeModes" :key="m.mode" type="button" class="p-1.5 rounded-md" :class="themeStore.themeMode === m.mode ? 'bg-white dark:bg-warm-600 text-primary-600 shadow-sm' : 'text-warm-400'" :aria-label="m.label" @click="themeStore.setThemeMode(m.mode)">
+          <div class="sm:hidden border-t border-line px-3 py-2 flex items-center justify-between">
+            <span class="text-sm text-ink-secondary">Theme</span>
+            <div class="segmented !p-0.5">
+              <button v-for="m in themeModes" :key="m.mode" type="button" class="!min-h-[36px] !px-2.5" :aria-pressed="themeStore.themeMode === m.mode" :aria-label="m.label" @click="themeStore.setThemeMode(m.mode)">
                 <AppIcon :icon="m.icon" class="w-4 h-4" />
               </button>
             </div>
           </div>
-          <div class="border-t border-warm-200 dark:border-warm-700 py-1">
+          <div class="border-t border-line py-1">
             <button
               type="button"
-              class="flex items-center gap-2 w-full px-3 py-2 text-sm text-coral dark:text-coral-light hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+              class="menu-item !text-danger-text hover:!bg-danger-soft"
               @click="logout"
             >
               <AppIcon icon="logout" class="w-4 h-4" />
@@ -240,6 +237,13 @@ function getAvatarUrl(path: string | undefined): string | null {
   return p.startsWith('storage/') ? `${base}/${p}` : `${base}/storage/${p}`
 }
 const avatarUrl = computed(() => getAvatarUrl(authStore.user?.avatar))
+
+const portalName = computed(() => {
+  const r = authStore.user?.role
+  if (r === 'admin') return 'Support'
+  if (r === 'store_owner') return 'Shop'
+  return 'Customer'
+})
 
 const roleLabel = computed(() => {
   const r = authStore.user?.role || ''
