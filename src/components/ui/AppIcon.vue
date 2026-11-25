@@ -114,6 +114,11 @@ import {
   CalendarClock,
   ChartColumn,
   ListFilter,
+  LocateFixed,
+  StarHalf,
+  IdCard,
+  CalendarRange,
+  CircleX,
 } from 'lucide-vue-next'
 
 const iconMap: Record<string, Component> = {
@@ -273,12 +278,17 @@ const iconMap: Record<string, Component> = {
   'chart-bar': ChartColumn,
   'list-filter': ListFilter,
   'shield-check': ShieldCheck,
+  'locate': LocateFixed,
+  'star-half': StarHalf,
+  'id-card': IdCard,
+  'calendar-range': CalendarRange,
+  'circle-x': CircleX,
 }
 
 const props = withDefaults(
   defineProps<{
     icon: string
-    class?: string
+    class?: string | (string | false | null | undefined)[]
     size?: number
   }>(),
   { class: '', size: 0 }
@@ -289,10 +299,12 @@ const iconComponent = computed(() => {
   return iconMap[key] || CircleHelp
 })
 
+const classString = computed(() => (Array.isArray(props.class) ? props.class.filter(Boolean).join(' ') : props.class || ''))
+
 const iconSize = computed(() => {
   if (props.size > 0) return props.size
   // Extract size from class (e.g. 'w-5 h-5' → 20)
-  const match = props.class?.match(/w-(\d+(?:\.\d+)?)/)
+  const match = classString.value.match(/w-(\d+(?:\.\d+)?)/)
   if (match) {
     const val = parseFloat(match[1])
     return val * 4 // Tailwind: w-5 = 20px
@@ -300,5 +312,5 @@ const iconSize = computed(() => {
   return 20 // default
 })
 
-const iconClass = computed(() => props.class || 'w-5 h-5')
+const iconClass = computed(() => classString.value || 'w-5 h-5')
 </script>
