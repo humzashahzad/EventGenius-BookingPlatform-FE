@@ -1,142 +1,225 @@
 <template>
-  <div class="content-container">
-    <div class="mb-5">
-      <RouterLink to="/shop/bookings" class="inline-flex items-center gap-1.5 text-sm text-warm-500 hover:text-primary-600 dark:text-warm-400">
-        <AppIcon icon="chevron-left" class="w-4 h-4" />
-        Back to bookings
-      </RouterLink>
+  <div class="space-y-6">
+    <RouterLink to="/shop/bookings" class="btn-ghost btn-sm -ml-2">
+      <AppIcon icon="chevron-left" class="w-4 h-4" />Back to bookings
+    </RouterLink>
+
+    <div v-if="loading" class="space-y-4" aria-busy="true">
+      <div class="skeleton h-28 w-full" />
+      <div class="grid lg:grid-cols-3 gap-6"><div class="skeleton h-72 lg:col-span-2" /><div class="skeleton h-72" /></div>
     </div>
 
-    <div v-if="loading" class="space-y-4">
-      <div class="skeleton h-24 w-full" />
-      <div class="grid lg:grid-cols-3 gap-6"><div class="skeleton h-64 lg:col-span-2" /><div class="skeleton h-64" /></div>
-    </div>
-
-    <div v-else-if="error" class="card p-8 text-center">
-      <div class="empty-state-icon mx-auto"><AppIcon icon="alert-circle" class="w-6 h-6" /></div>
-      <p class="empty-state-title">{{ error }}</p>
-      <RouterLink to="/shop/bookings" class="btn-outline btn-sm mt-4">Back to bookings</RouterLink>
+    <div v-else-if="error" class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
+        <p class="empty-state-title">{{ error }}</p>
+        <p class="empty-state-desc">It may have been removed, or belongs to another store.</p>
+        <div class="empty-state-actions">
+          <button class="btn-secondary" @click="load">Try again</button>
+          <RouterLink to="/shop/bookings" class="btn-primary">Back to bookings</RouterLink>
+        </div>
+      </div>
     </div>
 
     <template v-else-if="booking">
       <!-- Header -->
-      <div class="card p-5 sm:p-6 mb-6">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <header class="card p-5">
+        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div class="min-w-0">
-            <p class="font-mono text-xs text-warm-500 dark:text-warm-400">{{ booking.booking_number }}</p>
-            <h1 class="page-title mt-1 truncate">{{ booking.event_name }}</h1>
+            <p class="ref text-ink-muted">{{ booking.booking_number }}</p>
+            <h1 class="page-title mt-1 break-words">{{ booking.event_name }}</h1>
             <div class="flex flex-wrap items-center gap-2 mt-2">
-              <span :class="statusBadge(booking.status)" class="capitalize">{{ booking.status }}</span>
-              <span v-if="booking.payment_status === 'paid'" class="badge-success"><AppIcon icon="circle-check" class="w-3 h-3" />Paid</span>
-              <span v-else-if="booking.payment_status === 'refunded'" class="badge-warm">Refunded</span>
-              <span v-else-if="booking.status === 'confirmed'" class="badge-warning">Awaiting payment</span>
-              <span class="text-xs text-warm-500 dark:text-warm-400">Requested {{ formatDate(booking.created_at) }}</span>
+              <span :class="statusBadgeClass(booking.status)">{{ statusLabel(booking.status) }}</span>
+              <span v-if="booking.payment_status === 'paid'" class="badge-paid">Paid</span>
+              <span v-else-if="booking.payment_status === 'refunded'" class="badge-refunded">Refunded</span>
+              <span v-else-if="booking.status === 'confirmed'" class="badge-unpaid">Awaiting payment</span>
+              <span class="text-meta">Requested {{ formatDate(booking.created_at) }}</span>
             </div>
           </div>
-          <div v-if="booking.status === 'pending'" class="flex flex-wrap gap-2">
-            <button class="btn-outline btn-sm" :disabled="acting" @click="showReject = true">
-              <AppIcon icon="x" class="w-4 h-4" /> Reject
-            </button>
-            <button class="btn-primary btn-sm" :disabled="acting" @click="confirmBooking">
-              <AppIcon :icon="acting ? 'loader' : 'check'" :class="acting ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" /> Confirm booking
-            </button>
+          <div class="flex flex-wrap gap-2 shrink-0">
+            <RouterLink :to="{ path: '/shop/messages', query: { with: booking.client_id } }" class="btn-secondary">
+              <AppIcon icon="message" class="w-4 h-4" />Message
+            </RouterLink>
+            <template v-if="booking.status === 'pending'">
+              <button class="btn-secondary" :disabled="acting" @click="openReject">
+                <AppIcon icon="x" class="w-4 h-4" />Reject
+              </button>
+              <button class="btn-primary" :disabled="acting" @click="confirmBooking">
+                <AppIcon :icon="acting ? 'loader' : 'check'" :class="acting ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Confirm booking
+              </button>
+            </template>
           </div>
         </div>
-        <p v-if="booking.status === 'rejected' && booking.rejection_reason" class="mt-4 text-sm rounded-xl bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 px-4 py-3">
-          <strong>Rejection reason:</strong> {{ booking.rejection_reason }}
-        </p>
-        <p v-if="booking.status === 'cancelled' && booking.cancellation_reason" class="mt-4 text-sm rounded-xl bg-warm-100 dark:bg-warm-800 text-warm-700 dark:text-warm-300 px-4 py-3">
-          <strong>Cancellation reason:</strong> {{ booking.cancellation_reason }}
-        </p>
-      </div>
+        <div v-if="booking.status === 'pending'" class="alert-warning mt-4" role="status">
+          <AppIcon icon="clock" class="w-5 h-5 shrink-0" />
+          <div><p class="alert-title">Waiting for your answer</p><p>Confirm to let the customer pay, or reject with a reason.</p></div>
+        </div>
+        <div v-if="booking.status === 'rejected' && booking.rejection_reason" class="alert-danger mt-4">
+          <AppIcon icon="x" class="w-5 h-5 shrink-0" />
+          <div><p class="alert-title">Rejection reason</p><p>{{ booking.rejection_reason }}</p></div>
+        </div>
+        <div v-if="booking.status === 'cancelled' && booking.cancellation_reason" class="alert-info mt-4">
+          <AppIcon icon="info" class="w-5 h-5 shrink-0" />
+          <div><p class="alert-title">Cancellation reason</p><p>{{ booking.cancellation_reason }}</p></div>
+        </div>
+      </header>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-6">
+        <div class="lg:col-span-2 space-y-6 min-w-0">
           <!-- Event -->
           <section class="card">
-            <header class="px-5 py-4 border-b border-warm-200 dark:border-warm-700 flex items-center gap-2">
-              <AppIcon icon="calendar-event" class="w-4 h-4 text-primary-600" />
-              <h2 class="font-semibold text-warm-900 dark:text-white">Event</h2>
-            </header>
-            <dl class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-              <div><dt class="text-warm-500">Venue</dt><dd class="font-medium text-warm-900 dark:text-white mt-0.5">{{ booking.venue?.name }}</dd></div>
-              <div><dt class="text-warm-500">Event type</dt><dd class="font-medium text-warm-900 dark:text-white mt-0.5 capitalize">{{ String(booking.event_type || '').replace(/[-_]/g, ' ') }}</dd></div>
-              <div><dt class="text-warm-500">Date</dt><dd class="font-medium text-warm-900 dark:text-white mt-0.5">{{ formatDate(booking.event_date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}</dd></div>
-              <div><dt class="text-warm-500">Time</dt><dd class="font-medium text-warm-900 dark:text-white mt-0.5">{{ formatTimeRange(booking.start_time, booking.end_time) }} <span class="text-warm-500 font-normal">({{ booking.duration_hours }} h)</span></dd></div>
-              <div><dt class="text-warm-500">Expected guests</dt><dd class="font-medium text-warm-900 dark:text-white mt-0.5">{{ booking.expected_guests }}</dd></div>
-            </dl>
-            <div v-if="booking.special_requirements" class="px-5 pb-5">
-              <p class="text-sm text-warm-500 mb-1">Special requirements</p>
-              <p class="text-sm text-warm-800 dark:text-warm-200 whitespace-pre-line rounded-xl bg-warm-50 dark:bg-warm-800/60 p-4">{{ booking.special_requirements }}</p>
+            <div class="card-header"><h2 class="card-title">Event</h2></div>
+            <div class="card-body">
+              <div class="flex gap-4 items-start mb-5">
+                <img
+                  v-if="venueImage"
+                  :src="venueImage"
+                  :alt="booking.venue?.name"
+                  class="w-24 h-[72px] sm:w-32 sm:h-24 rounded-lg object-cover shrink-0 bg-surface-sunken"
+                  loading="lazy"
+                />
+                <div class="min-w-0">
+                  <p class="eyebrow">Venue</p>
+                  <p class="font-medium text-ink">{{ booking.venue?.name }}</p>
+                  <p v-if="booking.venue?.address || booking.venue?.city" class="text-sm text-ink-muted">{{ formatAddress(booking.venue) }}</p>
+                  <p v-if="booking.venue?.capacity_max" class="text-xs text-ink-muted mt-1">Capacity {{ booking.venue.capacity_min }}–{{ booking.venue.capacity_max }} guests</p>
+                </div>
+              </div>
+              <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+                <div class="dl-row"><dt>Date</dt><dd>{{ formatDate(booking.event_date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) }}</dd></div>
+                <div class="dl-row"><dt>Time</dt><dd>{{ formatTimeRange(booking.start_time, booking.end_time) }}</dd></div>
+                <div class="dl-row"><dt>Duration</dt><dd>{{ booking.duration_hours }} h</dd></div>
+                <div class="dl-row"><dt>Guests</dt><dd>{{ Number(booking.expected_guests || 0).toLocaleString('en-PK') }}</dd></div>
+                <div class="dl-row"><dt>Event type</dt><dd>{{ humanize(booking.event_type) || '—' }}</dd></div>
+                <div class="dl-row"><dt>Days to event</dt><dd>{{ daysToEvent }}</dd></div>
+              </dl>
+              <div v-if="booking.special_requirements" class="mt-5">
+                <p class="form-label">Special requirements</p>
+                <p class="panel-sunken p-4 text-sm text-ink-secondary whitespace-pre-line">{{ booking.special_requirements }}</p>
+              </div>
             </div>
           </section>
 
           <!-- Pricing -->
           <section class="card">
-            <header class="px-5 py-4 border-b border-warm-200 dark:border-warm-700 flex items-center gap-2">
-              <AppIcon icon="credit-card" class="w-4 h-4 text-primary-600" />
-              <h2 class="font-semibold text-warm-900 dark:text-white">Pricing &amp; payment</h2>
-            </header>
-            <div class="p-5 text-sm space-y-2">
-              <div class="flex justify-between"><span class="text-warm-500">Base ({{ booking.expected_guests }} guests)</span><span>{{ formatPKR(booking.base_price) }}</span></div>
-              <div v-if="Number(booking.amenities_price) > 0" class="flex justify-between"><span class="text-warm-500">Amenities</span><span>{{ formatPKR(booking.amenities_price) }}</span></div>
-              <div class="flex justify-between"><span class="text-warm-500">Tax (5%)</span><span>{{ formatPKR(booking.tax_amount) }}</span></div>
-              <div class="flex justify-between pt-3 mt-1 border-t border-warm-200 dark:border-warm-700 font-semibold text-base">
-                <span>Total</span><span class="text-primary-600 dark:text-primary-400">{{ formatPKR(booking.total_amount) }}</span>
+            <div class="card-header"><h2 class="card-title">Price breakdown</h2></div>
+            <div class="card-body">
+              <dl>
+                <div class="dl-row"><dt>Base ({{ booking.expected_guests }} guests)</dt><dd>{{ formatPKR(booking.base_price) }}</dd></div>
+                <div v-if="Number(booking.amenities_price) > 0" class="dl-row"><dt>Amenities</dt><dd>{{ formatPKR(booking.amenities_price) }}</dd></div>
+                <div v-if="Number(booking.discount_amount) > 0" class="dl-row"><dt>Discount</dt><dd class="!text-success-text">− {{ formatPKR(booking.discount_amount) }}</dd></div>
+                <div class="dl-row"><dt>Tax</dt><dd>{{ formatPKR(booking.tax_amount) }}</dd></div>
+              </dl>
+              <div class="flex items-baseline justify-between gap-4 pt-3 mt-1 border-t border-line">
+                <span class="font-semibold text-ink">Total</span>
+                <span class="text-xl font-display font-bold text-ink num">{{ formatPKR(booking.total_amount) }}</span>
               </div>
-              <p v-if="booking.payment_status === 'paid'" class="text-xs text-warm-500 pt-2">
-                Paid {{ formatDate(booking.paid_at) }}<span v-if="booking.payment?.transaction_id"> · Txn {{ booking.payment.transaction_id }}</span>
-              </p>
-              <p v-else-if="booking.status === 'confirmed'" class="text-xs text-warm-500 pt-2">The customer has been asked to pay via PayFast.</p>
+            </div>
+          </section>
+
+          <!-- Payment -->
+          <section class="card">
+            <div class="card-header">
+              <h2 class="card-title">Payment</h2>
+              <span v-if="booking.payment" :class="statusBadgeClass(paymentStatus(booking.payment.status))">{{ statusLabel(paymentStatus(booking.payment.status)) }}</span>
+            </div>
+            <div class="card-body">
+              <dl v-if="booking.payment">
+                <div class="dl-row"><dt>Amount</dt><dd>{{ formatPKR(booking.payment.amount) }}</dd></div>
+                <div class="dl-row"><dt>Method</dt><dd>{{ paymentMethod(booking.payment.payment_method) }}</dd></div>
+                <div v-if="booking.payment.transaction_id" class="dl-row"><dt>Transaction</dt><dd class="ref break-all">{{ booking.payment.transaction_id }}</dd></div>
+                <div v-if="booking.payment.payment_reference" class="dl-row"><dt>Reference</dt><dd class="ref break-all">{{ booking.payment.payment_reference }}</dd></div>
+                <div v-if="booking.payment.paid_at" class="dl-row"><dt>Paid on</dt><dd>{{ formatDateTime(booking.payment.paid_at) }}</dd></div>
+                <div v-if="booking.payment.refunded_at" class="dl-row"><dt>Refunded on</dt><dd>{{ formatDateTime(booking.payment.refunded_at) }}</dd></div>
+              </dl>
+              <div v-else class="flex items-start gap-3 text-sm text-ink-secondary">
+                <span class="icon-chip icon-chip-sm tone-neutral"><AppIcon icon="credit-card" class="w-4 h-4" /></span>
+                <p v-if="booking.status === 'confirmed'">No payment yet. The customer has been asked to pay online.</p>
+                <p v-else-if="booking.status === 'pending'">The customer can pay once you confirm this booking.</p>
+                <p v-else>No payment recorded for this booking.</p>
+              </div>
             </div>
           </section>
         </div>
 
-        <!-- Customer -->
-        <aside class="space-y-6">
-          <section class="card p-5">
-            <h2 class="font-semibold text-warm-900 dark:text-white mb-4">Customer</h2>
-            <div class="flex items-center gap-3">
-              <span class="w-11 h-11 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 flex items-center justify-center font-semibold">
-                {{ initials(booking.client?.name) }}
-              </span>
-              <div class="min-w-0">
-                <p class="font-medium text-warm-900 dark:text-white truncate">{{ booking.client?.name }}</p>
-                <a v-if="booking.client?.email" :href="`mailto:${booking.client.email}`" class="text-xs text-warm-500 hover:text-primary-600 truncate block">{{ booking.client.email }}</a>
+        <aside class="space-y-6 min-w-0">
+          <!-- Customer -->
+          <section class="card">
+            <div class="card-header"><h2 class="card-title">Customer</h2></div>
+            <div class="card-body">
+              <div class="flex items-center gap-3">
+                <img v-if="booking.client?.avatar" :src="getStorageUrl(booking.client.avatar)" alt="" class="w-11 h-11 rounded-full object-cover" />
+                <span v-else class="avatar w-11 h-11">{{ initials(booking.client?.name) }}</span>
+                <div class="min-w-0">
+                  <p class="font-medium text-ink truncate">{{ booking.client?.name }}</p>
+                  <p v-if="booking.client?.created_at" class="text-xs text-ink-muted">Customer since {{ formatDate(booking.client.created_at, { month: 'short', year: 'numeric' }) }}</p>
+                </div>
               </div>
+              <ul class="mt-4 space-y-2 text-sm">
+                <li v-if="booking.client?.email">
+                  <a :href="`mailto:${booking.client.email}`" class="flex items-center gap-2 text-ink-secondary hover:text-brand-text min-w-0">
+                    <AppIcon icon="mail" class="w-4 h-4 shrink-0" /><span class="truncate">{{ booking.client.email }}</span>
+                  </a>
+                </li>
+                <li v-if="booking.client?.phone">
+                  <a :href="`tel:${booking.client.phone}`" class="flex items-center gap-2 text-ink-secondary hover:text-brand-text">
+                    <AppIcon icon="phone" class="w-4 h-4 shrink-0" />{{ booking.client.phone }}
+                  </a>
+                </li>
+              </ul>
             </div>
-            <a v-if="booking.client?.phone" :href="`tel:${booking.client.phone}`" class="mt-3 flex items-center gap-2 text-sm text-warm-600 dark:text-warm-300 hover:text-primary-600">
-              <AppIcon icon="phone" class="w-4 h-4" />{{ booking.client.phone }}
-            </a>
-            <RouterLink :to="{ path: '/shop/messages', query: { with: booking.client_id } }" class="btn-outline btn-sm w-full mt-4">
-              <AppIcon icon="message" class="w-4 h-4" /> Message customer
-            </RouterLink>
+          </section>
+
+          <!-- Timeline -->
+          <section class="card">
+            <div class="card-header"><h2 class="card-title">Timeline</h2></div>
+            <div class="card-body">
+              <ol class="relative">
+                <li v-for="(step, i) in timeline" :key="step.key" class="relative pl-8 pb-5 last:pb-0">
+                  <span v-if="i < timeline.length - 1" class="absolute left-[11px] top-6 bottom-0 w-px bg-line" aria-hidden="true" />
+                  <span
+                    class="absolute left-0 top-0.5 w-6 h-6 rounded-full flex items-center justify-center"
+                    :class="step.done ? TONE[step.tone] : 'border border-dashed border-line-strong bg-surface text-ink-muted'"
+                    aria-hidden="true"
+                  >
+                    <AppIcon :icon="step.icon" class="w-3.5 h-3.5" />
+                  </span>
+                  <p class="text-sm font-medium" :class="step.done ? 'text-ink' : 'text-ink-muted'">{{ step.label }}</p>
+                  <p class="text-xs text-ink-muted">{{ step.when }}</p>
+                </li>
+              </ol>
+            </div>
           </section>
         </aside>
       </div>
     </template>
 
     <VuexyModal v-model:visible="showReject" title="Reject booking" width="28rem">
-      <label class="form-label">Reason <span class="text-coral">*</span></label>
-      <textarea v-model="rejectReason" class="form-input" rows="3" placeholder="Let the customer know why…" />
-      <p v-if="rejectError" class="text-xs text-coral mt-1.5">{{ rejectError }}</p>
+      <label for="reject-reason" class="form-label">Reason <span class="req">*</span></label>
+      <textarea id="reject-reason" v-model="rejectReason" class="form-textarea" rows="3" placeholder="Let the customer know why…" :aria-invalid="!!rejectError" />
+      <p v-if="rejectError" class="form-error">{{ rejectError }}</p>
+      <p v-else class="form-hint">The customer will see this reason.</p>
       <template #footer>
-        <button class="btn-ghost" @click="showReject = false">Cancel</button>
-        <button class="btn-danger" :disabled="acting" @click="rejectBooking">Reject booking</button>
+        <div class="flex justify-end gap-2">
+          <button class="btn-secondary" @click="showReject = false">Cancel</button>
+          <button class="btn-danger" :disabled="acting" @click="rejectBooking">Reject booking</button>
+        </div>
       </template>
     </VuexyModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
-import { formatDate, formatPKR, formatTimeRange } from '@/lib/format'
+import { formatDate, formatPKR, formatTimeRange, formatAddress } from '@/lib/format'
+import { getStorageUrl } from '@/lib/storageUrl'
+import { statusBadgeClass, statusLabel } from '@/lib/status'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import VuexyModal from '@/components/ui/VuexyModal.vue'
-import { statusBadgeClass } from '@/lib/status'
+import { humanize, initials } from '@/components/dashboard/metrics'
 
 const route = useRoute()
 const booking = ref<any>(null)
@@ -173,6 +256,12 @@ async function confirmBooking() {
   }
 }
 
+function openReject() {
+  rejectReason.value = ''
+  rejectError.value = ''
+  showReject.value = true
+}
+
 async function rejectBooking() {
   if (!rejectReason.value.trim()) { rejectError.value = 'Please give a reason.'; return }
   acting.value = true
@@ -189,13 +278,71 @@ async function rejectBooking() {
   }
 }
 
-function statusBadge(s: string) {
-  return statusBadgeClass(s)
+const venueImage = computed(() => {
+  const v = booking.value?.venue
+  if (!v) return ''
+  const img = (v.images || []).find((i: any) => i.is_primary) || (v.images || [])[0]
+  if (img?.url) return img.url
+  if (img?.path) return getStorageUrl(img.path)
+  return v.thumbnail ? getStorageUrl(v.thumbnail) : ''
+})
+
+const daysToEvent = computed(() => {
+  const d = booking.value?.event_date
+  if (!d) return '—'
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0)
+  const days = Math.round((new Date(String(d).slice(0, 10) + 'T00:00:00').getTime() - t0.getTime()) / 86_400_000)
+  if (days === 0) return 'Today'
+  return days > 0 ? `In ${days} day${days === 1 ? '' : 's'}` : `${-days} day${days === -1 ? '' : 's'} ago`
+})
+
+function formatDateTime(d?: string | null) {
+  if (!d) return ''
+  return new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
-function initials(name?: string) {
-  return (name || '?').split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
+function paymentStatus(s?: string) {
+  return s === 'completed' ? 'paid' : s || ''
 }
+
+function paymentMethod(m?: string) {
+  if (!m) return '—'
+  if (/pay.?d?_?fast/i.test(m)) return 'PayFast (online)'
+  return humanize(m)
+}
+
+const TONE: Record<string, string> = { brand: 'tone-brand', success: 'tone-success', warning: 'tone-warning', danger: 'tone-danger', info: 'tone-info', neutral: 'tone-neutral' }
+
+interface Step { key: string; label: string; when: string; done: boolean; icon: string; tone: string }
+const timeline = computed<Step[]>(() => {
+  const b = booking.value
+  if (!b) return []
+  const steps: Step[] = [{ key: 'req', label: 'Booking requested', when: formatDateTime(b.created_at), done: true, icon: 'file-text', tone: 'neutral' }]
+  if (b.status === 'rejected') {
+    steps.push({ key: 'rej', label: 'Rejected', when: formatDateTime(b.updated_at), done: true, icon: 'x', tone: 'danger' })
+    return steps
+  }
+  steps.push(b.confirmed_at
+    ? { key: 'conf', label: 'Confirmed by you', when: formatDateTime(b.confirmed_at), done: true, icon: 'check', tone: 'success' }
+    : { key: 'conf', label: 'Confirm booking', when: b.status === 'pending' ? 'Waiting for you' : '—', done: false, icon: 'check', tone: 'success' })
+  const paidAt = b.payment?.paid_at || b.paid_at
+  if (b.status !== 'cancelled' || paidAt) {
+    steps.push(paidAt
+      ? { key: 'paid', label: 'Payment received', when: formatDateTime(paidAt), done: true, icon: 'wallet', tone: 'info' }
+      : { key: 'paid', label: 'Payment', when: b.status === 'confirmed' ? 'Waiting for the customer' : 'After confirmation', done: false, icon: 'wallet', tone: 'info' })
+  }
+  if (b.status === 'cancelled') {
+    steps.push({ key: 'can', label: 'Cancelled', when: formatDateTime(b.cancelled_at || b.updated_at), done: true, icon: 'ban', tone: 'neutral' })
+    if (b.payment?.refunded_at || b.payment_status === 'refunded') {
+      steps.push({ key: 'ref', label: 'Refunded', when: formatDateTime(b.payment?.refunded_at), done: true, icon: 'refresh', tone: 'info' })
+    }
+    return steps
+  }
+  const eventPast = String(b.event_date).slice(0, 10) < new Date().toISOString().slice(0, 10)
+  steps.push({ key: 'event', label: 'Event day', when: formatDate(b.event_date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }), done: eventPast || b.status === 'completed', icon: 'calendar-event', tone: 'brand' })
+  steps.push({ key: 'done', label: 'Completed', when: b.status === 'completed' ? 'Event finished' : 'After the event', done: b.status === 'completed', icon: 'circle-check', tone: 'success' })
+  return steps
+})
 
 onMounted(load)
 </script>
