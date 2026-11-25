@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen overflow-hidden flex items-center justify-center bg-warm-100 dark:bg-warm-950 p-4 sm:p-6">
+  <div class="fixed inset-0 overflow-hidden overscroll-none flex items-center justify-center bg-warm-100 dark:bg-warm-950 p-3 sm:p-6">
     <div class="w-full h-full max-h-full flex rounded-3xl overflow-hidden shadow-elevated bg-warm-50 dark:bg-warm-900">
       <!-- Left: Brand Panel (desktop) -->
       <div class="hidden lg:flex lg:w-[58%] xl:w-[66%] items-center justify-center relative bg-gradient-to-br from-primary-800 via-primary-700 to-primary-600 overflow-hidden rounded-3xl m-2">
@@ -31,8 +31,8 @@
       </div>
 
       <!-- Right: Form -->
-      <div class="flex-1 flex items-center justify-center p-6 sm:p-12 overflow-hidden">
-        <div class="w-full max-w-[400px]">
+      <div class="flex-1 flex overflow-y-auto overscroll-contain p-4 sm:p-12">
+        <div class="w-full max-w-[400px] m-auto">
         <div class="lg:hidden flex items-center gap-2 mb-8">
           <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center">
             <span class="text-white font-bold text-sm">EG</span>
