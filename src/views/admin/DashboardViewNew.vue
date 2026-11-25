@@ -296,6 +296,7 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import LineChart from '@/components/charts/LineChart.vue'
 import BarChart from '@/components/charts/BarChart.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
+import { statusBadgeClass } from '@/lib/status'
 
 const authStore = useAuthStore()
 const loading = ref(true)
@@ -353,8 +354,7 @@ function formatRevenue(v: number) {
 }
 
 function statusClass(s: string) {
-  const m: Record<string, string> = { pending: 'badge-accent', confirmed: 'badge-primary', completed: 'badge-primary', cancelled: 'badge-coral', rejected: 'badge-coral' }
-  return m[s] || 'badge-warm'
+  return statusBadgeClass(s)
 }
 
 function storeStatusClass(s: string) {

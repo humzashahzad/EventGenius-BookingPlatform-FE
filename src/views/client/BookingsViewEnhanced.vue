@@ -149,6 +149,7 @@ import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { getStorageUrl } from '@/lib/storageUrl'
 import { useTopBarActionsStore } from '@/stores/topBarActions'
+import { statusBadgeClass } from '@/lib/status'
 
 const bookings = ref<any[]>([])
 const loading = ref(false)
@@ -239,14 +240,7 @@ function getImageUrl(path: string) {
 }
 
 function statusClass(s: string) {
-  const m: Record<string, string> = {
-    pending: 'badge-accent',
-    confirmed: 'badge-primary',
-    completed: 'badge-primary',
-    cancelled: 'badge-coral',
-    rejected: 'badge-coral',
-  }
-  return m[s] || 'badge-warm'
+  return statusBadgeClass(s)
 }
 
 onMounted(() => {

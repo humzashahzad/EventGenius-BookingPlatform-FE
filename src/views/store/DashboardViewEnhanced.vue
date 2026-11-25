@@ -230,6 +230,7 @@ import api from '@/lib/axios'
 import LineChart from '@/components/charts/LineChart.vue'
 import BarChart from '@/components/charts/BarChart.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import { statusBadgeClass } from '@/lib/status'
 
 const loading = ref(true)
 const data = ref<any>(null)
@@ -259,14 +260,7 @@ function formatRevenue(v: number) {
 }
 
 function statusClass(s: string) {
-  const m: Record<string, string> = {
-    pending: 'badge-accent',
-    confirmed: 'badge-primary',
-    completed: 'badge-primary',
-    cancelled: 'badge-coral',
-    rejected: 'badge-coral',
-  }
-  return m[s] || 'badge-warm'
+  return statusBadgeClass(s)
 }
 
 onMounted(load)

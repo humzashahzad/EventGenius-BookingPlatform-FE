@@ -113,6 +113,7 @@ import api from '@/lib/axios'
 import { useTopBarActionsStore } from '@/stores/topBarActions'
 import VuexyModal from '@/components/ui/VuexyModal.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import { statusBadgeClass } from '@/lib/status'
 
 const bookings    = ref<any[]>([])
 const loading     = ref(false)
@@ -172,14 +173,7 @@ function formatDate(d: string) {
 }
 
 function statusClass(s: string) {
-  const m: Record<string, string> = {
-    pending: 'badge-accent',
-    confirmed: 'badge-primary',
-    completed: 'badge-primary',
-    cancelled: 'badge-coral',
-    rejected: 'badge-coral',
-  }
-  return m[s] || 'badge-warm'
+  return statusBadgeClass(s)
 }
 
 onMounted(() => {

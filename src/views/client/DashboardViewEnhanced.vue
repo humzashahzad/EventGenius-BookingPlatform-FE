@@ -221,6 +221,7 @@ import { getStorageUrl } from '@/lib/storageUrl'
 import { useAuthStore } from '@/stores/auth'
 import BarChart from '@/components/charts/BarChart.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import { statusBadgeClass } from '@/lib/status'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -283,14 +284,7 @@ function getImageUrl(path: string) {
 }
 
 function statusClass(s: string) {
-  const map: Record<string, string> = {
-    pending: 'badge-accent',
-    confirmed: 'badge-primary',
-    completed: 'badge-primary',
-    cancelled: 'badge-coral',
-    rejected: 'badge-coral',
-  }
-  return map[s] || 'badge-warm'
+  return statusBadgeClass(s)
 }
 
 onMounted(load)

@@ -246,6 +246,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import ReviewForm from '@/components/reviews/ReviewForm.vue'
+import { statusBadgeClass } from '@/lib/status'
 
 const route = useRoute()
 const router = useRouter()
@@ -277,14 +278,7 @@ function formatDate(d: string) {
 }
 
 function statusClass(s: string) {
-  const m: Record<string, string> = {
-    pending: 'badge-accent',
-    confirmed: 'badge-primary',
-    completed: 'badge-primary',
-    cancelled: 'badge-coral',
-    rejected: 'badge-coral',
-  }
-  return m[s] || 'badge-warm'
+  return statusBadgeClass(s)
 }
 
 onMounted(load)

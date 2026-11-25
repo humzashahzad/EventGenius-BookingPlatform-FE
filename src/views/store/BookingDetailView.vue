@@ -136,6 +136,7 @@ import api from '@/lib/axios'
 import { formatDate, formatPKR, formatTimeRange } from '@/lib/format'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import VuexyModal from '@/components/ui/VuexyModal.vue'
+import { statusBadgeClass } from '@/lib/status'
 
 const route = useRoute()
 const booking = ref<any>(null)
@@ -189,7 +190,7 @@ async function rejectBooking() {
 }
 
 function statusBadge(s: string) {
-  return ({ pending: 'badge-warning', confirmed: 'badge-success', completed: 'badge-info', cancelled: 'badge-warm', rejected: 'badge-danger' } as Record<string, string>)[s] || 'badge-warm'
+  return statusBadgeClass(s)
 }
 
 function initials(name?: string) {
