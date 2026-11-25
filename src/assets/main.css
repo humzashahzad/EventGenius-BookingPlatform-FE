@@ -493,13 +493,13 @@
   .slider-box { position: relative; display: flex; align-items: center; height: var(--control-h-sm); }
   .slider-box.is-disabled { opacity: .5; }
   .slider-track { position: absolute; left: 9px; right: 9px; height: 6px; border-radius: 9999px; background: var(--surface-sunken); box-shadow: inset 0 0 0 1px var(--line); }
-  .slider-fill { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 9999px; background: var(--brand-strong); }
+  .slider-fill { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 9999px; background: var(--slider-color, var(--brand-strong)); }
   .slider-input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
   .slider-input:disabled { cursor: not-allowed; }
   .slider-input::-webkit-slider-runnable-track { height: 6px; background: transparent; }
   .slider-input::-moz-range-track { height: 6px; background: transparent; }
-  .slider-input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 9999px; background: var(--surface); border: 2px solid var(--brand-strong); box-shadow: var(--shadow-sm); }
-  .slider-input::-moz-range-thumb { width: 14px; height: 14px; border-radius: 9999px; background: var(--surface); border: 2px solid var(--brand-strong); box-shadow: var(--shadow-sm); }
+  .slider-input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 9999px; background: var(--surface); border: 2px solid var(--slider-color, var(--brand-strong)); box-shadow: var(--shadow-sm); }
+  .slider-input::-moz-range-thumb { width: 14px; height: 14px; border-radius: 9999px; background: var(--surface); border: 2px solid var(--slider-color, var(--brand-strong)); box-shadow: var(--shadow-sm); }
   .slider-input:focus-visible { outline: none; }
   .slider-input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--focus-ring); }
   .slider-input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--focus-ring); }

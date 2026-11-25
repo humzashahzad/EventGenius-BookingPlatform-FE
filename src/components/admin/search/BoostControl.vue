@@ -23,8 +23,9 @@
     </div>
     <div class="flex items-center gap-1.5">
       <button v-for="q in quick" :key="q.label" type="button"
-        class="px-2 py-0.5 text-[11px] font-semibold rounded-md border transition-colors"
-        :class="venue.search_boost === q.value ? q.active : 'border-warm-200 text-ink-muted hover:bg-warm-50 dark:border-warm-600 dark:text-warm-400 dark:hover:bg-warm-700'"
+        class="btn-secondary btn-sm !px-2.5 !text-xs"
+        :class="venue.search_boost === q.value && q.active"
+        :aria-pressed="venue.search_boost === q.value"
         :disabled="state?.status === 'saving'"
         @click="emit('set', q.value)"
       >{{ q.label }}</button>
@@ -44,9 +45,9 @@ defineProps<{ venue: { name: string; search_boost: number }; state?: BoostState 
 const emit = defineEmits<{ set: [value: number]; preview: [value: number] }>()
 
 const quick = [
-  { label: 'Bury', value: -50, active: 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300' },
-  { label: 'Neutral', value: 0, active: 'border-warm-400 bg-warm-100 text-warm-700 dark:border-warm-500 dark:bg-warm-700 dark:text-warm-200' },
-  { label: 'Boost', value: 50, active: 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-700 dark:bg-primary-900/30 dark:text-primary-300' },
+  { label: 'Bury', value: -50, active: '!border-danger-line !bg-danger-soft !text-danger-text' },
+  { label: 'Neutral', value: 0, active: '!border-neutral-line !bg-neutral-soft !text-neutral-text' },
+  { label: 'Boost', value: 50, active: '!border-success-line !bg-success-soft !text-success-text' },
 ]
 </script>
 

@@ -1,11 +1,12 @@
 <template>
-  <div :class="['slider', $attrs.class]">
+  <div :class="['slider', split.wrapper.class]" :style="[split.wrapper.style, color ? { '--slider-color': color } : {}]">
     <div v-if="showValue || $slots.value" class="flex items-baseline justify-between gap-2 mb-1">
       <slot name="value" :value="model"><span /><output :for="ctl.id.value" class="text-sm font-semibold text-ink num">{{ fmt(model) }}</output></slot>
     </div>
     <div class="slider-box" :class="ctl.disabled.value && 'is-disabled'">
       <div class="slider-track" aria-hidden="true"><div class="slider-fill" :style="{ width: `${pct}%` }" /></div>
       <input
+        v-bind="split.input"
         :id="ctl.id.value"
         type="range"
         class="slider-input"
@@ -28,8 +29,8 @@
 
 <script setup lang="ts">
 /** Single-value slider on a native range input (keyboard + screen readers built in). */
-import { computed } from 'vue'
-import { useControl } from './useControl'
+import { computed, useAttrs } from 'vue'
+import { splitAttrs, useControl } from './useControl'
 
 defineOptions({ inheritAttrs: false })
 const props = withDefaults(defineProps<{
@@ -40,13 +41,17 @@ const props = withDefaults(defineProps<{
   showLimits?: boolean
   format?: (v: number) => string
   ariaLabel?: string
+  /** Fill/handle colour (CSS colour), e.g. a chart series colour. Defaults to the brand. */
+  color?: string
   id?: string
   disabled?: boolean
   describedby?: string
-}>(), { min: 0, max: 100, step: 1, format: undefined, ariaLabel: undefined })
+}>(), { min: 0, max: 100, step: 1, format: undefined, ariaLabel: undefined, color: undefined })
 const model = defineModel<number>({ default: 0 })
 const emit = defineEmits<{ change: [value: number] }>()
 const ctl = useControl(props)
+const attrs = useAttrs()
+const split = computed(() => splitAttrs(attrs))
 const fmt = (v: number) => (props.format ? props.format(v) : Number(v).toLocaleString('en-PK'))
 const pct = computed(() => ((Math.min(props.max, Math.max(props.min, Number(model.value))) - props.min) / (props.max - props.min || 1)) * 100)
 </script>
