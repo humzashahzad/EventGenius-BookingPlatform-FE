@@ -297,6 +297,18 @@ const router = createRouter({
       component: () => import('@/views/admin/SearchRankingView.vue'),
       meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
+    // ── Internal form-component showcase (not linked anywhere) ───────────
+    // Open in development at /dev/forms; on a deployed build it is only
+    // reachable by a signed-in admin at /support/dev/forms.
+    {
+      path: '/support/dev/forms',
+      name: 'support-dev-forms',
+      component: () => import('@/views/dev/FormsShowcaseView.vue'),
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
+    },
+    import.meta.env.DEV
+      ? { path: '/dev/forms', name: 'dev-forms', component: () => import('@/views/dev/FormsShowcaseView.vue'), meta: { layout: 'auth' } }
+      : { path: '/dev/forms', redirect: '/support/dev/forms' },
     // ── Catch-all ─────────────────────────────────────────────────────────
     {
       path: '/:pathMatch(.*)*',
