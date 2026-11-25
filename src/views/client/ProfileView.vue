@@ -1,139 +1,166 @@
 <template>
-  <div class="content-container">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+  <div class="space-y-6">
+    <header class="page-header !mb-0">
       <div>
-        <h1 class="text-2xl font-bold text-warm-900 tracking-tight dark:text-white">My Profile</h1>
-        <p class="text-sm text-warm-500 mt-1">Manage your personal information and account security.</p>
+        <h1 class="page-title">My profile</h1>
+        <p class="page-subtitle">Manage your personal details, photo and password.</p>
       </div>
-      <button @click="saveProfile" :disabled="saving" class="btn-primary inline-flex items-center gap-2">
-        <AppIcon v-if="saving" icon="loader" class="w-4 h-4 animate-spin" />
-        <AppIcon v-else icon="check" class="w-4 h-4" />
-        {{ saving ? 'Saving...' : 'Save Changes' }}
-      </button>
+    </header>
+
+    <!-- Loading -->
+    <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-busy="true" aria-label="Loading profile">
+      <div class="card h-64 skeleton"></div>
+      <div class="lg:col-span-2 space-y-6"><div class="card h-72 skeleton"></div><div class="card h-64 skeleton"></div></div>
     </div>
 
-    <!-- Alerts -->
-    <transition name="fade">
-      <div v-if="successMsg" class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/30 mb-6">
-        <AppIcon icon="circle-check" class="w-5 h-5 text-primary-600 flex-shrink-0" />
-        <span class="text-sm font-medium text-primary-700 dark:text-primary-400">{{ successMsg }}</span>
+    <div v-else-if="loadError" class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="alert-triangle" class="w-5 h-5" /></div>
+        <p class="empty-state-title">We couldn't load your profile</p>
+        <p class="empty-state-desc">{{ loadError }}</p>
+        <div class="empty-state-actions"><button type="button" class="btn-primary" @click="loadProfile"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button></div>
       </div>
-    </transition>
-    <transition name="fade">
-      <div v-if="errorMsg" class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-coral/10 border border-coral/20 mb-6">
-        <AppIcon icon="alert-circle" class="w-5 h-5 text-coral flex-shrink-0" />
-        <span class="text-sm font-medium text-coral">{{ errorMsg }}</span>
-      </div>
-    </transition>
+    </div>
 
-    <form @submit.prevent="saveProfile" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <!-- Left: Avatar card -->
-      <div class="lg:col-span-1 space-y-6">
-        <div class="card">
-          <div class="p-6 text-center">
-            <div class="mx-auto mb-4 w-24 h-24">
-              <img v-if="avatarUrl" :src="avatarUrl" alt="Profile" class="rounded-2xl w-full h-full object-cover shadow-soft" />
-              <div v-else class="rounded-2xl w-full h-full flex items-center justify-center bg-primary-100 dark:bg-primary-900/30">
-                <span class="text-3xl font-bold text-primary-600">{{ userInitials }}</span>
-              </div>
+    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <!-- Summary -->
+      <aside class="card lg:sticky lg:top-24">
+        <div class="card-body flex flex-col items-center text-center">
+          <div class="w-24 h-24 rounded-full overflow-hidden border border-line bg-brand-soft flex items-center justify-center">
+            <img v-if="avatarUrl" :src="avatarUrl" alt="" class="w-full h-full object-cover" />
+            <span v-else class="font-display text-3xl font-bold text-brand-text" aria-hidden="true">{{ userInitials }}</span>
+          </div>
+          <p class="mt-3 text-lg font-semibold text-ink break-words max-w-full">{{ saved.name || 'Your name' }}</p>
+          <p class="text-sm text-ink-muted break-all">{{ saved.email }}</p>
+          <span class="badge-confirmed mt-3">Customer account</span>
+        </div>
+        <dl class="border-t border-line px-5 py-2 text-sm">
+          <div class="dl-row"><dt>Phone</dt><dd>{{ saved.phone || 'Not set' }}</dd></div>
+          <div v-if="memberSince" class="dl-row"><dt>Member since</dt><dd>{{ memberSince }}</dd></div>
+        </dl>
+      </aside>
+
+      <div class="lg:col-span-2 space-y-6 min-w-0">
+        <!-- Personal info -->
+        <section class="card" aria-labelledby="personal-title">
+          <div class="card-header">
+            <div>
+              <h2 id="personal-title" class="card-title">Personal information</h2>
+              <p class="card-subtitle">Venues see your name and phone on your bookings.</p>
             </div>
+          </div>
+          <form class="card-body space-y-5" novalidate @submit.prevent="savePersonal">
             <ProfileAvatarUpload :current-avatar="authStore.user?.avatar" @update="onAvatarUpdate" />
-            <div class="mt-4">
-              <h3 class="text-lg font-semibold text-warm-900 mb-1 dark:text-white">{{ form.name || 'Your Name' }}</h3>
-              <p class="text-sm text-warm-500 mb-3">{{ form.email || authStore.user?.email }}</p>
-              <span class="badge-primary capitalize">{{ authStore.user?.role?.replace('_', ' ') || 'Client' }}</span>
-            </div>
-          </div>
-        </div>
 
-        <!-- Quick Info -->
-        <div class="card">
-          <div class="p-5">
-            <p class="text-xs font-semibold uppercase text-warm-400 tracking-wider mb-4">Quick Info</p>
-            <div class="space-y-3">
-              <div class="flex items-center gap-3">
-                <AppIcon icon="mail" class="w-4 h-4 text-warm-400 flex-shrink-0" />
-                <span class="text-sm text-warm-700 truncate dark:text-warm-200">{{ form.email || 'No email' }}</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <AppIcon icon="phone" class="w-4 h-4 text-warm-400 flex-shrink-0" />
-                <span class="text-sm text-warm-700 dark:text-warm-200">{{ form.phone || 'No phone set' }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Form sections -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Personal Info -->
-        <div class="card">
-          <div class="flex items-center gap-3 px-5 py-4 border-b border-warm-100 dark:border-warm-700">
-            <div class="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <AppIcon icon="user" class="w-4 h-4 text-primary-600" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-100">Personal Information</h2>
-          </div>
-          <div class="p-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label class="form-label">Full Name</label>
-                <input v-model="form.name" type="text" class="form-input" placeholder="Your full name" />
+                <label for="profile-name" class="form-label">Full name <span class="req">*</span></label>
+                <input
+                  id="profile-name"
+                  v-model="form.name"
+                  type="text"
+                  class="form-input"
+                  autocomplete="name"
+                  placeholder="Your full name"
+                  :aria-invalid="!!personalErrors.name"
+                  :aria-describedby="personalErrors.name ? 'profile-name-error' : undefined"
+                  @blur="touched.name = true"
+                />
+                <p v-if="personalErrors.name" id="profile-name-error" class="form-error">{{ personalErrors.name }}</p>
               </div>
               <div>
-                <label class="form-label">Phone Number</label>
-                <input v-model="form.phone" type="tel" class="form-input" placeholder="+92 300 0000000" />
+                <label for="profile-phone" class="form-label">Phone number</label>
+                <input
+                  id="profile-phone"
+                  v-model="form.phone"
+                  type="tel"
+                  class="form-input"
+                  autocomplete="tel"
+                  placeholder="0300 1234567"
+                  :aria-invalid="!!personalErrors.phone"
+                  :aria-describedby="personalErrors.phone ? 'profile-phone-error' : 'profile-phone-hint'"
+                  @blur="touched.phone = true"
+                />
+                <p v-if="personalErrors.phone" id="profile-phone-error" class="form-error">{{ personalErrors.phone }}</p>
+                <p v-else id="profile-phone-hint" class="form-hint">For example 0300 1234567 or +92 300 1234567.</p>
               </div>
               <div class="sm:col-span-2">
-                <label class="form-label">Email Address</label>
-                <input :value="form.email" type="email" class="form-input bg-warm-100 dark:bg-warm-700 cursor-not-allowed opacity-70" disabled placeholder="your@email.com" />
-                <p class="text-xs text-warm-400 dark:text-warm-500 mt-1">Email cannot be changed.</p>
+                <label for="profile-email" class="form-label">Email address</label>
+                <input id="profile-email" :value="form.email" type="email" class="form-input !bg-surface-sunken !text-ink-muted cursor-not-allowed" disabled aria-describedby="profile-email-hint" />
+                <p id="profile-email-hint" class="form-hint">Your sign-in email can't be changed. Contact support if you need to update it.</p>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Change Password -->
-        <div class="card">
-          <div class="flex items-center justify-between px-5 py-4 border-b border-warm-100 dark:border-warm-700">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center">
-                <AppIcon icon="lock" class="w-4 h-4 text-accent" />
-              </div>
-              <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-100">Change Password</h2>
+            <div v-if="personalMsg" :class="personalMsg.ok ? 'alert-success' : 'alert-danger'" role="status">
+              <AppIcon :icon="personalMsg.ok ? 'circle-check' : 'alert-circle'" class="w-5 h-5 shrink-0" />
+              <p>{{ personalMsg.text }}</p>
             </div>
-            <span class="text-xs text-warm-400">Leave blank to keep current password</span>
+
+            <div class="flex flex-wrap items-center gap-3 pt-1">
+              <button type="submit" class="btn-primary" :disabled="savingPersonal || !personalDirty">
+                <AppIcon :icon="savingPersonal ? 'loader' : 'check'" :class="savingPersonal ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
+                {{ savingPersonal ? 'Saving…' : 'Save changes' }}
+              </button>
+              <button v-if="personalDirty" type="button" class="btn-ghost" @click="resetPersonal">Discard</button>
+              <span v-if="!personalDirty && !personalMsg" class="text-sm text-ink-muted">No unsaved changes</span>
+            </div>
+          </form>
+        </section>
+
+        <!-- Password -->
+        <section class="card" aria-labelledby="password-title">
+          <div class="card-header">
+            <div>
+              <h2 id="password-title" class="card-title">Change password</h2>
+              <p class="card-subtitle">Use at least 8 characters with a mix of letters, numbers and symbols.</p>
+            </div>
+            <span class="icon-chip icon-chip-sm tone-neutral"><AppIcon icon="lock" class="w-4 h-4" /></span>
           </div>
-          <div class="p-5">
+          <form class="card-body space-y-5" novalidate @submit.prevent="savePassword">
+            <!-- Hidden username helps password managers pair the new password with this account. -->
+            <input type="text" name="username" :value="form.email" autocomplete="username" hidden readonly tabindex="-1" aria-hidden="true" />
+            <PasswordField
+              id="current-password"
+              v-model="pw.current_password"
+              label="Current password"
+              autocomplete="current-password"
+              :error="pwErrors.current_password"
+              @blur="pwTouched.current = true"
+            />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div class="sm:col-span-2">
-                <label class="form-label">Current Password</label>
-                <input v-model="form.current_password" type="password" class="form-input" placeholder="Required to set a new password" autocomplete="current-password" :required="!!form.password" />
-              </div>
-              <div>
-                <label class="form-label">New Password</label>
-                <input v-model="form.password" type="password" class="form-input" placeholder="Enter new password" />
-              </div>
-              <div>
-                <label class="form-label">Confirm Password</label>
-                <input v-model="form.password_confirmation" type="password" class="form-input" placeholder="Repeat new password" />
-              </div>
+              <PasswordField
+                id="new-password"
+                v-model="pw.password"
+                label="New password"
+                autocomplete="new-password"
+                :error="pwErrors.password"
+                @blur="pwTouched.password = true"
+              >
+                <PasswordStrength :password="pw.password" />
+              </PasswordField>
+              <PasswordField
+                id="confirm-password"
+                v-model="pw.password_confirmation"
+                label="Confirm new password"
+                autocomplete="new-password"
+                :error="pwErrors.password_confirmation"
+                @blur="pwTouched.confirm = true"
+              />
             </div>
-            <!-- Password strength -->
-            <div v-if="form.password" class="mt-4">
-              <div class="flex items-center justify-between text-xs mb-1.5">
-                <span class="text-warm-500">Password strength</span>
-                <span :class="passwordStrength.color" class="font-medium">{{ passwordStrength.label }}</span>
-              </div>
-              <div class="h-1.5 bg-warm-100 rounded-full overflow-hidden dark:bg-warm-700">
-                <div class="h-full rounded-full transition-all duration-300" :class="passwordStrength.barColor" :style="{ width: passwordStrength.percent + '%' }"></div>
-              </div>
+
+            <div v-if="pwMsg" :class="pwMsg.ok ? 'alert-success' : 'alert-danger'" role="status">
+              <AppIcon :icon="pwMsg.ok ? 'circle-check' : 'alert-circle'" class="w-5 h-5 shrink-0" />
+              <p>{{ pwMsg.text }}</p>
             </div>
-          </div>
-        </div>
+
+            <button type="submit" class="btn-primary" :disabled="savingPassword || !pw.password">
+              <AppIcon :icon="savingPassword ? 'loader' : 'key'" :class="savingPassword ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
+              {{ savingPassword ? 'Updating…' : 'Update password' }}
+            </button>
+          </form>
+        </section>
       </div>
-    </form>
+    </div>
   </div>
 </template>
 
@@ -143,11 +170,14 @@ import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { useAuthStore } from '@/stores/auth'
 import ProfileAvatarUpload from '@/components/profile/AvatarUpload.vue'
+import PasswordField from '@/components/auth/PasswordField.vue'
+import PasswordStrength from '@/components/auth/PasswordStrength.vue'
 
 const authStore = useAuthStore()
 
 function getAvatarUrl(path: string | undefined): string | null {
   if (!path) return null
+  if (path.startsWith('http')) return path
   const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api\/?$/, '') || 'http://localhost:8000'
   const p = path.startsWith('/') ? path.slice(1) : path
   return p.startsWith('storage/') ? `${base}/${p}` : `${base}/storage/${p}`
@@ -158,73 +188,130 @@ const avatarUrl = computed(() => getAvatarUrl(authStore.user?.avatar))
 function onAvatarUpdate(_urlOrPath: string | null) {
   // Auth store already updated by AvatarUpload
 }
-const saving = ref(false)
-const successMsg = ref('')
-const errorMsg = ref('')
 
-const form = reactive({ name: '', email: '', phone: '', password: '', password_confirmation: '', current_password: '' })
+const loading = ref(true)
+const loadError = ref('')
+const createdAt = ref<string | null>(null)
+
+const saved = reactive({ name: '', email: '', phone: '' })
+const form = reactive({ name: '', email: '', phone: '' })
+const touched = reactive({ name: false, phone: false })
+const serverErrors = ref<Record<string, string[]>>({})
+const savingPersonal = ref(false)
+const personalMsg = ref<{ ok: boolean; text: string } | null>(null)
+
+const pw = reactive({ current_password: '', password: '', password_confirmation: '' })
+const pwTouched = reactive({ current: false, password: false, confirm: false, submit: false })
+const pwServerErrors = ref<Record<string, string[]>>({})
+const savingPassword = ref(false)
+const pwMsg = ref<{ ok: boolean; text: string } | null>(null)
 
 const userInitials = computed(() => {
-  const name = form.name || authStore.user?.name || ''
-  return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'ME'
+  const name = saved.name || authStore.user?.name || ''
+  return name.split(' ').filter(Boolean).map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'ME'
+})
+const memberSince = computed(() => createdAt.value ? new Date(createdAt.value).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '')
+
+const personalDirty = computed(() => form.name.trim() !== saved.name || form.phone.trim() !== saved.phone)
+
+const PHONE_RE = /^\+?[0-9][0-9\s-]{8,16}$/
+const personalErrors = computed(() => {
+  const e: Record<string, string> = {}
+  if (touched.name) {
+    if (!form.name.trim()) e.name = 'Enter your full name.'
+    else if (form.name.trim().length < 2) e.name = 'Name must be at least 2 characters.'
+  }
+  const phone = form.phone.trim()
+  if (touched.phone && phone && phone !== saved.phone && !PHONE_RE.test(phone)) e.phone = 'Enter a valid phone number, e.g. 0300 1234567.'
+  if (serverErrors.value.name) e.name = serverErrors.value.name[0]
+  if (serverErrors.value.phone) e.phone = serverErrors.value.phone[0]
+  return e
 })
 
-const passwordStrength = computed(() => {
-  const p = form.password
-  if (!p) return { label: '', color: '', barColor: '', percent: 0 }
-  let score = 0
-  if (p.length >= 8)  score++
-  if (p.length >= 12) score++
-  if (/[A-Z]/.test(p)) score++
-  if (/[0-9]/.test(p)) score++
-  if (/[^A-Za-z0-9]/.test(p)) score++
-  if (score <= 1) return { label: 'Weak', color: 'text-coral', barColor: 'bg-coral', percent: 20 }
-  if (score <= 2) return { label: 'Fair', color: 'text-accent', barColor: 'bg-accent', percent: 45 }
-  if (score <= 3) return { label: 'Good', color: 'text-primary-500', barColor: 'bg-primary-500', percent: 65 }
-  return { label: 'Strong', color: 'text-primary-600', barColor: 'bg-primary-600', percent: 100 }
+const pwErrors = computed(() => {
+  const e: Record<string, string> = {}
+  const t = pwTouched
+  if ((t.current || t.submit) && pw.password && !pw.current_password) e.current_password = 'Enter your current password.'
+  if ((t.password || t.submit) && pw.password && pw.password.length < 8) e.password = 'Use at least 8 characters.'
+  if ((t.confirm || t.submit) && pw.password_confirmation !== pw.password) e.password_confirmation = "Passwords don't match."
+  for (const k of ['current_password', 'password', 'password_confirmation']) {
+    if (pwServerErrors.value[k]) e[k] = pwServerErrors.value[k][0]
+  }
+  return e
 })
 
-async function saveProfile() {
-  saving.value = true
-  successMsg.value = ''
-  errorMsg.value = ''
+function resetPersonal() {
+  form.name = saved.name
+  form.phone = saved.phone
+  touched.name = touched.phone = false
+  serverErrors.value = {}
+}
+
+function applyUser(user: any) {
+  saved.name = user?.name || ''
+  saved.email = user?.email || ''
+  saved.phone = user?.phone || ''
+  form.name = saved.name
+  form.email = saved.email
+  form.phone = saved.phone
+  createdAt.value = user?.created_at || createdAt.value
+}
+
+async function savePersonal() {
+  touched.name = touched.phone = true
+  serverErrors.value = {}
+  personalMsg.value = null
+  if (Object.keys(personalErrors.value).length) return
+  savingPersonal.value = true
   try {
-    const payload: any = { name: form.name, email: form.email, phone: form.phone }
-    if (form.password) {
-      payload.password = form.password
-      payload.password_confirmation = form.password_confirmation
-      payload.current_password = form.current_password
-    }
-    const { data } = await api.put('/client/profile', payload)
+    const { data } = await api.put('/client/profile', { name: form.name.trim(), email: form.email, phone: form.phone.trim() })
     authStore.user = data.data
-    successMsg.value = 'Profile updated successfully!'
-    form.password = ''
-    form.password_confirmation = ''
-    form.current_password = ''
-    setTimeout(() => (successMsg.value = ''), 3500)
+    applyUser(data.data)
+    touched.name = touched.phone = false
+    personalMsg.value = { ok: true, text: 'Your details were saved.' }
+    setTimeout(() => { if (personalMsg.value?.ok) personalMsg.value = null }, 3500)
   } catch (e: any) {
-    errorMsg.value = e.response?.data?.message || 'Update failed. Please try again.'
-    setTimeout(() => (errorMsg.value = ''), 4000)
-  } finally { saving.value = false }
+    serverErrors.value = e.response?.data?.errors || {}
+    personalMsg.value = { ok: false, text: e.response?.data?.message || 'Update failed. Please try again.' }
+  } finally { savingPersonal.value = false }
 }
 
-onMounted(async () => {
-  const { data } = await api.get('/client/profile')
-  const user = data.data
-  form.name  = user.name
-  form.email = user.email
-  form.phone = user.phone || ''
-})
+async function savePassword() {
+  pwTouched.submit = true
+  pwServerErrors.value = {}
+  pwMsg.value = null
+  if (Object.keys(pwErrors.value).length) return
+  savingPassword.value = true
+  try {
+    const { data } = await api.put('/client/profile', {
+      name: saved.name,
+      email: saved.email,
+      phone: saved.phone,
+      password: pw.password,
+      password_confirmation: pw.password_confirmation,
+      current_password: pw.current_password,
+    })
+    authStore.user = data.data
+    pw.current_password = pw.password = pw.password_confirmation = ''
+    Object.assign(pwTouched, { current: false, password: false, confirm: false, submit: false })
+    pwMsg.value = { ok: true, text: 'Your password was updated.' }
+    setTimeout(() => { if (pwMsg.value?.ok) pwMsg.value = null }, 3500)
+  } catch (e: any) {
+    pwServerErrors.value = e.response?.data?.errors || {}
+    pwMsg.value = { ok: false, text: e.response?.data?.message || 'Could not update your password. Please try again.' }
+  } finally { savingPassword.value = false }
+}
+
+async function loadProfile() {
+  loading.value = true
+  loadError.value = ''
+  try {
+    const { data } = await api.get('/client/profile')
+    applyUser(data.data)
+  } catch (e: any) {
+    loadError.value = e?.response?.data?.message || 'Please check your connection and try again.'
+  } finally { loading.value = false }
+}
+
+onMounted(loadProfile)
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

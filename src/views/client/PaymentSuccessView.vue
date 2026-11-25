@@ -1,78 +1,76 @@
 <template>
-  <div class="content-container">
-    <div class="card max-w-xl mx-auto text-center py-10">
-      <div class="px-6">
+  <div class="max-w-xl mx-auto">
+    <section class="card overflow-hidden" aria-live="polite">
+      <div class="px-6 pt-8 pb-6 text-center">
         <!-- PAID (confirmed by PayFast ITN) -->
         <template v-if="state === 'paid'">
-          <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-            <AppIcon icon="check" class="w-10 h-10 text-primary-600" />
-          </div>
-          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Payment Successful!</h1>
-          <p class="text-sm text-warm-500 mb-8">PayFast has confirmed your payment. Your booking is now paid.</p>
+          <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success-text border border-success-line">
+            <AppIcon icon="check" class="w-7 h-7" />
+          </span>
+          <h1 class="mt-4 page-title">Payment successful</h1>
+          <p class="mt-1 text-sm text-ink-muted">PayFast has confirmed your payment. Your booking is now paid and your date is secured.</p>
         </template>
 
         <!-- CANCELLED / FAILED -->
         <template v-else-if="state === 'cancelled' || state === 'failed'">
-          <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-coral/10 flex items-center justify-center">
-            <AppIcon icon="x" class="w-10 h-10 text-coral" />
-          </div>
-          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Payment {{ state === 'failed' ? 'Failed' : 'Cancelled' }}</h1>
-          <p class="text-sm text-warm-500 mb-8">PayFast did not complete this payment. You can try again from your booking.</p>
+          <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-danger-soft text-danger-text border border-danger-line">
+            <AppIcon icon="x" class="w-7 h-7" />
+          </span>
+          <h1 class="mt-4 page-title">Payment {{ state === 'failed' ? 'failed' : 'cancelled' }}</h1>
+          <p class="mt-1 text-sm text-ink-muted">PayFast did not complete this payment. No money was taken. You can try again from your booking.</p>
         </template>
 
         <!-- ERROR loading status -->
         <template v-else-if="state === 'error'">
-          <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-coral/10 flex items-center justify-center">
-            <AppIcon icon="alert-triangle" class="w-10 h-10 text-coral" />
-          </div>
-          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Couldn't check payment status</h1>
-          <p class="text-sm text-warm-500 mb-8">{{ errorMessage }}</p>
+          <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning-soft text-warning-text border border-warning-line">
+            <AppIcon icon="alert-triangle" class="w-7 h-7" />
+          </span>
+          <h1 class="mt-4 page-title">Couldn't check payment status</h1>
+          <p class="mt-1 text-sm text-ink-muted">{{ errorMessage }}</p>
         </template>
 
         <!-- PROCESSING: waiting for PayFast ITN -->
         <template v-else>
-          <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-accent/10 flex items-center justify-center">
-            <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
-          </div>
-          <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Processing Payment</h1>
-          <p class="text-sm text-warm-500 mb-2">Waiting for PayFast to confirm your payment&hellip;</p>
-          <p class="text-xs text-warm-400 mb-8">
+          <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft border border-brand-muted">
+            <span class="spinner-border !w-7 !h-7 text-brand-text" aria-hidden="true"></span>
+          </span>
+          <h1 class="mt-4 page-title">Confirming your payment</h1>
+          <p class="mt-1 text-sm text-ink-muted">Waiting for PayFast to confirm your payment&hellip;</p>
+          <p class="mt-2 text-xs text-ink-muted">
             <template v-if="!timedOut">This usually takes a few seconds. Please keep this page open.</template>
             <template v-else>Confirmation is taking longer than usual. You'll get a notification once PayFast confirms &mdash; you can also check again below.</template>
           </p>
         </template>
-
-        <!-- Transaction Details (real data only) -->
-        <div v-if="status?.payment" class="card bg-warm-50 dark:bg-warm-800 max-w-sm mx-auto mb-6">
-          <div class="p-5 text-left">
-            <h3 class="font-semibold text-warm-500 text-xs uppercase tracking-wider mb-4">Transaction Details</h3>
-            <div class="space-y-2.5 text-sm">
-              <div class="flex justify-between"><span class="text-warm-500">Booking</span><span class="font-mono text-warm-800 dark:text-warm-100">{{ status.booking_number }}</span></div>
-              <div v-if="status.payment.reference" class="flex justify-between gap-3"><span class="text-warm-500">Payment ID</span><span class="font-mono text-xs text-warm-800 truncate dark:text-warm-100">{{ status.payment.reference }}</span></div>
-              <div class="flex justify-between"><span class="text-warm-500">Amount</span><span class="font-semibold text-warm-800 dark:text-warm-100">{{ formatPKR(status.payment.amount) }}</span></div>
-              <div v-if="status.payment.gateway_amount" class="flex justify-between"><span class="text-warm-500">Charged</span><span class="text-warm-800 dark:text-warm-100">R{{ Number(status.payment.gateway_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span></div>
-              <div class="flex justify-between"><span class="text-warm-500">Status</span><span :class="state === 'paid' ? 'text-primary-600' : 'text-warm-700'" class="font-medium capitalize">{{ statusLabel }}</span></div>
-              <div v-if="state === 'paid' && status.payment.transaction_id" class="flex justify-between gap-3"><span class="text-warm-500">Transaction</span><span class="font-mono text-xs text-warm-800 truncate dark:text-warm-100">{{ status.payment.transaction_id }}</span></div>
-              <div v-if="status.paid_at" class="flex justify-between"><span class="text-warm-500">Paid At</span><span class="text-warm-800 dark:text-warm-100">{{ formatDate(status.paid_at) }}</span></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sandbox Notice -->
-        <div class="flex items-center gap-2 justify-center px-5 py-3 rounded-2xl bg-accent/10 border border-accent/20 max-w-sm mx-auto mb-6">
-          <AppIcon icon="alert-triangle" class="w-4 h-4 text-accent flex-shrink-0" />
-          <span class="text-xs text-amber-800 dark:text-amber-300"><strong>Sandbox Mode:</strong> Test payment via PayFast sandbox. No real money is charged.</span>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex flex-wrap gap-3 justify-center">
-          <button v-if="state === 'processing' && timedOut" @click="restartPolling" class="btn-outline">Check again</button>
-          <button v-if="state === 'error'" @click="restartPolling" class="btn-outline">Retry</button>
-          <RouterLink v-if="bookingId" :to="`/customer/bookings/${bookingId}`" class="btn-primary">View Booking</RouterLink>
-          <RouterLink to="/customer/bookings" class="btn-outline">All Bookings</RouterLink>
-        </div>
       </div>
-    </div>
+
+      <!-- Transaction Details (real data only) -->
+      <div v-if="status?.payment" class="px-6 pb-6">
+        <h2 class="eyebrow mb-2">Transaction details</h2>
+        <dl class="panel-sunken px-4 py-1 text-sm">
+          <div class="dl-row"><dt>Booking</dt><dd class="ref">{{ status.booking_number }}</dd></div>
+          <div v-if="status.payment.reference" class="dl-row"><dt>Payment ID</dt><dd class="ref min-w-0 break-all">{{ status.payment.reference }}</dd></div>
+          <div class="dl-row"><dt>Amount</dt><dd>{{ formatPKR(status.payment.amount) }}</dd></div>
+          <div v-if="status.payment.gateway_amount" class="dl-row"><dt>Charged</dt><dd>R{{ Number(status.payment.gateway_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</dd></div>
+          <div class="dl-row"><dt>Status</dt><dd :class="state === 'paid' ? '!text-success-text' : ''" class="capitalize">{{ statusLabel }}</dd></div>
+          <div v-if="state === 'paid' && status.payment.transaction_id" class="dl-row"><dt>Transaction</dt><dd class="ref min-w-0 break-all">{{ status.payment.transaction_id }}</dd></div>
+          <div v-if="status.paid_at" class="dl-row"><dt>Paid at</dt><dd>{{ formatDate(status.paid_at) }}</dd></div>
+        </dl>
+      </div>
+
+      <!-- Actions -->
+      <div class="card-footer flex-wrap !justify-center">
+        <button v-if="state === 'processing' && timedOut" type="button" class="btn-secondary" @click="restartPolling"><AppIcon icon="refresh" class="w-4 h-4" />Check again</button>
+        <button v-if="state === 'error'" type="button" class="btn-secondary" @click="restartPolling"><AppIcon icon="refresh" class="w-4 h-4" />Retry</button>
+        <RouterLink v-if="bookingId" :to="`/customer/bookings/${bookingId}`" class="btn-primary">View booking</RouterLink>
+        <RouterLink to="/customer/bookings" class="btn-ghost">All bookings</RouterLink>
+      </div>
+    </section>
+
+    <!-- Sandbox Notice -->
+    <p class="mt-4 flex items-start justify-center gap-2 text-xs text-ink-muted text-center">
+      <AppIcon icon="info-circle" class="w-4 h-4 shrink-0" />
+      <span><strong class="font-semibold text-ink-secondary">Sandbox mode:</strong> test payment via the PayFast sandbox. No real money is charged.</span>
+    </p>
   </div>
 </template>
 

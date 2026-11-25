@@ -1,110 +1,87 @@
 <template>
-  <div class="fixed inset-0 overflow-hidden overscroll-none flex items-center justify-center bg-warm-100 dark:bg-warm-950 p-3 sm:p-6">
-    <div class="w-full h-full max-h-full flex rounded-3xl overflow-hidden shadow-elevated bg-warm-50 dark:bg-warm-900">
-      <!-- Left: Brand Panel (desktop) -->
-      <AuthPhotoPanel
-        eyebrow="Account recovery"
-        title="Set a new password"
-        text="Choose a strong password to keep your account secure."
+  <AuthShell
+    :heading="success ? 'Password updated' : hasToken ? 'Set a new password' : 'Reset link not valid'"
+    :subheading="success ? '' : hasToken ? 'Choose a strong password you don\'t use anywhere else.' : ''"
+    panel-eyebrow="Account recovery"
+    panel-title="Set a new password"
+    panel-text="Choose a strong password to keep your account and bookings secure."
+  >
+    <!-- Success state -->
+    <div v-if="success" class="space-y-4" role="status">
+      <div class="alert-success">
+        <AppIcon icon="circle-check" class="w-5 h-5 shrink-0" />
+        <div><p class="alert-title">All set</p><p class="text-sm">You can now sign in with your new password.</p></div>
+      </div>
+      <RouterLink :to="loginBackLink" class="btn-primary btn-lg btn-block">Sign in</RouterLink>
+    </div>
+
+    <!-- Form state -->
+    <form v-else-if="hasToken" class="space-y-4" novalidate @submit.prevent="onSubmit">
+      <div>
+        <label for="reset-email" class="form-label">Email</label>
+        <input id="reset-email" v-model="email" type="email" required class="form-input !bg-surface-sunken !text-ink-secondary cursor-not-allowed" readonly autocomplete="username" />
+        <p v-if="errors.email" class="form-error">{{ errors.email[0] }}</p>
+      </div>
+
+      <PasswordField
+        id="reset-password"
+        v-model="form.password"
+        label="New password"
+        placeholder="At least 8 characters"
+        autocomplete="new-password"
+        required
+        :minlength="8"
+        :error="passwordError"
+        @blur="touched.password = true"
+      >
+        <PasswordStrength :password="form.password" />
+      </PasswordField>
+
+      <PasswordField
+        id="reset-password-confirm"
+        v-model="form.password_confirmation"
+        label="Confirm new password"
+        placeholder="Repeat your password"
+        autocomplete="new-password"
+        required
+        :error="confirmError"
+        @blur="touched.confirm = true"
       />
 
-      <!-- Right: Form -->
-      <div class="flex-1 flex overflow-y-auto overscroll-contain p-4 sm:p-12">
-        <div class="w-full max-w-[400px] m-auto">
-        <div class="lg:hidden flex items-center gap-2 mb-8">
-          <AppLogo class="w-9 h-9" />
-          <span class="font-bold text-warm-800 dark:text-white">EventGenius</span>
-        </div>
-
-        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-sm text-warm-500 hover:text-primary-600 dark:text-warm-400 mb-8">
-
-          <AppIcon icon="arrow-left" class="w-4 h-4" /> Back to EventGenius
-
-        </RouterLink>
-
-        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-white mb-1">Set new password</h1>
-        <p class="text-warm-500 dark:text-warm-400 mb-6">Enter your new password below.</p>
-
-        <!-- Success state -->
-        <div v-if="success" class="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-2xl p-5">
-          <h3 class="font-semibold text-primary-700 dark:text-primary-300 mb-1">Password updated!</h3>
-          <p class="text-sm text-primary-600 dark:text-primary-400 mb-4">You can now sign in with your new password.</p>
-          <RouterLink
-            :to="loginBackLink"
-            class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-all duration-200 text-sm shadow-soft"
-          >
-            Sign In
-          </RouterLink>
-        </div>
-
-        <!-- Form state -->
-        <form v-else-if="hasToken" @submit.prevent="handleSubmit" class="space-y-4">
-          <div>
-            <label class="form-label">Email</label>
-            <input v-model="email" type="email" required class="form-input bg-warm-100 dark:bg-warm-700 cursor-not-allowed" readonly />
-          </div>
-
-          <div>
-            <label class="form-label">New Password</label>
-            <input v-model="form.password" type="password" required minlength="8" class="form-input" placeholder="Min. 8 characters" autocomplete="new-password" />
-            <p v-if="errors.password" class="mt-1 text-sm text-coral">{{ errors.password[0] }}</p>
-          </div>
-
-          <div>
-            <label class="form-label">Confirm Password</label>
-            <input v-model="form.password_confirmation" type="password" required class="form-input" placeholder="Repeat password" autocomplete="new-password" />
-            <p v-if="errors.password_confirmation" class="mt-1 text-sm text-coral">{{ errors.password_confirmation[0] }}</p>
-          </div>
-
-          <div v-if="errorMsg" class="flex items-center gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-coral dark:text-red-300 text-sm">
-            <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
-            <span>{{ errorMsg }}</span>
-          </div>
-
-          <button
-            type="submit"
-            :disabled="loading"
-            class="w-full py-3 rounded-xl font-semibold text-white bg-primary-500 hover:bg-primary-600 focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 shadow-soft hover:shadow-card"
-          >
-            <span v-if="loading" class="inline-flex items-center justify-center gap-2">
-              <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Updating...
-            </span>
-            <span v-else>Update Password</span>
-          </button>
-
-          <p class="text-center">
-            <RouterLink :to="loginBackLink" class="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors">
-              <AppIcon icon="chevron-left" class="w-4 h-4" />
-              Back to Sign In
-            </RouterLink>
-          </p>
-        </form>
-
-        <!-- Invalid token state -->
-        <div v-else class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-5">
-          <h3 class="font-semibold text-coral dark:text-red-300 mb-1">Invalid reset link</h3>
-          <p class="text-sm text-warm-600 dark:text-warm-400 mb-4">This page requires a valid reset link. Request a new link from the sign-in page.</p>
-          <RouterLink
-            :to="loginBackLink"
-            class="inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-all duration-200 text-sm shadow-soft"
-          >
-            Back to Sign In
-          </RouterLink>
-        </div>
-        </div>
+      <div v-if="errorMsg" class="alert-danger" role="alert">
+        <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
+        <p>{{ errorMsg }}</p>
       </div>
+
+      <button type="submit" :disabled="loading" class="btn-primary btn-lg btn-block">
+        <span v-if="loading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        {{ loading ? 'Updating…' : 'Update password' }}
+      </button>
+    </form>
+
+    <!-- Invalid token state -->
+    <div v-else class="space-y-4">
+      <div class="alert-danger" role="alert">
+        <AppIcon icon="alert-circle" class="w-5 h-5 shrink-0" />
+        <div><p class="alert-title">This link is missing or incomplete</p><p class="text-sm">Open the link from your reset email again, or request a new one.</p></div>
+      </div>
+      <RouterLink :to="forgotLink" class="btn-primary btn-lg btn-block">Request a new link</RouterLink>
     </div>
-  </div>
+
+    <template v-if="!success" #footer>
+      <p><RouterLink :to="loginBackLink" class="link">Back to sign in</RouterLink></p>
+    </template>
+  </AuthShell>
 </template>
 
 <script setup lang="ts">
-import AppLogo from '@/components/brand/AppLogo.vue'
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import AuthPhotoPanel from '@/components/auth/AuthPhotoPanel.vue'
+import AuthShell from '@/components/auth/AuthShell.vue'
+import PasswordField from '@/components/auth/PasswordField.vue'
+import PasswordStrength from '@/components/auth/PasswordStrength.vue'
 
 const route = useRoute()
 
@@ -115,6 +92,29 @@ const loading = ref(false)
 const errorMsg = ref('')
 const success = ref(false)
 const hasToken = ref(false)
+const touched = reactive({ password: false, confirm: false, submit: false })
+
+const passwordError = computed(() => {
+  if (errors.value.password?.length) return errors.value.password[0]
+  if (!touched.password && !touched.submit) return ''
+  if (!form.value.password) return 'Choose a new password.'
+  return form.value.password.length < 8 ? 'Use at least 8 characters.' : ''
+})
+const confirmError = computed(() => {
+  if (errors.value.password_confirmation?.length) return errors.value.password_confirmation[0]
+  if (!touched.confirm && !touched.submit) return ''
+  return form.value.password_confirmation === form.value.password ? '' : "Passwords don't match."
+})
+const forgotLink = computed(() => `/forgot-password?from=${(route.query.from as string) || 'customer'}`)
+
+// Drop a stale server error once the user edits the password again.
+watch(form, () => { if (Object.keys(errors.value).length) errors.value = {} }, { deep: true })
+
+function onSubmit() {
+  touched.submit = true
+  if (passwordError.value || confirmError.value) return
+  handleSubmit()
+}
 
 const loginBackLink = computed(() => {
   const from = (route.query.from as string) || 'customer'
