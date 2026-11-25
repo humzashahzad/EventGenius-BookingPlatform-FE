@@ -1,5 +1,5 @@
 <template>
-  <div class="cal" @keydown="onKeydown">
+  <div ref="root" class="cal" @keydown="onKeydown">
     <div class="flex items-center justify-between gap-2 mb-2">
       <button type="button" class="btn-icon btn-icon-sm" aria-label="Previous month" :disabled="!canPrev" @click="shiftMonth(-1)"><AppIcon icon="chevron-left" class="w-4 h-4" /></button>
       <p class="text-sm font-semibold text-ink" aria-live="polite">{{ MONTHS_LONG[view.getMonth()] }} {{ view.getFullYear() }}</p>
@@ -13,7 +13,7 @@
         <tr v-for="(week, wi) in weeks" :key="wi">
           <td v-for="d in week" :key="d.iso" class="p-0 text-center" :class="rangeClass(d.date)">
             <button
-              :ref="el => setRef(d.iso, el as HTMLButtonElement | null)"
+              :data-iso="d.iso"
               type="button"
               class="day"
               :class="[{
@@ -22,12 +22,12 @@
                 'is-selected': isSel(d.date),
               }, d.meta?.tone && `tone-day-${d.meta.tone}`]"
               :tabindex="sameDay(d.date, focus) ? 0 : -1"
-              :disabled="d.disabled"
+              :aria-disabled="d.disabled || undefined"
               :aria-pressed="isSel(d.date)"
               :aria-current="d.today ? 'date' : undefined"
               :aria-label="label(d.date) + (d.meta?.label ? `, ${d.meta.label}` : '')"
               :title="d.meta?.label"
-              @click="pick(d.date)"
+              @click="!d.disabled && pick(d.date)"
               @mouseenter="emit('hover', d.date)"
               @focus="focus = d.date"
             >{{ d.date.getDate() }}<span v-if="d.meta?.tone" class="day-dot" aria-hidden="true" /></button>
@@ -63,8 +63,7 @@ const emit = defineEmits<{ pick: [d: Date]; hover: [d: Date]; month: [ym: string
 const today = new Date(); today.setHours(0, 0, 0, 0)
 const focus = ref<Date>(props.initial ?? props.selected ?? props.rangeStart ?? clamp(today))
 const view = ref(new Date(focus.value.getFullYear(), focus.value.getMonth(), 1))
-const refs = new Map<string, HTMLButtonElement>()
-const setRef = (iso: string, el: HTMLButtonElement | null) => { if (el) refs.set(iso, el); else refs.delete(iso) }
+const root = ref<HTMLElement | null>(null)
 
 function clamp(d: Date) {
   if (props.min && d < props.min) return new Date(props.min)
@@ -109,7 +108,7 @@ function shiftMonth(n: number) {
   view.value = addMonths(view.value, n)
   focus.value = clamp(addMonths(focus.value, n))
 }
-function pick(d: Date) { if (!disabled(d)) emit('pick', d) }
+function pick(d: Date) { if (!disabled(d) && !props.dayMeta?.(toISODate(d), d)?.disabled) emit('pick', d) }
 
 watch(view, v => emit('month', `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}`), { immediate: true })
 watch(focus, f => {
@@ -117,7 +116,7 @@ watch(focus, f => {
 })
 async function focusDay() {
   await nextTick()
-  refs.get(toISODate(focus.value))?.focus()
+  root.value?.querySelector<HTMLButtonElement>(`[data-iso="${toISODate(focus.value)}"]`)?.focus()
 }
 function onKeydown(e: KeyboardEvent) {
   if (!(e.target as HTMLElement).classList.contains('day')) return
@@ -144,11 +143,11 @@ defineExpose({ focusDay })
   width: 2.25rem; height: 2.25rem; margin: 1px; border-radius: var(--radius-sm);
   font-size: 0.875rem; font-variant-numeric: tabular-nums; color: var(--ink);
 }
-.day:hover:not(:disabled):not(.is-selected) { background: var(--surface-hover); }
+.day:hover:not([aria-disabled]):not(.is-selected) { background: var(--surface-hover); }
 .day.is-out { color: var(--ink-muted); }
 .day.is-today { font-weight: 700; box-shadow: inset 0 0 0 1px var(--line-strong); }
 .day.is-selected { background: var(--brand-strong); color: var(--on-brand); font-weight: 600; }
-.day:disabled { color: var(--ink-muted); opacity: .4; text-decoration: line-through; cursor: not-allowed; }
+.day[aria-disabled='true'] { color: var(--ink-muted); opacity: .4; text-decoration: line-through; cursor: not-allowed; }
 .day-dot { position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 9999px; background: currentColor; }
 .tone-day-success:not(.is-selected) { color: var(--success-text); }
 .tone-day-warning:not(.is-selected) { color: var(--warning-text); }
