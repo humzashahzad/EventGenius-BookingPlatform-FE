@@ -14,7 +14,7 @@
     >
       <AppIcon
         :icon="i <= (hover || modelValue || 0) ? 'star-filled' : 'star'"
-        :class="`${sizeClass} ${i <= (hover || modelValue || 0) ? 'text-[#F59E0B]' : 'text-warm-300 dark:text-warm-600'}`"
+        :class="`${sizeClass} ${i <= (hover || modelValue || 0) ? 'fill-current text-[#D97706]' : 'text-line-strong'}`"
       />
     </button>
   </div>
