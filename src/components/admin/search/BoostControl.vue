@@ -17,21 +17,21 @@
       />
       <span
         class="w-12 text-right text-sm font-semibold tabular-nums"
-        :class="venue.search_boost > 0 ? 'text-primary-600 dark:text-primary-400' : venue.search_boost < 0 ? 'text-red-600 dark:text-red-400' : 'text-warm-500'"
+        :class="venue.search_boost > 0 ? 'text-brand-text' : venue.search_boost < 0 ? 'text-danger-text' : 'text-ink-muted'"
         data-testid="boost-value"
       >{{ venue.search_boost > 0 ? '+' : '' }}{{ venue.search_boost }}</span>
     </div>
     <div class="flex items-center gap-1.5">
       <button v-for="q in quick" :key="q.label" type="button"
         class="px-2 py-0.5 text-[11px] font-semibold rounded-md border transition-colors"
-        :class="venue.search_boost === q.value ? q.active : 'border-warm-200 text-warm-500 hover:bg-warm-50 dark:border-warm-600 dark:text-warm-400 dark:hover:bg-warm-700'"
+        :class="venue.search_boost === q.value ? q.active : 'border-warm-200 text-ink-muted hover:bg-warm-50 dark:border-warm-600 dark:text-warm-400 dark:hover:bg-warm-700'"
         :disabled="state?.status === 'saving'"
         @click="emit('set', q.value)"
       >{{ q.label }}</button>
       <span class="ml-auto text-[11px]" aria-live="polite">
-        <span v-if="state?.status === 'saving'" class="text-warm-400">Saving…</span>
-        <span v-else-if="state?.status === 'saved'" class="text-primary-600 dark:text-primary-400">Saved</span>
-        <span v-else-if="state?.status === 'error'" class="text-red-600 dark:text-red-400" :title="state.message">Failed</span>
+        <span v-if="state?.status === 'saving'" class="text-ink-muted">Saving…</span>
+        <span v-else-if="state?.status === 'saved'" class="text-brand-text">Saved</span>
+        <span v-else-if="state?.status === 'error'" class="text-danger-text" :title="state.message">Failed</span>
       </span>
     </div>
   </div>

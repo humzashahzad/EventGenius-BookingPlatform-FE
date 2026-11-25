@@ -1,167 +1,121 @@
 <template>
-  <div class="content-container">
-    <!-- Header -->
-    <div class="page-header">
+  <div class="space-y-6">
+    <header class="page-header !mb-0">
       <div>
-        <h1 class="text-2xl font-bold text-warm-900 dark:text-warm-50 tracking-tight">Store Profile</h1>
-        <p class="text-sm text-warm-500 dark:text-warm-400 mt-1">Manage your personal info and store details.</p>
+        <h1 class="page-title">Store profile</h1>
+        <p class="page-subtitle">Your personal info and the store details customers see.</p>
       </div>
-      <button @click="save" :disabled="saving" class="btn-primary gap-1.5">
-        <AppIcon v-if="saving" icon="loader" class="w-4 h-4 animate-spin" />
-        <AppIcon v-else icon="check" class="w-4 h-4" />
-        {{ saving ? 'Saving...' : 'Save Changes' }}
-      </button>
+      <div class="page-header-actions">
+        <RouterLink to="/shop/landing" class="btn-secondary"><AppIcon icon="globe" class="w-4 h-4" />Public page</RouterLink>
+      </div>
+    </header>
+
+    <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-busy="true">
+      <div class="skeleton h-72"></div>
+      <div class="lg:col-span-2 skeleton h-96"></div>
     </div>
 
-    <!-- Alerts -->
-    <transition name="fade">
-      <div v-if="successMsg" class="flex items-center gap-3 p-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 mb-6">
-        <AppIcon icon="circle-check" class="w-5 h-5 flex-shrink-0" />
-        <p class="text-sm font-medium">{{ successMsg }}</p>
-      </div>
-    </transition>
-    <transition name="fade">
-      <div v-if="errorMsg" class="flex items-center gap-3 p-4 rounded-2xl bg-coral/10 dark:bg-coral/20 border border-coral/30 text-coral dark:text-red-300 mb-6">
-        <AppIcon icon="alert-circle" class="w-5 h-5 flex-shrink-0" />
-        <p class="text-sm font-medium">{{ errorMsg }}</p>
-      </div>
-    </transition>
-
-    <!-- Skeleton -->
-    <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="skeleton h-72 rounded-2xl"></div>
-      <div class="lg:col-span-2 skeleton h-72 rounded-2xl"></div>
-    </div>
-
-    <form v-else @submit.prevent="save" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left: Avatar card -->
-      <div class="space-y-6">
-        <div class="card">
-          <div class="p-5 sm:p-6 text-center">
+    <form v-else id="profile-form" @submit.prevent="save" class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <!-- Left: identity -->
+      <aside class="space-y-6 lg:sticky lg:top-[calc(var(--topbar-height)+1.5rem)]">
+        <section class="card">
+          <div class="card-body text-center">
             <div class="mx-auto mb-4 w-24 h-24">
-              <img v-if="avatarUrl" :src="avatarUrl" alt="Profile" class="rounded-2xl w-full h-full object-cover shadow-soft" />
-              <div v-else class="rounded-2xl w-full h-full flex items-center justify-center bg-primary-100 dark:bg-primary-900/30">
-                <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ initials }}</span>
-              </div>
+              <img v-if="avatarUrl" :src="avatarUrl" alt="Profile photo" class="rounded-full w-full h-full object-cover border border-line" />
+              <div v-else class="avatar w-full h-full text-2xl">{{ initials }}</div>
             </div>
             <ProfileAvatarUpload :current-avatar="storeUserAvatar" @update="onAvatarUpdate" />
-            <div class="mt-4">
-              <h3 class="text-base font-semibold text-warm-900 dark:text-warm-50">{{ form.name || 'Your Name' }}</h3>
-              <p class="text-warm-500 dark:text-warm-400 text-xs mt-1">Store Owner</p>
-              <div class="mt-3">
-                <span :class="storeStatusClass" class="capitalize">{{ storeStatus }}</span>
-              </div>
-            </div>
+            <p class="mt-4 font-semibold text-ink">{{ form.name || 'Your name' }}</p>
+            <p class="text-xs text-ink-muted">Store owner · {{ form.store_name || 'Store' }}</p>
+            <span :class="statusBadgeClass(storeStatus)" class="mt-3 inline-flex">Store {{ statusLabel(storeStatus).toLowerCase() }}</span>
           </div>
-        </div>
+          <div class="card-footer">
+            <ul class="space-y-2 text-sm">
+              <li class="flex items-center gap-2.5 min-w-0"><AppIcon icon="mail" class="w-4 h-4 text-ink-muted shrink-0" /><span class="truncate text-ink-secondary">{{ form.store_email || 'No email set' }}</span></li>
+              <li class="flex items-center gap-2.5"><AppIcon icon="phone" class="w-4 h-4 text-ink-muted shrink-0" /><span class="text-ink-secondary">{{ form.store_phone || 'No phone set' }}</span></li>
+              <li class="flex items-center gap-2.5"><AppIcon icon="map-pin" class="w-4 h-4 text-ink-muted shrink-0" /><span class="text-ink-secondary">{{ form.city ? `${form.city}${form.state ? ', ' + form.state : ''}` : 'No location set' }}</span></li>
+            </ul>
+          </div>
+        </section>
+      </aside>
 
-        <!-- Quick info -->
-        <div class="card">
-          <div class="p-5 sm:p-6">
-            <p class="text-[11px] font-semibold uppercase tracking-wider text-warm-500 dark:text-warm-400 mb-3">Quick Info</p>
-            <div class="space-y-2.5">
-              <div class="flex items-center gap-2.5">
-                <AppIcon icon="mail" class="w-4 h-4 text-warm-400 dark:text-warm-500 flex-shrink-0" />
-                <span class="text-sm text-warm-700 dark:text-warm-300 truncate">{{ form.store_email || 'No email set' }}</span>
-              </div>
-              <div class="flex items-center gap-2.5">
-                <AppIcon icon="phone" class="w-4 h-4 text-warm-400 dark:text-warm-500 flex-shrink-0" />
-                <span class="text-sm text-warm-700 dark:text-warm-300">{{ form.store_phone || 'No phone set' }}</span>
-              </div>
-              <div class="flex items-center gap-2.5">
-                <AppIcon icon="map-pin" class="w-4 h-4 text-warm-400 dark:text-warm-500 flex-shrink-0" />
-                <span class="text-sm text-warm-700 dark:text-warm-300">{{ form.city ? `${form.city}${form.state ? ', ' + form.state : ''}` : 'No location set' }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Form sections -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Personal Info -->
-        <div class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <AppIcon icon="user" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Personal Information</h2>
-          </div>
-          <div class="p-5 sm:p-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="form-label">Full Name</label>
-                <input v-model="form.name" class="form-input" placeholder="Your full name" />
-              </div>
-              <div>
-                <label class="form-label">Phone Number</label>
-                <input v-model="form.phone" class="form-input" placeholder="+92 300 0000000" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Store Details -->
-        <div class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-warm-100 dark:bg-warm-800 flex items-center justify-center">
-              <AppIcon icon="building" class="w-4 h-4 text-warm-600 dark:text-warm-400" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Store Details</h2>
-          </div>
-          <div class="p-5 sm:p-6 space-y-4">
+      <!-- Right: form -->
+      <div class="lg:col-span-2 space-y-6 min-w-0">
+        <section class="card">
+          <div class="card-header"><div><h2 class="card-title">Personal information</h2><p class="card-subtitle">Only used for your account.</p></div></div>
+          <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="form-label">Store Name</label>
-              <input v-model="form.store_name" class="form-input" placeholder="My Venue Business" />
+              <label for="pf-name" class="form-label">Full name</label>
+              <input id="pf-name" v-model="form.name" class="form-input" placeholder="Your full name" autocomplete="name" />
             </div>
             <div>
-              <label class="form-label">Description</label>
-              <textarea v-model="form.description" class="form-input" rows="3" placeholder="Describe your store and the kind of venues you offer..."></textarea>
+              <label for="pf-phone" class="form-label">Phone number</label>
+              <input id="pf-phone" v-model="form.phone" class="form-input" placeholder="+92 300 0000000" autocomplete="tel" />
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header"><div><h2 class="card-title">Store details</h2><p class="card-subtitle">Shown on your public store page and venue listings.</p></div></div>
+          <div class="card-body space-y-4">
+            <div>
+              <label for="pf-store" class="form-label">Store name</label>
+              <input id="pf-store" v-model="form.store_name" class="form-input" placeholder="My Venue Business" />
+            </div>
+            <div>
+              <label for="pf-desc" class="form-label">Description</label>
+              <textarea id="pf-desc" v-model="form.description" class="form-textarea" rows="4" placeholder="Describe your store and the kind of venues you offer…"></textarea>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="form-label">Store Phone</label>
-                <input v-model="form.store_phone" class="form-input" placeholder="+92 300 0000000" />
+                <label for="pf-sphone" class="form-label">Store phone</label>
+                <input id="pf-sphone" v-model="form.store_phone" class="form-input" placeholder="+92 300 0000000" />
               </div>
               <div>
-                <label class="form-label">Store Email</label>
-                <input v-model="form.store_email" type="email" class="form-input" placeholder="store@example.com" />
+                <label for="pf-semail" class="form-label">Store email</label>
+                <input id="pf-semail" v-model="form.store_email" type="email" class="form-input" placeholder="store@example.com" />
               </div>
             </div>
             <div>
-              <label class="form-label">Website</label>
+              <label for="pf-web" class="form-label">Website</label>
               <div class="flex">
-                <span class="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-warm-300 dark:border-warm-600 bg-warm-50 dark:bg-warm-800 text-warm-500 dark:text-warm-400 text-sm">https://</span>
-                <input v-model="form.website" class="form-input !rounded-l-none" placeholder="yourwebsite.com" />
+                <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-line-strong/60 bg-surface-sunken text-ink-muted text-sm">https://</span>
+                <input id="pf-web" v-model="form.website" class="form-input !rounded-l-none min-w-0" placeholder="yourwebsite.com" />
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Location -->
-        <div class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-accent/10 dark:bg-accent/20 flex items-center justify-center">
-              <AppIcon icon="map-pin" class="w-4 h-4 text-accent" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Location</h2>
-          </div>
-          <div class="p-5 sm:p-6 space-y-4">
+        <section class="card">
+          <div class="card-header"><div><h2 class="card-title">Location</h2><p class="card-subtitle">Your business address.</p></div></div>
+          <div class="card-body space-y-4">
             <div>
-              <label class="form-label">Street Address</label>
-              <input v-model="form.address" class="form-input" placeholder="123 Main Street" />
+              <label for="pf-addr" class="form-label">Street address</label>
+              <input id="pf-addr" v-model="form.address" class="form-input" placeholder="123 Main Street" autocomplete="street-address" />
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="form-label">City</label>
-                <input v-model="form.city" class="form-input" placeholder="Lahore" />
+                <label for="pf-city" class="form-label">City</label>
+                <input id="pf-city" v-model="form.city" class="form-input" placeholder="Lahore" />
               </div>
               <div>
-                <label class="form-label">State / Province</label>
-                <input v-model="form.state" class="form-input" placeholder="Punjab" />
+                <label for="pf-state" class="form-label">State / province</label>
+                <input id="pf-state" v-model="form.state" class="form-input" placeholder="Punjab" />
               </div>
             </div>
           </div>
+        </section>
+
+        <div class="save-bar">
+          <div class="min-w-0 flex-1 text-sm" aria-live="polite">
+            <p v-if="errorMsg" class="flex items-center gap-2 text-danger-text font-medium"><AppIcon icon="alert-circle" class="w-4 h-4 shrink-0" /><span class="truncate">{{ errorMsg }}</span></p>
+            <p v-else-if="successMsg" class="flex items-center gap-2 text-success-text font-medium"><AppIcon icon="circle-check" class="w-4 h-4 shrink-0" /><span class="truncate">{{ successMsg }}</span></p>
+            <p v-else class="text-ink-muted hidden sm:block">Changes are saved when you press Save.</p>
+          </div>
+          <button type="submit" :disabled="saving" class="btn-primary">
+            <AppIcon :icon="saving ? 'loader' : 'check'" :class="saving ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
+            {{ saving ? 'Saving…' : 'Save changes' }}
+          </button>
         </div>
       </div>
     </form>
@@ -170,7 +124,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'
+import { statusBadgeClass, statusLabel } from '@/lib/status'
 import { useAuthStore } from '@/stores/auth'
 import ProfileAvatarUpload from '@/components/profile/AvatarUpload.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -202,16 +158,6 @@ const storeUserAvatar = computed<string | undefined>(() => authStore.user?.avata
 const avatarUrl = computed(() => getAvatarUrl(storeUserAvatar.value))
 
 function onAvatarUpdate() {}
-
-const storeStatusClass = computed(() => {
-  const m: Record<string, string> = {
-    approved: 'badge-primary',
-    pending: 'badge-accent',
-    suspended: 'badge-coral',
-    rejected: 'badge-coral',
-  }
-  return m[storeStatus.value] || 'badge-warm'
-})
 
 async function load() {
   loading.value = true
@@ -258,6 +204,11 @@ onMounted(load)
 </script>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.save-bar {
+  position: sticky; bottom: 0; z-index: var(--z-sticky);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+}
 </style>

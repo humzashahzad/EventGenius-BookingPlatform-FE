@@ -1,291 +1,269 @@
 <template>
-  <div class="content-container">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="flex items-center gap-3">
-        <RouterLink :to="{ name: 'shop-venues' }" class="btn-ghost !p-2 rounded-xl">
-          <AppIcon icon="chevron-left" class="w-5 h-5 text-warm-600 dark:text-warm-400" />
-        </RouterLink>
-        <div>
-          <h1 class="text-2xl font-bold text-warm-900 dark:text-warm-50 tracking-tight">{{ isEdit ? 'Edit Venue' : 'Add New Venue' }}</h1>
-          <p class="text-sm text-warm-500 dark:text-warm-400 mt-1">{{ isEdit ? 'Update venue details and pricing.' : 'Create a new venue listing to attract clients.' }}</p>
-        </div>
+  <div class="pb-4">
+    <header class="page-header">
+      <div class="min-w-0">
+        <RouterLink :to="{ name: 'shop-venues' }" class="btn-ghost btn-sm -ml-2 mb-2"><AppIcon icon="chevron-left" class="w-4 h-4" />My venues</RouterLink>
+        <h1 class="page-title">{{ isEdit ? (form.name || 'Edit venue') : 'Add a new venue' }}</h1>
+        <p class="page-subtitle">{{ isEdit ? 'Update details, pricing, hours and amenities.' : 'Fill in the details below. You can add photos right after saving.' }}</p>
       </div>
-      <button type="button" @click="save" :disabled="saving" class="btn-primary gap-1.5">
-        <AppIcon v-if="saving" icon="loader" class="w-4 h-4 animate-spin" />
-        <AppIcon v-else icon="check" class="w-4 h-4" />
-        {{ saving ? 'Saving...' : isEdit ? 'Update Venue' : 'Create Venue' }}
-      </button>
-    </div>
-
-    <!-- Alerts -->
-    <transition name="fade">
-      <div v-if="successMsg" class="flex items-center gap-3 p-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 mb-6">
-        <AppIcon icon="circle-check" class="w-5 h-5 flex-shrink-0" />
-        <p class="text-sm font-medium">{{ successMsg }}</p>
+      <div v-if="isEdit" class="page-header-actions">
+        <RouterLink :to="`/shop/venues/${route.params.id}/gallery`" class="btn-secondary"><AppIcon icon="image" class="w-4 h-4" />Gallery</RouterLink>
       </div>
-    </transition>
-    <transition name="fade">
-      <div v-if="errorMsg" class="flex items-center gap-3 p-4 rounded-2xl bg-coral/10 dark:bg-coral/20 border border-coral/30 text-coral dark:text-red-300 mb-6">
-        <AppIcon icon="alert-circle" class="w-5 h-5 flex-shrink-0" />
-        <p class="text-sm font-medium">{{ errorMsg }}</p>
+    </header>
+
+    <!-- Section nav: chips on phones, sticky list on desktop -->
+    <nav class="lg:hidden sticky top-[var(--topbar-height)] z-sticky -mx-4 px-4 py-2 mb-4 bg-canvas/95 border-b border-line overflow-x-auto scrollbar-thin" aria-label="Form sections" data-scroll>
+      <div class="flex gap-1.5 w-max">
+        <a v-for="s in sections" :key="s.id" :href="`#${s.id}`" class="section-chip" :aria-current="activeSection === s.id ? 'true' : undefined" @click.prevent="goTo(s.id)">{{ s.label }}</a>
       </div>
-    </transition>
+    </nav>
 
-    <form @submit.prevent="save" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:grid lg:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)] gap-8 items-start">
+      <nav class="hidden lg:block sticky top-[calc(var(--topbar-height)+1.5rem)]" aria-label="Form sections">
+        <p class="eyebrow mb-2 px-3">Sections</p>
+        <ul class="space-y-0.5">
+          <li v-for="s in sections" :key="s.id">
+            <a :href="`#${s.id}`" class="section-link" :aria-current="activeSection === s.id ? 'true' : undefined" @click.prevent="goTo(s.id)">
+              <AppIcon :icon="s.icon" class="w-4 h-4 shrink-0" />
+              <span class="truncate">{{ s.label }}</span>
+              <AppIcon v-if="s.complete" icon="check" class="w-3.5 h-3.5 ml-auto text-success-text" />
+            </a>
+          </li>
+        </ul>
+      </nav>
 
-      <!-- Main column -->
-      <div class="lg:col-span-2 space-y-6">
-
-        <!-- Basic Info -->
-        <div class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <AppIcon icon="info" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Basic Information</h2>
-          </div>
-          <div class="p-5 sm:p-6 space-y-4">
-            <div>
-              <label class="form-label">Venue Name <span class="text-coral">*</span></label>
-              <input v-model="form.name" required class="form-input" placeholder="e.g. Grand Marquee Hall" />
-            </div>
-            <div>
-              <label class="form-label">Description</label>
-              <textarea v-model="form.description" class="form-input" rows="4" placeholder="Describe your venue — features, ambience, what makes it unique..."></textarea>
-            </div>
-          </div>
-        </div>
-
-        <!-- Location -->
-        <div class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-accent/10 dark:bg-accent/20 flex items-center justify-center">
-              <AppIcon icon="map-pin" class="w-4 h-4 text-accent" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Location</h2>
-          </div>
-          <div class="p-5 sm:p-6 space-y-5">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="space-y-6 min-w-0">
+        <form id="venue-form" class="space-y-6" novalidate @submit.prevent="save">
+          <!-- Basics -->
+          <section id="sec-basics" class="card scroll-mt-28">
+            <div class="card-header"><div><h2 class="card-title">Basic information</h2><p class="card-subtitle">What guests see first.</p></div></div>
+            <div class="card-body space-y-4">
               <div>
-                <label class="form-label">Country <span class="text-coral">*</span></label>
-                <select v-model="form.country" @change="onCountryChange" class="form-select" required>
-                  <option value="" disabled>Select Country</option>
-                  <option v-for="c in countriesList" :key="c.code" :value="c.name">{{ c.name }}</option>
-                </select>
+                <label for="vf-name" class="form-label">Venue name <span class="req">*</span></label>
+                <input id="vf-name" v-model="form.name" required class="form-input" placeholder="e.g. Grand Marquee Hall" />
               </div>
               <div>
-                <label class="form-label">City <span class="text-coral">*</span></label>
-                <select v-model="form.city" class="form-select" required :disabled="!form.country || loadingCities">
-                  <option value="" disabled>{{ loadingCities ? 'Loading cities...' : 'Select City' }}</option>
-                  <option v-for="city in citiesList" :key="city" :value="city">{{ city }}</option>
-                </select>
+                <label for="vf-desc" class="form-label">Description</label>
+                <textarea id="vf-desc" v-model="form.description" class="form-textarea" rows="5" placeholder="Describe your venue — features, ambience, what makes it unique…" aria-describedby="vf-desc-hint"></textarea>
+                <p id="vf-desc-hint" class="form-hint">{{ (form.description || '').length }} characters. Mention parking, catering, decor and accessibility.</p>
               </div>
             </div>
+          </section>
 
-            <div class="space-y-3">
-              <label class="form-label">Venue Location <span class="text-coral">*</span></label>
-              <div class="flex flex-col gap-3">
-                <button type="button" @click="openMapModal" class="btn-outline w-full gap-2 justify-center py-3 border-dashed border-2 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all duration-300">
-                  <AppIcon icon="map" class="w-5 h-5 text-primary-600" />
-                  <span class="font-semibold">{{ form.latitude ? 'Change Location on Map' : 'Select Location on Map' }}</span>
-                </button>
-                
-                <div v-if="form.address || (form.latitude && form.longitude)" class="p-4 rounded-xl bg-warm-50 dark:bg-warm-800/50 border border-warm-200 dark:border-warm-700 space-y-2">
-                  <div v-if="form.address" class="flex gap-2">
-                    <AppIcon icon="map-pin" class="w-4 h-4 text-warm-400 mt-0.5 flex-shrink-0" />
-                    <span class="text-sm text-warm-700 dark:text-warm-300 font-medium">{{ form.address }}</span>
-                  </div>
-                  <div class="flex gap-4 text-[10px] text-warm-500 font-mono uppercase tracking-wider">
-                    <span>Lat: {{ form.latitude?.toFixed(6) }}</span>
-                    <span>Long: {{ form.longitude?.toFixed(6) }}</span>
-                  </div>
+          <!-- Location -->
+          <section id="sec-location" class="card scroll-mt-28">
+            <div class="card-header"><div><h2 class="card-title">Location</h2><p class="card-subtitle">Used for search, distance and directions.</p></div></div>
+            <div class="card-body space-y-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="vf-country" class="form-label">Country <span class="req">*</span></label>
+                  <select id="vf-country" v-model="form.country" @change="onCountryChange" class="form-select" required>
+                    <option value="" disabled>Select country</option>
+                    <option v-for="c in countriesList" :key="c.code" :value="c.name">{{ c.name }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="vf-city" class="form-label">City <span class="req">*</span></label>
+                  <select id="vf-city" v-model="form.city" class="form-select" required :disabled="!form.country || loadingCities">
+                    <option value="" disabled>{{ loadingCities ? 'Loading cities…' : 'Select city' }}</option>
+                    <option v-for="city in citiesList" :key="city" :value="city">{{ city }}</option>
+                  </select>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Pricing -->
-        <div class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <AppIcon icon="dollar-sign" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
+              <div>
+                <p class="form-label">Map pin <span class="req">*</span></p>
+                <div v-if="form.address || (form.latitude && form.longitude)" class="panel-sunken p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <span class="icon-chip icon-chip-sm tone-brand"><AppIcon icon="map-pin" class="w-4 h-4" /></span>
+                  <div class="min-w-0 flex-1">
+                    <p v-if="form.address" class="text-sm text-ink font-medium break-words">{{ form.address }}</p>
+                    <p class="ref text-xs text-ink-muted mt-0.5">{{ form.latitude?.toFixed(6) }}, {{ form.longitude?.toFixed(6) }}</p>
+                  </div>
+                  <button type="button" class="btn-secondary btn-sm shrink-0" @click="openMapModal"><AppIcon icon="map" class="w-4 h-4" />Change</button>
+                </div>
+                <button v-else type="button" @click="openMapModal" class="w-full flex flex-col items-center gap-1 py-6 rounded-lg border-2 border-dashed border-line-strong/60 text-ink-secondary hover:bg-surface-hover hover:border-line-strong transition-colors">
+                  <AppIcon icon="map" class="w-6 h-6 text-brand-text" />
+                  <span class="text-sm font-medium text-ink">Pick location on map</span>
+                  <span class="text-xs text-ink-muted">Search an address or click to drop a pin</span>
+                </button>
+              </div>
             </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Pricing</h2>
-          </div>
-          <div class="p-5 sm:p-6">
-            <label class="form-label">Price Per Head (PKR) <span class="text-coral">*</span></label>
-            <input v-model.number="form.price_per_head" type="number" min="0" step="0.01" required class="form-input" placeholder="e.g. 2500" />
-            <p class="text-xs text-warm-500 dark:text-warm-400 mt-2">Total = Price per head x Number of guests</p>
-          </div>
-        </div>
+          </section>
 
-        <!-- Event Types -->
-        <div class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <AppIcon icon="tags" class="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          <!-- Capacity -->
+          <section id="sec-capacity" class="card scroll-mt-28">
+            <div class="card-header"><div><h2 class="card-title">Capacity &amp; size</h2><p class="card-subtitle">Guests can only book within this range.</p></div></div>
+            <div class="card-body grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label for="vf-cmin" class="form-label">Min guests</label>
+                <input id="vf-cmin" v-model.number="form.capacity_min" type="number" min="1" class="form-input num" placeholder="10" />
+              </div>
+              <div>
+                <label for="vf-cmax" class="form-label">Max guests <span class="req">*</span></label>
+                <input id="vf-cmax" v-model.number="form.capacity_max" required type="number" min="1" class="form-input num" placeholder="500" :aria-invalid="capacityInvalid" />
+              </div>
+              <div>
+                <label for="vf-area" class="form-label">Area (sq ft)</label>
+                <input id="vf-area" v-model.number="form.area_sqft" type="number" min="0" class="form-input num" placeholder="2000" />
+              </div>
+              <div>
+                <label for="vf-floors" class="form-label">Floors</label>
+                <input id="vf-floors" v-model.number="form.floors" type="number" min="1" class="form-input num" placeholder="1" />
+              </div>
+              <p v-if="capacityInvalid" class="form-error col-span-full !mt-0">Max guests should be at least the minimum.</p>
             </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Event Types</h2>
-          </div>
-          <div class="p-5 sm:p-6">
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <label
-                v-for="et in eventTypes" :key="et.value"
-                class="flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all duration-200"
-                :class="form.event_types.includes(et.value)
-                  ? 'border-primary-300 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-200 dark:ring-primary-800'
-                  : 'border-warm-200 dark:border-warm-700 hover:border-warm-300 dark:hover:border-warm-600'"
-              >
-                <input type="checkbox" :value="et.value" v-model="form.event_types" class="w-4 h-4 rounded border-warm-300 dark:border-warm-600 text-primary-600 focus:ring-primary-500" />
-                <span class="text-sm">{{ et.emoji }}</span>
-                <span class="text-xs font-medium text-warm-700 dark:text-warm-300">{{ et.label }}</span>
+          </section>
+
+          <!-- Pricing -->
+          <section id="sec-pricing" class="card scroll-mt-28">
+            <div class="card-header"><div><h2 class="card-title">Pricing</h2><p class="card-subtitle">Total = price per head × number of guests (+ paid amenities and tax).</p></div></div>
+            <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+              <div>
+                <label for="vf-price" class="form-label">Price per head (PKR) <span class="req">*</span></label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-muted pointer-events-none">PKR</span>
+                  <input id="vf-price" v-model.number="form.price_per_head" type="number" min="0" step="0.01" required class="form-input !pl-12 num" placeholder="2500" />
+                </div>
+              </div>
+              <div v-if="form.price_per_head" class="panel-sunken p-3 text-sm">
+                <p class="text-ink-muted text-xs mb-1">Example</p>
+                <p class="text-ink num">{{ exampleGuests }} guests × {{ formatPKR(form.price_per_head) }} = <strong>{{ formatPKR(exampleGuests * Number(form.price_per_head)) }}</strong></p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Event types -->
+          <section id="sec-events" class="card scroll-mt-28">
+            <div class="card-header">
+              <div><h2 class="card-title">Event types</h2><p class="card-subtitle">Pick everything this venue suits. Used by search filters.</p></div>
+              <span class="badge-neutral num">{{ form.event_types.length }} selected</span>
+            </div>
+            <div class="card-body">
+              <div v-if="!eventTypes.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2"><div v-for="i in 6" :key="i" class="skeleton h-11" /></div>
+              <div v-else class="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-3 gap-2">
+                <label
+                  v-for="et in eventTypes" :key="et.value"
+                  class="choice"
+                  :class="form.event_types.includes(et.value) && 'is-checked'"
+                >
+                  <input type="checkbox" :value="et.value" v-model="form.event_types" class="form-check" />
+                  <span v-if="et.emoji" class="text-sm" aria-hidden="true">{{ et.emoji }}</span>
+                  <span class="text-sm text-ink">{{ et.label }}</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <!-- Hours -->
+          <section id="sec-hours" class="card scroll-mt-28">
+            <div class="card-header"><div><h2 class="card-title">Operating hours</h2><p class="card-subtitle">Customers can only book slots inside this range (24-hour clock).</p></div></div>
+            <div class="card-body grid grid-cols-2 gap-4">
+              <div>
+                <label for="vf-open" class="form-label">Opens</label>
+                <select id="vf-open" v-model="form.operating_start" class="form-select num">
+                  <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
+                </select>
+              </div>
+              <div>
+                <label for="vf-close" class="form-label">Closes</label>
+                <select id="vf-close" v-model="form.operating_end" class="form-select num">
+                  <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <!-- Visibility (edit only) -->
+          <section v-if="isEdit" id="sec-visibility" class="card scroll-mt-28">
+            <div class="card-header"><div><h2 class="card-title">Visibility</h2><p class="card-subtitle">Inactive venues are hidden from search and can't be booked.</p></div></div>
+            <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label class="choice" :class="form.status === 'active' && 'is-checked'">
+                <input v-model="form.status" type="radio" value="active" class="form-check" />
+                <span><span class="block text-sm font-medium text-ink">Active</span><span class="block text-xs text-ink-muted">Visible to clients</span></span>
+              </label>
+              <label class="choice" :class="form.status === 'inactive' && 'is-checked'">
+                <input v-model="form.status" type="radio" value="inactive" class="form-check" />
+                <span><span class="block text-sm font-medium text-ink">Inactive</span><span class="block text-xs text-ink-muted">Hidden from listings</span></span>
               </label>
             </div>
-          </div>
+          </section>
+        </form>
+
+        <!-- Amenities editor (edit only; manages its own API calls) -->
+        <div v-if="isEdit" id="sec-amenities" class="scroll-mt-28">
+          <AmenityEditor :venue-id="String(route.params.id)" />
         </div>
 
-        <!-- Operating Hours -->
-        <div class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-              <AppIcon icon="clock" class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+        <!-- Gallery shortcut -->
+        <section id="sec-gallery" class="card scroll-mt-28">
+          <div class="card-body flex flex-col sm:flex-row sm:items-center gap-4">
+            <span class="icon-chip tone-info"><AppIcon icon="image" class="w-5 h-5" /></span>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-ink">Photo gallery</p>
+              <p class="text-sm text-ink-muted">{{ isEdit ? 'Upload photos and choose the cover image guests see first.' : 'You can upload photos right after the venue is created.' }}</p>
             </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Operating Hours</h2>
+            <RouterLink v-if="isEdit" :to="`/shop/venues/${route.params.id}/gallery`" class="btn-secondary shrink-0"><AppIcon icon="image" class="w-4 h-4" />Manage gallery</RouterLink>
           </div>
-          <div class="p-5 sm:p-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="form-label">Opening Time</label>
-                <select v-model="form.operating_start" class="form-select">
-                  <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
-                </select>
-              </div>
-              <div>
-                <label class="form-label">Closing Time</label>
-                <select v-model="form.operating_end" class="form-select">
-                  <option v-for="t in timeSlots" :key="t" :value="t">{{ t }}</option>
-                </select>
-              </div>
-            </div>
-            <p class="text-xs text-warm-500 dark:text-warm-400 mt-3">Customers will only be able to book slots within this time range. Use 24-hour format (e.g. 09:00 to 23:00).</p>
+        </section>
+
+        <!-- Sticky save bar -->
+        <div class="save-bar" role="region" aria-label="Save changes">
+          <div class="min-w-0 flex-1 text-sm" aria-live="polite">
+            <p v-if="errorMsg" class="flex items-center gap-2 text-danger-text font-medium"><AppIcon icon="alert-circle" class="w-4 h-4 shrink-0" /><span class="truncate">{{ errorMsg }}</span></p>
+            <p v-else-if="successMsg" class="flex items-center gap-2 text-success-text font-medium"><AppIcon icon="circle-check" class="w-4 h-4 shrink-0" /><span class="truncate">{{ successMsg }}</span></p>
+            <p v-else-if="dirty" class="flex items-center gap-2 text-ink-secondary"><span class="w-2 h-2 rounded-full bg-warning shrink-0" aria-hidden="true" />Unsaved changes</p>
+            <p v-else class="text-ink-muted hidden sm:block">{{ isEdit ? 'All changes saved' : 'Fields marked * are required' }}</p>
           </div>
-        </div>
-
-      </div>
-
-      <!-- Sidebar column -->
-      <div class="space-y-6">
-
-        <!-- Capacity & Size -->
-        <div class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-warm-100 dark:bg-warm-800 flex items-center justify-center">
-              <AppIcon icon="users" class="w-4 h-4 text-warm-600 dark:text-warm-400" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Capacity & Size</h2>
-          </div>
-          <div class="p-5 sm:p-6 space-y-4">
-            <div>
-              <label class="form-label">Min Capacity</label>
-              <input v-model.number="form.capacity_min" type="number" min="1" class="form-input" placeholder="10" />
-            </div>
-            <div>
-              <label class="form-label">Max Capacity <span class="text-coral">*</span></label>
-              <input v-model.number="form.capacity_max" required type="number" min="1" class="form-input" placeholder="500" />
-            </div>
-            <div>
-              <label class="form-label">Area (sq ft)</label>
-              <input v-model.number="form.area_sqft" type="number" min="0" class="form-input" placeholder="2000" />
-            </div>
-            <div>
-              <label class="form-label">Number of Floors</label>
-              <input v-model.number="form.floors" type="number" min="1" class="form-input" placeholder="1" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Status (edit only) -->
-        <div v-if="isEdit" class="card">
-          <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <AppIcon icon="shield" class="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Visibility</h2>
-          </div>
-          <div class="p-5 sm:p-6">
-            <label class="form-label">Status</label>
-            <select v-model="form.status" class="form-select">
-              <option value="active">Active — visible to clients</option>
-              <option value="inactive">Inactive — hidden from listings</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Gallery shortcut (edit only) -->
-        <div v-if="isEdit" class="card">
-          <div class="p-5 sm:p-6">
-            <p class="font-medium text-warm-900 dark:text-warm-50 text-sm">Venue Gallery</p>
-            <p class="text-warm-500 dark:text-warm-400 text-xs mt-1 mb-4">Upload and manage photos that showcase your venue to potential clients.</p>
-            <RouterLink :to="`/shop/venues/${route.params.id}/gallery`" class="btn-outline w-full gap-1.5 justify-center">
-              <AppIcon icon="image" class="w-4 h-4" />
-              Manage Gallery
-            </RouterLink>
-          </div>
-        </div>
-
-      </div>
-    </form>
-
-    <!-- Amenities editor (edit only; manages its own API calls) -->
-    <AmenityEditor v-if="isEdit" :venue-id="String(route.params.id)" class="mt-6" />
-
-    <!-- Map Modal -->
-    <div v-if="showMapModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div class="bg-white dark:bg-warm-900 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div class="p-5 border-b border-warm-200 dark:border-warm-800 flex items-center justify-between">
-          <div>
-            <h3 class="text-lg font-bold text-warm-900 dark:text-warm-50">Select Venue Location</h3>
-            <p class="text-xs text-warm-500 mt-1">Click on the map to pin your venue's exact location.</p>
-          </div>
-          <button @click="closeMapModal" class="p-2 hover:bg-warm-100 dark:hover:bg-warm-800 rounded-xl transition-colors">
-            <AppIcon icon="x" class="w-6 h-6" />
+          <RouterLink :to="{ name: 'shop-venues' }" class="btn-secondary">Cancel</RouterLink>
+          <button type="submit" form="venue-form" :disabled="saving" class="btn-primary">
+            <AppIcon :icon="saving ? 'loader' : 'check'" :class="saving ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
+            {{ saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create venue' }}
           </button>
         </div>
-        
-        <div class="flex-1 relative min-h-[400px]">
-          <div id="location-map" class="absolute inset-0"></div>
-          
-          <!-- Search in map overlay -->
-          <div class="absolute top-4 left-4 z-[1000] w-full max-w-sm">
-            <div class="relative">
-              <input 
-                type="text" 
-                placeholder="Search for address or landmark..." 
-                class="form-input !pl-10 !bg-white/90 backdrop-blur shadow-lg"
-                @keyup.enter="searchLocation(($event.target as HTMLInputElement).value)"
-              />
-              <AppIcon icon="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400" />
-            </div>
+      </div>
+    </div>
+
+    <!-- Map Modal -->
+    <div v-if="showMapModal" class="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4" role="dialog" aria-modal="true" aria-label="Select venue location">
+      <div class="absolute inset-0 bg-warm-900/60" @click="closeMapModal" />
+      <div class="relative bg-surface border border-line w-full max-w-4xl rounded-xl shadow-float overflow-hidden flex flex-col max-h-[92vh]">
+        <div class="px-5 py-4 border-b border-line flex items-center justify-between gap-3">
+          <div>
+            <h2 class="font-sans text-base font-semibold text-ink tracking-normal">Select venue location</h2>
+            <p class="text-xs text-ink-muted mt-0.5">Search, or click on the map to pin your venue's exact location.</p>
+          </div>
+          <button type="button" @click="closeMapModal" class="btn-icon btn-icon-sm" aria-label="Close"><AppIcon icon="x" class="w-5 h-5" /></button>
+        </div>
+
+        <div class="px-4 py-3 border-b border-line">
+          <div class="relative">
+            <AppIcon icon="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted pointer-events-none" />
+            <input
+              type="search"
+              placeholder="Search for an address or landmark, then press Enter"
+              class="form-input !pl-9"
+              aria-label="Search location"
+              @keyup.enter="searchLocation(($event.target as HTMLInputElement).value)"
+            />
           </div>
         </div>
-        
-        <div class="p-5 border-t border-warm-200 dark:border-warm-800 bg-warm-50 dark:bg-warm-800/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div class="space-y-1">
-            <p v-if="selectedAddress" class="text-sm font-semibold text-warm-900 dark:text-warm-50 flex items-center gap-1.5">
-              <AppIcon icon="map-pin" class="w-4 h-4 text-primary-500" />
-              {{ selectedAddress }}
+
+        <div class="flex-1 relative min-h-[320px] sm:min-h-[420px]">
+          <div id="location-map" class="absolute inset-0"></div>
+        </div>
+
+        <div class="px-5 py-3.5 border-t border-line bg-surface-sunken flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p v-if="selectedAddress" class="text-sm font-medium text-ink flex items-start gap-1.5">
+              <AppIcon icon="map-pin" class="w-4 h-4 text-brand-text shrink-0 mt-0.5" />
+              <span class="line-clamp-2">{{ selectedAddress }}</span>
             </p>
-            <p v-else class="text-sm text-warm-400 italic">No location selected yet</p>
-            <div class="flex gap-3 text-[10px] text-warm-500 font-mono" v-if="tempCoords">
-              <span>LAT: {{ tempCoords.lat.toFixed(6) }}</span>
-              <span>LONG: {{ tempCoords.lng.toFixed(6) }}</span>
-            </div>
+            <p v-else class="text-sm text-ink-muted">No location selected yet</p>
+            <p v-if="tempCoords" class="ref text-xs text-ink-muted mt-0.5">{{ tempCoords.lat.toFixed(6) }}, {{ tempCoords.lng.toFixed(6) }}</p>
           </div>
-          <div class="flex items-center gap-3">
-            <button @click="closeMapModal" class="btn-ghost">Cancel</button>
-            <button @click="confirmLocation" :disabled="!tempCoords" class="btn-primary px-8">Confirm Location</button>
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" @click="closeMapModal" class="btn-secondary">Cancel</button>
+            <button type="button" @click="confirmLocation" :disabled="!tempCoords" class="btn-primary">Use this location</button>
           </div>
         </div>
       </div>
@@ -294,12 +272,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { useCategoriesStore } from '@/stores/categories'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AmenityEditor from '@/components/amenities/AmenityEditor.vue'
+import { formatPKR } from '@/lib/format'
 
 const route  = useRoute()
 const router = useRouter()
@@ -509,6 +488,7 @@ async function load() {
     const { data } = await api.get(`/store/venues/${route.params.id}`)
     Object.assign(form, data.data)
     if (form.country) fetchCities(form.country)
+    takeSnapshot()
   } catch {
     errorMsg.value = 'Failed to load venue data.'
   }
@@ -522,6 +502,7 @@ async function save() {
     if (isEdit.value) {
       await api.put(`/store/venues/${route.params.id}`, form)
       successMsg.value = 'Venue updated successfully!'
+      takeSnapshot()
       setTimeout(() => (successMsg.value = ''), 3500)
     } else {
       const { data } = await api.post('/store/venues', form)
@@ -576,9 +557,90 @@ onMounted(() => {
     document.head.appendChild(script)
   }
 })
+
+
+
+// ── Section navigation, completeness and unsaved-changes tracking ───────────
+const capacityInvalid = computed(() => !!form.capacity_min && !!form.capacity_max && Number(form.capacity_max) < Number(form.capacity_min))
+const exampleGuests = computed(() => Math.max(Number(form.capacity_min) || 0, Math.min(300, Number(form.capacity_max) || 300)) || 300)
+
+const sections = computed(() => {
+  const list = [
+    { id: 'sec-basics', label: 'Basics', icon: 'info', complete: !!form.name },
+    { id: 'sec-location', label: 'Location', icon: 'map-pin', complete: !!form.city && !!form.latitude },
+    { id: 'sec-capacity', label: 'Capacity', icon: 'users', complete: !!form.capacity_max && !capacityInvalid.value },
+    { id: 'sec-pricing', label: 'Pricing', icon: 'banknote', complete: !!form.price_per_head },
+    { id: 'sec-events', label: 'Event types', icon: 'tags', complete: form.event_types.length > 0 },
+    { id: 'sec-hours', label: 'Hours', icon: 'clock', complete: !!form.operating_start && !!form.operating_end },
+  ]
+  if (isEdit.value) {
+    list.push({ id: 'sec-visibility', label: 'Visibility', icon: 'eye', complete: true })
+    list.push({ id: 'sec-amenities', label: 'Amenities', icon: 'circle-check', complete: false })
+  }
+  list.push({ id: 'sec-gallery', label: 'Gallery', icon: 'image', complete: false })
+  return list
+})
+
+const activeSection = ref('sec-basics')
+let observer: IntersectionObserver | null = null
+
+function goTo(id: string) {
+  activeSection.value = id
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function observeSections() {
+  observer?.disconnect()
+  observer = new IntersectionObserver(entries => {
+    const visible = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+    if (visible[0]) activeSection.value = visible[0].target.id
+  }, { rootMargin: '-120px 0px -55% 0px' })
+  for (const s of sections.value) {
+    const el = document.getElementById(s.id)
+    if (el) observer.observe(el)
+  }
+}
+
+const snapshot = ref('')
+const dirty = computed(() => !!snapshot.value && JSON.stringify(form) !== snapshot.value)
+function takeSnapshot() { snapshot.value = JSON.stringify(form) }
+
+onMounted(async () => {
+  await nextTick()
+  observeSections()
+  if (!isEdit.value) takeSnapshot()
+})
+onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.section-link {
+  display: flex; align-items: center; gap: 0.625rem;
+  padding: 0.5rem 0.75rem; border-radius: var(--radius-md);
+  font-size: 0.875rem; color: var(--ink-secondary);
+  border-left: 2px solid transparent;
+}
+.section-link:hover { background-color: var(--surface-hover); color: var(--ink); }
+.section-link[aria-current='true'] { background-color: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-xs); }
+.section-chip {
+  display: inline-flex; align-items: center; white-space: nowrap;
+  padding: 0.375rem 0.75rem; border-radius: 9999px; font-size: 0.8125rem;
+  color: var(--ink-secondary); border: 1px solid var(--line); background: var(--surface);
+}
+.section-chip[aria-current='true'] { color: var(--brand-text); border-color: var(--brand-text); background: var(--brand-soft); font-weight: 600; }
+.choice {
+  display: flex; align-items: center; gap: 0.625rem;
+  padding: 0.625rem 0.75rem; border-radius: var(--radius-md);
+  border: 1px solid var(--line); cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.choice:hover { border-color: rgb(var(--c-line-strong) / 0.6); }
+.choice.is-checked { border-color: var(--brand-text); background-color: var(--brand-soft); }
+.save-bar {
+  position: sticky; bottom: 0; z-index: var(--z-sticky);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem; margin-top: 0.5rem;
+  background-color: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+}
 </style>

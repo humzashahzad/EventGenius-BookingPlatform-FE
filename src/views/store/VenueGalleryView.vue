@@ -1,138 +1,114 @@
 <template>
-  <div class="content-container">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="flex items-center gap-3">
-        <router-link :to="{ name: 'shop-venues' }" class="btn-ghost !p-2 rounded-xl">
-          <AppIcon icon="chevron-left" class="w-5 h-5 text-warm-600 dark:text-warm-400" />
-        </router-link>
-        <div>
-          <h1 class="text-2xl font-bold text-warm-900 dark:text-warm-50 tracking-tight">Gallery — {{ venue?.name || '...' }}</h1>
-          <p class="text-sm text-warm-500 dark:text-warm-400 mt-1">Manage photos for this venue. First image is set as cover.</p>
-        </div>
+  <div class="space-y-5">
+    <header class="page-header !mb-0">
+      <div class="min-w-0">
+        <RouterLink :to="venue ? `/shop/venues/${venueId}/edit` : { name: 'shop-venues' }" class="btn-ghost btn-sm -ml-2 mb-2"><AppIcon icon="chevron-left" class="w-4 h-4" />{{ venue?.name || 'Venue' }}</RouterLink>
+        <h1 class="page-title">Photo gallery</h1>
+        <p class="page-subtitle">The cover photo is shown first in search and on the venue page.</p>
       </div>
-      <label class="btn-primary gap-1.5 cursor-pointer">
-        <AppIcon icon="upload" class="w-4 h-4" />
-        Upload Images
-        <input ref="fileInput" type="file" multiple accept="image/*" class="hidden" @change="handleUpload" />
-      </label>
-    </div>
-
-    <!-- Upload Progress -->
-    <transition name="fade">
-      <div v-if="uploading" class="flex items-center gap-3 p-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 mb-6">
-        <AppIcon icon="loader" class="w-5 h-5 animate-spin flex-shrink-0" />
-        <p class="text-sm font-medium">Uploading {{ uploadCount }} image(s)... please wait</p>
-      </div>
-    </transition>
-
-    <!-- Success/Error alerts -->
-    <transition name="fade">
-      <div v-if="successMsg" class="flex items-center gap-3 p-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-primary-700 dark:text-primary-300 mb-6">
-        <AppIcon icon="circle-check" class="w-5 h-5 flex-shrink-0" />
-        <p class="text-sm font-medium">{{ successMsg }}</p>
-      </div>
-    </transition>
-    <transition name="fade">
-      <div v-if="errorMsg" class="flex items-center gap-3 p-4 rounded-2xl bg-coral/10 dark:bg-coral/20 border border-coral/30 text-coral dark:text-red-300 mb-6">
-        <AppIcon icon="alert-circle" class="w-5 h-5 flex-shrink-0" />
-        <p class="text-sm font-medium">{{ errorMsg }}</p>
-      </div>
-    </transition>
-
-    <!-- Loading skeleton -->
-    <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-      <div v-for="i in 8" :key="i" class="skeleton aspect-square rounded-2xl"></div>
-    </div>
-
-    <!-- Gallery Grid -->
-    <div v-else-if="images.length" class="card">
-      <div class="p-5 sm:p-6">
-        <div class="flex items-center justify-between mb-4">
-          <p class="text-warm-500 dark:text-warm-400 text-xs">{{ images.length }} photo{{ images.length !== 1 ? 's' : '' }}</p>
-          <div class="flex items-center gap-2 text-xs text-warm-500 dark:text-warm-400">
-            <span class="inline-block w-2.5 h-2.5 rounded-full bg-primary-500"></span> Primary (cover)
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          <div
-            v-for="image in images"
-            :key="image.id"
-            class="group relative aspect-square rounded-2xl overflow-hidden"
-            :class="image.is_primary ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-warm-50 dark:ring-offset-warm-900' : ''"
-          >
-            <img :src="imageUrl(image.path)" :alt="image.alt_text || venue?.name" loading="lazy" class="w-full h-full object-cover" />
-
-            <!-- Primary badge -->
-            <div v-if="image.is_primary" class="absolute top-2 left-2 z-10">
-              <span class="badge-primary text-[10px]">Cover</span>
-            </div>
-
-            <!-- Actions overlay -->
-            <div class="absolute inset-0 bg-warm-950/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
-              <button
-                v-if="!image.is_primary"
-                @click="setPrimary(image)"
-                :disabled="actionId === image.id"
-                class="btn-secondary btn-sm !text-xs gap-1"
-                title="Set as cover"
-              >
-                <AppIcon icon="star" class="w-3 h-3" />
-                Cover
-              </button>
-              <button
-                @click="deleteImage(image)"
-                :disabled="actionId === image.id"
-                class="btn-danger btn-sm !text-xs gap-1"
-                title="Delete image"
-              >
-                <AppIcon icon="trash" class="w-3 h-3" />
-                Delete
-              </button>
-            </div>
-          </div>
-
-          <!-- Upload drop zone -->
-          <label
-            class="aspect-square rounded-2xl border-2 border-dashed border-warm-300 dark:border-warm-600 hover:border-primary-400 dark:hover:border-primary-500 flex flex-col items-center justify-center gap-2 cursor-pointer text-warm-400 dark:text-warm-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
-          >
-            <AppIcon icon="plus" class="w-8 h-8" />
-            <span class="text-xs font-medium">Add Photos</span>
-            <input type="file" multiple accept="image/*" class="hidden" @change="handleUpload" />
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <!-- Empty state -->
-    <div v-else class="card">
-      <div class="flex flex-col items-center py-16 text-center px-6">
-        <div class="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-2xl flex items-center justify-center mb-4">
-          <AppIcon icon="image" class="w-8 h-8 text-primary-600 dark:text-primary-400" />
-        </div>
-        <h3 class="text-lg font-semibold text-warm-800 dark:text-warm-100">No photos yet</h3>
-        <p class="text-warm-500 dark:text-warm-400 mt-1 max-w-xs text-sm">Upload photos to showcase your venue to potential clients.</p>
-        <label class="btn-primary mt-5 cursor-pointer gap-1.5">
-          <AppIcon icon="upload" class="w-4 h-4" />
-          Upload Photos
-          <input type="file" multiple accept="image/*" class="hidden" @change="handleUpload" />
+      <div class="page-header-actions">
+        <label class="btn-primary cursor-pointer" :class="uploading && 'opacity-60 pointer-events-none'">
+          <AppIcon icon="upload" class="w-4 h-4" />Upload photos
+          <input ref="fileInput" type="file" multiple accept="image/*" class="sr-only" @change="handleUpload" />
         </label>
       </div>
+    </header>
+
+    <div v-if="uploading" class="alert-info" role="status">
+      <AppIcon icon="loader" class="w-5 h-5 animate-spin shrink-0" />
+      <p>Uploading {{ uploadCount }} photo{{ uploadCount === 1 ? '' : 's' }}… please wait.</p>
+    </div>
+    <div v-if="successMsg" class="alert-success" role="status">
+      <AppIcon icon="circle-check" class="w-5 h-5 shrink-0" /><p>{{ successMsg }}</p>
+    </div>
+    <div v-if="errorMsg" class="alert-danger" role="alert">
+      <AppIcon icon="alert-circle" class="w-5 h-5 shrink-0" /><p>{{ errorMsg }}</p>
     </div>
 
+    <!-- Loading -->
+    <div v-if="loading && !images.length" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4" aria-busy="true">
+      <div v-for="i in 8" :key="i" class="skeleton aspect-[4/3]" />
+    </div>
+
+    <template v-else>
+      <!-- Drop zone -->
+      <label
+        class="dropzone"
+        :class="dragOver && 'is-over'"
+        @dragover.prevent="dragOver = true"
+        @dragleave.prevent="dragOver = false"
+        @drop.prevent="onDrop"
+      >
+        <span class="icon-chip tone-brand"><AppIcon icon="cloud-upload" class="w-5 h-5" /></span>
+        <span class="text-sm font-medium text-ink">Drag photos here or <span class="text-brand-text underline underline-offset-2">browse</span></span>
+        <span class="text-xs text-ink-muted">JPG or PNG, landscape works best. You can select several at once.</span>
+        <input type="file" multiple accept="image/*" class="sr-only" @change="handleUpload" />
+      </label>
+
+      <section v-if="images.length" class="card">
+        <div class="card-header">
+          <div><h2 class="card-title">{{ images.length }} photo{{ images.length !== 1 ? 's' : '' }}</h2><p class="card-subtitle">Set a cover or remove photos you no longer want.</p></div>
+        </div>
+        <div class="card-body">
+          <ul class="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+            <li
+              v-for="image in images"
+              :key="image.id"
+              class="rounded-lg border overflow-hidden bg-surface flex flex-col"
+              :class="image.is_primary ? 'border-brand-text ring-1 ring-brand-text' : 'border-line'"
+            >
+              <div class="relative aspect-[4/3] bg-surface-sunken">
+                <img :src="imageUrl(image.path)" :alt="image.alt_text || venue?.name || 'Venue photo'" loading="lazy" class="w-full h-full object-cover" />
+                <span v-if="image.is_primary" class="absolute top-2 left-2 badge-confirmed shadow-xs">Cover photo</span>
+              </div>
+              <div class="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-line">
+                <button
+                  v-if="!image.is_primary"
+                  type="button"
+                  class="btn-ghost btn-sm"
+                  :disabled="actionId === image.id"
+                  @click="setPrimary(image)"
+                >
+                  <AppIcon :icon="actionId === image.id ? 'loader' : 'star'" :class="actionId === image.id ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Make cover
+                </button>
+                <span v-else class="text-xs text-ink-muted px-2">Shown first</span>
+                <button type="button" class="btn-icon btn-icon-sm hover:!text-danger-text" :disabled="actionId === image.id" aria-label="Delete photo" title="Delete photo" @click="deleteImage(image)">
+                  <AppIcon icon="trash" class="w-4 h-4" />
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <div v-else class="card">
+        <div class="empty-state">
+          <div class="empty-state-icon"><AppIcon icon="image" class="w-5 h-5" /></div>
+          <p class="empty-state-title">No photos yet</p>
+          <p class="empty-state-desc">Venues with 5+ good photos get noticeably more booking requests.</p>
+          <div class="empty-state-actions">
+            <label class="btn-primary cursor-pointer"><AppIcon icon="upload" class="w-4 h-4" />Upload photos
+              <input type="file" multiple accept="image/*" class="sr-only" @change="handleUpload" />
+            </label>
+          </div>
+        </div>
+      </div>
+    </template>
+
     <!-- Delete Confirm Modal -->
-    <VuexyModal v-model:visible="showDeleteModal" title="Delete Image" width="28rem">
+    <VuexyModal v-model:visible="showDeleteModal" title="Delete photo" width="28rem">
       <div v-if="deleteTarget">
-        <img :src="imageUrl(deleteTarget.path)" class="w-full rounded-2xl mb-4 h-40 object-cover" :alt="deleteTarget.alt_text ?? undefined" />
-        <p class="text-warm-500 dark:text-warm-400 text-sm">Are you sure you want to delete this image? This action cannot be undone.</p>
+        <img :src="imageUrl(deleteTarget.path)" class="w-full rounded-lg mb-4 aspect-[16/9] object-cover" :alt="deleteTarget.alt_text ?? 'Photo to delete'" />
+        <p class="text-ink-secondary text-sm">Delete this photo? This can't be undone.</p>
       </div>
       <template #footer>
-        <button class="btn-ghost" @click="showDeleteModal = false">Cancel</button>
-        <button class="btn-danger gap-1.5" :disabled="deleting" @click="confirmDelete">
-          <AppIcon v-if="deleting" icon="loader" class="w-4 h-4 animate-spin" />
-          {{ deleting ? 'Deleting...' : 'Delete' }}
-        </button>
+        <div class="flex justify-end gap-2">
+          <button class="btn-secondary" @click="showDeleteModal = false">Cancel</button>
+          <button class="btn-danger" :disabled="deleting" @click="confirmDelete">
+            <AppIcon v-if="deleting" icon="loader" class="w-4 h-4 animate-spin" />
+            {{ deleting ? 'Deleting…' : 'Delete photo' }}
+          </button>
+        </div>
       </template>
     </VuexyModal>
   </div>
@@ -140,7 +116,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
 import VuexyModal from '@/components/ui/VuexyModal.vue'
@@ -204,13 +180,28 @@ async function loadVenue() {
   }
 }
 
+const dragOver = ref(false)
+
+function onDrop(e: DragEvent) {
+  dragOver.value = false
+  const files = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'))
+  if (files.length) uploadFiles(files)
+}
+
 async function handleUpload(event: Event) {
   const input = event.target as HTMLInputElement
   if (!input.files?.length) return
+  try {
+    await uploadFiles(Array.from(input.files))
+  } finally {
+    input.value = ''
+  }
+}
 
+async function uploadFiles(files: File[]) {
   const formData = new FormData()
-  uploadCount.value = input.files.length
-  for (const file of input.files) {
+  uploadCount.value = files.length
+  for (const file of files) {
     formData.append('images[]', file)
   }
 
@@ -225,7 +216,6 @@ async function handleUpload(event: Event) {
     showError(e.response?.data?.message || 'Upload failed.')
   } finally {
     uploading.value = false
-    input.value = ''
   }
 }
 
@@ -265,6 +255,13 @@ onMounted(loadVenue)
 </script>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.375rem;
+  padding: 1.5rem 1rem; text-align: center; cursor: pointer;
+  border: 2px dashed rgb(var(--c-line-strong) / 0.55); border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.dropzone:hover, .dropzone.is-over { border-color: var(--brand-text); background-color: var(--brand-soft); }
+.dropzone:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 </style>

@@ -1,16 +1,16 @@
 <template>
   <div class="card overflow-hidden">
-    <div class="p-5 sm:p-6 border-b border-warm-100 dark:border-warm-700">
+    <div class="p-5 sm:p-6 border-b border-line">
       <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
-          <h2 class="text-lg font-semibold text-warm-900 dark:text-warm-50">Venue controls</h2>
-          <p class="text-sm text-warm-500 dark:text-warm-400 mt-0.5">
+          <h2 class="text-lg font-semibold text-ink">Venue controls</h2>
+          <p class="text-sm text-ink-muted mt-0.5">
             Manually lift or bury a venue in “Best match”. Each 10 boost points adds or removes 2 score points (max ±20).
           </p>
         </div>
         <div class="flex flex-col sm:flex-row gap-2">
           <div class="relative sm:w-64">
-            <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-warm-400" />
+            <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
             <input v-model="filter" class="form-input !pl-9" placeholder="Filter by name, city or store" aria-label="Filter venues" />
           </div>
           <select v-model="sortKey" class="form-select sm:w-48" aria-label="Sort venues">
@@ -21,7 +21,7 @@
             <option value="avg_rating">Sort: Rating</option>
             <option value="search_boost">Sort: Boost</option>
           </select>
-          <label class="inline-flex items-center gap-2 text-sm text-warm-600 dark:text-warm-300 whitespace-nowrap px-1">
+          <label class="inline-flex items-center gap-2 text-sm text-ink-secondary whitespace-nowrap px-1">
             <input v-model="onlyBoosted" type="checkbox" class="rounded border-warm-300 text-primary-600 focus:ring-primary-500" />
             Only adjusted
           </label>
@@ -56,22 +56,22 @@
               <th class="px-5 py-3 w-[22rem]">Search boost</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-warm-100 dark:divide-warm-700">
-            <tr v-for="v in rows" :key="v.id" class="align-middle hover:bg-warm-50/60 dark:hover:bg-warm-700/30" :data-venue-id="v.id">
+          <tbody class="divide-y divide-line">
+            <tr v-for="v in rows" :key="v.id" class="align-middle hover:bg-surface-hover" :data-venue-id="v.id">
               <td class="px-5 py-3">
-                <p class="text-sm font-medium text-warm-900 dark:text-warm-50 flex items-center gap-1.5">
+                <p class="text-sm font-medium text-ink flex items-center gap-1.5">
                   {{ v.name }}
                   <AppIcon v-if="v.is_featured" icon="star-filled" class="w-3.5 h-3.5 text-amber-500" title="Featured" />
                   <span v-if="v.status !== 'active'" class="badge-warm !text-[10px] !py-0">{{ v.status }}</span>
                 </p>
-                <p class="text-xs text-warm-500 dark:text-warm-400">{{ v.city || '—' }} · {{ v.store_name || '—' }}</p>
+                <p class="text-xs text-ink-muted">{{ v.city || '—' }} · {{ v.store_name || '—' }}</p>
               </td>
-              <td class="px-3 py-3 text-right text-sm tabular-nums text-warm-700 dark:text-warm-300">{{ num(v.impressions) }}</td>
-              <td class="px-3 py-3 text-right text-sm tabular-nums text-warm-700 dark:text-warm-300">{{ num(v.clicks) }}</td>
-              <td class="px-3 py-3 text-right text-sm tabular-nums text-warm-700 dark:text-warm-300">{{ v.impressions ? pct(v.ctr) : '—' }}</td>
-              <td class="px-3 py-3 text-right text-sm tabular-nums text-warm-700 dark:text-warm-300">
-                <template v-if="v.total_reviews">★ {{ Number(v.avg_rating).toFixed(1) }} <span class="text-warm-400">({{ v.total_reviews }})</span></template>
-                <span v-else class="text-warm-400">—</span>
+              <td class="px-3 py-3 text-right text-sm tabular-nums text-ink-secondary">{{ num(v.impressions) }}</td>
+              <td class="px-3 py-3 text-right text-sm tabular-nums text-ink-secondary">{{ num(v.clicks) }}</td>
+              <td class="px-3 py-3 text-right text-sm tabular-nums text-ink-secondary">{{ v.impressions ? pct(v.ctr) : '—' }}</td>
+              <td class="px-3 py-3 text-right text-sm tabular-nums text-ink-secondary">
+                <template v-if="v.total_reviews">★ {{ Number(v.avg_rating).toFixed(1) }} <span class="text-ink-muted">({{ v.total_reviews }})</span></template>
+                <span v-else class="text-ink-muted">—</span>
               </td>
               <td class="px-5 py-3"><BoostControl :venue="v" :state="state[v.id]" @set="b => setBoost(v, b)" @preview="b => (v.search_boost = b)" /></td>
             </tr>
@@ -79,27 +79,27 @@
         </table>
       </div>
       <!-- Mobile cards -->
-      <ul class="md:hidden divide-y divide-warm-100 dark:divide-warm-700">
+      <ul class="md:hidden divide-y divide-line">
         <li v-for="v in rows" :key="v.id" class="p-4" :data-venue-id="v.id">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
-              <p class="text-sm font-medium text-warm-900 dark:text-warm-50 flex items-center gap-1.5">
+              <p class="text-sm font-medium text-ink flex items-center gap-1.5">
                 <span class="truncate">{{ v.name }}</span>
                 <AppIcon v-if="v.is_featured" icon="star-filled" class="w-3.5 h-3.5 text-amber-500 shrink-0" />
               </p>
-              <p class="text-xs text-warm-500 dark:text-warm-400 truncate">{{ v.city || '—' }} · {{ v.store_name || '—' }}</p>
+              <p class="text-xs text-ink-muted truncate">{{ v.city || '—' }} · {{ v.store_name || '—' }}</p>
             </div>
-            <span v-if="v.total_reviews" class="text-xs text-warm-600 dark:text-warm-300 whitespace-nowrap">★ {{ Number(v.avg_rating).toFixed(1) }}</span>
+            <span v-if="v.total_reviews" class="text-xs text-ink-secondary whitespace-nowrap">★ {{ Number(v.avg_rating).toFixed(1) }}</span>
           </div>
           <div class="grid grid-cols-3 gap-2 my-3 text-center">
-            <div class="rounded-lg bg-warm-50 dark:bg-warm-700/40 py-1.5"><p class="text-sm font-semibold tabular-nums text-warm-900 dark:text-warm-50">{{ num(v.impressions) }}</p><p class="text-[10px] uppercase text-warm-400">Impr.</p></div>
-            <div class="rounded-lg bg-warm-50 dark:bg-warm-700/40 py-1.5"><p class="text-sm font-semibold tabular-nums text-warm-900 dark:text-warm-50">{{ num(v.clicks) }}</p><p class="text-[10px] uppercase text-warm-400">Clicks</p></div>
-            <div class="rounded-lg bg-warm-50 dark:bg-warm-700/40 py-1.5"><p class="text-sm font-semibold tabular-nums text-warm-900 dark:text-warm-50">{{ v.impressions ? pct(v.ctr) : '—' }}</p><p class="text-[10px] uppercase text-warm-400">CTR</p></div>
+            <div class="rounded-lg bg-surface-sunken py-1.5"><p class="text-sm font-semibold tabular-nums text-ink">{{ num(v.impressions) }}</p><p class="text-[10px] uppercase text-ink-muted">Impr.</p></div>
+            <div class="rounded-lg bg-surface-sunken py-1.5"><p class="text-sm font-semibold tabular-nums text-ink">{{ num(v.clicks) }}</p><p class="text-[10px] uppercase text-ink-muted">Clicks</p></div>
+            <div class="rounded-lg bg-surface-sunken py-1.5"><p class="text-sm font-semibold tabular-nums text-ink">{{ v.impressions ? pct(v.ctr) : '—' }}</p><p class="text-[10px] uppercase text-ink-muted">CTR</p></div>
           </div>
           <BoostControl :venue="v" :state="state[v.id]" @set="b => setBoost(v, b)" @preview="b => (v.search_boost = b)" />
         </li>
       </ul>
-      <p class="px-5 py-3 text-xs text-warm-400 border-t border-warm-100 dark:border-warm-700">
+      <p class="px-5 py-3 text-xs text-ink-muted border-t border-line">
         {{ rows.length }} of {{ venues.length }} venues · CTR = clicks ÷ impressions (all time).
       </p>
     </template>

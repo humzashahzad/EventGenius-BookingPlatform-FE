@@ -1,7 +1,7 @@
 <template>
   <div>
     <div
-      class="flex h-2.5 w-full overflow-hidden rounded-full bg-warm-100 dark:bg-warm-700"
+      class="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-sunken"
       role="img"
       :aria-label="ariaLabel"
     >
@@ -14,9 +14,9 @@
       ></span>
     </div>
     <div v-if="showLegend && segments.length" class="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
-      <span v-for="seg in segments" :key="seg.key" class="inline-flex items-center gap-1 text-[11px] text-warm-500 dark:text-warm-400">
+      <span v-for="seg in segments" :key="seg.key" class="inline-flex items-center gap-1 text-[11px] text-ink-muted">
         <span class="w-2 h-2 rounded-sm" :style="{ background: seg.color }"></span>
-        {{ seg.label }} <span class="tabular-nums text-warm-700 dark:text-warm-300">{{ seg.points.toFixed(1) }}</span>
+        {{ seg.label }} <span class="tabular-nums text-ink-secondary">{{ seg.points.toFixed(1) }}</span>
       </span>
     </div>
   </div>

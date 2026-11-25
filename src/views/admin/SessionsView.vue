@@ -1,188 +1,129 @@
 <template>
-  <div class="content-container">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between mb-8">
+  <div class="space-y-5">
+    <header class="page-header !mb-0">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-warm-50">Sessions Management</h1>
-        <p class="text-warm-500 dark:text-warm-400 mt-1">Monitor and revoke active user sessions across all devices</p>
+        <h1 class="page-title">Sessions</h1>
+        <p class="page-subtitle">Signed-in devices across the platform. Revoke a session to sign that device out.</p>
       </div>
-      <button @click="loadSessions" class="btn-outline inline-flex items-center gap-1.5 text-sm">
-        <AppIcon icon="refresh" class="w-4 h-4" />
-        Refresh
-      </button>
-    </div>
+      <div class="page-header-actions">
+        <button @click="refreshAll" class="btn-secondary" :disabled="loading"><AppIcon icon="refresh" :class="loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Refresh</button>
+      </div>
+    </header>
 
-    <!-- Stats Row -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-      <div class="stat-card">
-        <div class="stat-icon bg-primary-50 dark:bg-primary-900/30">
-          <AppIcon icon="users" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
-        </div>
-        <div>
-          <h4 class="stat-value">{{ stats.total }}</h4>
-          <span class="stat-label">Total Sessions</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon bg-emerald-50 dark:bg-emerald-900/30">
-          <AppIcon icon="circle-check" class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-        </div>
-        <div>
-          <h4 class="stat-value">{{ stats.active }}</h4>
-          <span class="stat-label">Active</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon bg-coral/10 dark:bg-coral/20">
-          <AppIcon icon="x" class="w-5 h-5 text-coral" />
-        </div>
-        <div>
-          <h4 class="stat-value">{{ stats.revoked }}</h4>
-          <span class="stat-label">Revoked</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon bg-warm-100 dark:bg-warm-800">
-          <AppIcon icon="clock" class="w-5 h-5 text-warm-500 dark:text-warm-400" />
-        </div>
-        <div>
-          <h4 class="stat-value">{{ stats.expired }}</h4>
-          <span class="stat-label">Expired</span>
-        </div>
-      </div>
-    </div>
+    <section aria-label="Session counts" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <KpiTile label="All sessions" icon="shield-check" tone="neutral" :loading="countsLoading" :value="counts.total" helper="tokens issued" />
+      <KpiTile label="Active" icon="circle-check" tone="success" :loading="countsLoading" :value="counts.active" helper="currently valid" />
+      <KpiTile label="Revoked" icon="ban" tone="danger" :loading="countsLoading" :value="counts.revoked" helper="signed out by support or user" />
+      <KpiTile label="Expired" icon="clock" tone="neutral" :loading="countsLoading" :value="counts.expired" helper="timed out" />
+    </section>
 
-
-    <!-- Sessions Table -->
-    <div class="card">
-      <!-- Loading -->
-      <div v-if="loading" class="p-5 text-center py-12">
-        <div class="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto"></div>
-        <p class="text-warm-500 dark:text-warm-400 text-sm mt-3">Loading sessions...</p>
-      </div>
-
-      <!-- Table -->
-      <div v-else-if="sessions.length" class="table-wrapper overflow-x-auto">
-        <table class="w-full min-w-[700px]">
-          <thead>
-            <tr class="table-header">
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">User</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Role</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Status</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">IP Address</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Device</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Last Used</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Expires</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="session in sessions" :key="session.id" class="table-row">
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-                    <span class="text-xs font-bold text-primary-700 dark:text-primary-300">{{ (session.user?.name || 'U').charAt(0).toUpperCase() }}</span>
-                  </div>
-                  <div>
-                    <p class="text-sm font-medium text-warm-800 dark:text-warm-200 mb-0">{{ session.user?.name }}</p>
-                    <span class="text-xs text-warm-400 dark:text-warm-500">{{ session.user?.email }}</span>
-                  </div>
-                </div>
-              </td>
-              <td class="px-5 py-3"><span :class="getRoleBadge(session.user?.role)">{{ formatRole(session.user?.role) }}</span></td>
-              <td class="px-5 py-3"><span :class="getStatusBadge(session)">{{ getStatusLabel(session) }}</span></td>
-              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 font-mono">{{ session.ip_address || '---' }}</td>
-              <td class="px-5 py-3">
-                <span class="text-sm text-warm-500 dark:text-warm-400 truncate inline-block max-w-[150px]" :title="session.user_agent ?? undefined">{{ parseDevice(session.user_agent) }}</span>
-              </td>
-              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 whitespace-nowrap">{{ formatDate(session.last_used_at) }}</td>
-              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 whitespace-nowrap">{{ formatDate(session.expires_at) }}</td>
-              <td class="px-5 py-3">
-                <button
-                  v-if="!session.is_revoked && !isExpired(session)"
-                  @click="revokeSession(session)"
-                  :disabled="revokingId === session.id"
-                  class="btn-danger text-sm px-3 py-1.5 inline-flex items-center gap-1"
-                  title="Revoke this session"
-                >
-                  <AppIcon icon="x" class="w-3.5 h-3.5" />
-                  {{ revokingId === session.id ? 'Revoking...' : 'Revoke' }}
-                </button>
-                <span v-else class="text-sm text-warm-400 dark:text-warm-500">---</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Empty -->
-      <div v-else class="p-5 text-center py-12">
-        <div class="w-14 h-14 rounded-2xl bg-warm-100 dark:bg-warm-800 flex items-center justify-center mx-auto mb-4">
-          <AppIcon icon="shield" class="w-7 h-7 text-warm-400" />
-        </div>
-        <p class="font-medium text-warm-700 dark:text-warm-300 mb-1">No sessions found</p>
-        <p class="text-warm-500 dark:text-warm-400 text-sm">Try adjusting your search or filters</p>
-      </div>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="pagination" class="flex flex-wrap items-center justify-between mt-6">
-      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ pagination.from }}–{{ pagination.to }} of {{ pagination.total }} sessions</p>
-      <nav class="flex items-center gap-1">
-        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="pagination.current_page === 1 ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="pagination.current_page === 1" @click="goToPage(pagination.current_page - 1)">
-          <AppIcon icon="chevron-left" class="w-4 h-4" />
-        </button>
-        <button v-for="pg in visiblePages" :key="pg" class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-medium transition-all" :class="pg === pagination.current_page ? 'bg-primary-600 text-white shadow-soft' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" @click="goToPage(pg)">{{ pg }}</button>
-        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="pagination.current_page === pagination.last_page ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="pagination.current_page === pagination.last_page" @click="goToPage(pagination.current_page + 1)">
-          <AppIcon icon="chevron-right" class="w-4 h-4" />
-        </button>
+    <section class="card overflow-hidden">
+      <nav class="tabs px-2 sm:px-4" role="tablist" aria-label="Session status">
+        <button v-for="t in statusTabs" :key="t.value" role="tab" class="tab" :aria-selected="filters.status === t.value" @click="filters.status = t.value; resetAndLoad()">{{ t.label }}</button>
       </nav>
-    </div>
+      <DataToolbar v-model:search="filters.search" placeholder="Search by user name or email" :count="loading ? undefined : pagination?.total" noun="sessions" @update:search="resetAndLoad">
+        <select v-model="filters.role" class="form-select" aria-label="Role" @change="resetAndLoad">
+          <option value="">All roles</option>
+          <option value="admin">Support</option>
+          <option value="store_owner">Shop owner</option>
+          <option value="client">Customer</option>
+        </select>
+      </DataToolbar>
 
-    <!-- Confirm Revoke Modal -->
-    <VuexyModal v-model:visible="showRevokeModal" title="Revoke Session" width="28rem">
-      <div class="rounded-2xl bg-coral/5 dark:bg-coral/10 border border-coral/20 p-4 mb-4">
-        <div class="flex items-start gap-2.5">
-          <AppIcon icon="alert-triangle" class="w-5 h-5 text-coral flex-shrink-0 mt-0.5" />
-          <div>
-            <p class="text-sm font-medium text-coral mb-1">This will immediately log out the user</p>
-            <p class="text-sm text-warm-600 dark:text-warm-400">
-              <strong class="text-warm-800 dark:text-warm-200">{{ confirmSession?.user?.name }}</strong> will be signed out and their JWT token will no longer be valid. They will need to log in again.
-            </p>
-          </div>
-        </div>
+      <div v-if="loading" class="p-4 space-y-3" aria-busy="true"><div v-for="i in 8" :key="i" class="skeleton h-10 w-full" /></div>
+
+      <div v-else-if="loadError" class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
+        <p class="empty-state-title">Couldn't load sessions</p>
+        <p class="empty-state-desc">{{ loadError }}</p>
+        <div class="empty-state-actions"><button class="btn-primary" @click="loadSessions">Try again</button></div>
       </div>
-      <div class="space-y-2 text-sm text-warm-500 dark:text-warm-400">
-        <div class="flex justify-between">
-          <span>User:</span>
-          <span class="font-medium text-warm-800 dark:text-warm-200">{{ confirmSession?.user?.name }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span>IP:</span>
-          <span class="font-mono text-sm">{{ confirmSession?.ip_address || 'Unknown' }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span>Device:</span>
-          <span class="text-sm">{{ parseDevice(confirmSession?.user_agent ?? null) }}</span>
-        </div>
+
+      <div v-else-if="!sessions.length" class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="shield" class="w-5 h-5" /></div>
+        <p class="empty-state-title">No sessions found</p>
+        <p class="empty-state-desc">Try a different search, status or role.</p>
+        <div class="empty-state-actions"><button class="btn-secondary" @click="filters.search = ''; filters.status = ''; filters.role = ''; resetAndLoad()">Clear filters</button></div>
       </div>
-      <template #footer>
-        <button class="btn-secondary" @click="showRevokeModal = false">Cancel</button>
-        <button class="btn-danger inline-flex items-center" :disabled="revoking" @click="confirmRevoke">
-          <AppIcon v-if="revoking" icon="loader" class="w-4 h-4 animate-spin mr-1.5" />
-          {{ revoking ? 'Revoking...' : 'Revoke Session' }}
-        </button>
+
+      <template v-else>
+        <!-- Phone -->
+        <ul class="md:hidden divide-y divide-line">
+          <li v-for="session in sessions" :key="session.id" class="p-4">
+            <div class="flex items-start gap-3">
+              <span class="avatar w-9 h-9 text-xs shrink-0">{{ initials(session.user?.name) }}</span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-sm font-medium text-ink truncate">{{ session.user?.name }}</p>
+                  <span :class="getStatusBadge(session)" class="shrink-0">{{ getStatusLabel(session) }}</span>
+                </div>
+                <p class="text-xs text-ink-muted truncate">{{ session.user?.email }}</p>
+                <p class="text-xs text-ink-muted mt-1"><span class="ref">{{ session.ip_address || 'Unknown IP' }}</span> · {{ parseDevice(session.user_agent) }} · used {{ formatDate(session.last_used_at) }}</p>
+              </div>
+            </div>
+            <button v-if="!session.is_revoked && !isExpired(session)" class="btn-danger-ghost btn-sm mt-2" :disabled="revokingId === session.id" @click="revokeSession(session)">
+              <AppIcon icon="logout" class="w-4 h-4" />Revoke
+            </button>
+          </li>
+        </ul>
+
+        <!-- Desktop -->
+        <div class="hidden md:block table-wrapper max-h-[calc(100vh-320px)] min-h-[320px] scrollbar-thin">
+          <table class="data-table">
+            <thead>
+              <tr><th>User</th><th>Role</th><th>Status</th><th>IP address</th><th>Device</th><th>Last used</th><th>Expires</th><th class="cell-actions"><span class="sr-only">Actions</span></th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="session in sessions" :key="session.id">
+                <td>
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="avatar w-8 h-8 text-[11px] shrink-0">{{ initials(session.user?.name) }}</span>
+                    <div class="min-w-0">
+                      <p class="cell-primary truncate max-w-[200px]">{{ session.user?.name }}</p>
+                      <p class="text-xs text-ink-muted truncate max-w-[220px]">{{ session.user?.email }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td><span :class="getRoleBadge(session.user?.role)">{{ formatRole(session.user?.role) }}</span></td>
+                <td><span :class="getStatusBadge(session)">{{ getStatusLabel(session) }}</span></td>
+                <td class="ref whitespace-nowrap">{{ session.ip_address || '—' }}</td>
+                <td><span class="truncate inline-block max-w-[150px] align-middle" :title="session.user_agent ?? undefined">{{ parseDevice(session.user_agent) }}</span></td>
+                <td class="whitespace-nowrap">{{ formatDate(session.last_used_at) }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(session.expires_at) }}</td>
+                <td class="cell-actions">
+                  <button v-if="!session.is_revoked && !isExpired(session)" class="btn-danger-ghost btn-sm" :disabled="revokingId === session.id" title="Revoke this session" @click="revokeSession(session)">
+                    <AppIcon icon="logout" class="w-4 h-4" />{{ revokingId === session.id ? 'Revoking…' : 'Revoke' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <TablePager v-if="pagination" :page="pagination.current_page" :per-page="pagination.per_page" :total="pagination.total" @update:page="goToPage" />
       </template>
-    </VuexyModal>
+    </section>
+
+    <ConfirmDialog v-model:visible="showRevokeModal" title="Revoke session" confirm-label="Revoke session" tone="danger" icon="logout" :loading="revoking" @confirm="confirmRevoke">
+      <p class="font-medium text-ink">This signs the user out immediately.</p>
+      <p class="mt-1"><strong class="text-ink">{{ confirmSession?.user?.name }}</strong>'s token stops working and they'll need to sign in again.</p>
+      <dl class="mt-3 panel-sunken px-3 py-1">
+        <div class="dl-row"><dt>IP</dt><dd class="ref">{{ confirmSession?.ip_address || 'Unknown' }}</dd></div>
+        <div class="dl-row"><dt>Device</dt><dd>{{ parseDevice(confirmSession?.user_agent ?? null) }}</dd></div>
+      </dl>
+    </ConfirmDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
-import { useTopBarActionsStore } from '@/stores/topBarActions'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import VuexyModal from '@/components/ui/VuexyModal.vue'
+import DataToolbar from '@/components/admin/DataToolbar.vue'
+import ConfirmDialog from '@/components/admin/ConfirmDialog.vue'
+import KpiTile from '@/components/dashboard/KpiTile.vue'
+import TablePager from '@/components/dashboard/TablePager.vue'
+import { initials } from '@/components/dashboard/metrics'
 
 interface SessionUser {
   id: number
@@ -230,21 +171,34 @@ const filters = ref({
   page:     1,
 })
 
-const stats = ref({ total: 0, active: 0, revoked: 0, expired: 0 })
-const topBarActions = useTopBarActionsStore()
+const loadError = ref('')
+const countsLoading = ref(true)
+const counts = ref({ total: 0, active: 0, revoked: 0, expired: 0 })
+const statusTabs = [
+  { value: '', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'revoked', label: 'Revoked' },
+  { value: 'expired', label: 'Expired' },
+]
 
-const visiblePages = computed(() => {
-  if (!pagination.value) return []
-  const { current_page, last_page } = pagination.value
-  const pages: number[] = []
-  for (let i = Math.max(1, current_page - 2); i <= Math.min(last_page, current_page + 2); i++) {
-    pages.push(i)
-  }
-  return pages
-})
+// Platform-wide counts (one tiny request per status) instead of counting the current page.
+async function loadCounts() {
+  countsLoading.value = true
+  const total = (status?: string) => api.get('/admin/sessions', { params: { per_page: 1, ...(status ? { status } : {}) } })
+    .then(({ data }) => Number(data.data?.total) || 0).catch(() => 0)
+  const [all, active, revoked, expired] = await Promise.all([total(), total('active'), total('revoked'), total('expired')])
+  counts.value = { total: all, active, revoked, expired }
+  countsLoading.value = false
+}
+
+function refreshAll() {
+  loadSessions()
+  loadCounts()
+}
 
 async function loadSessions() {
   loading.value = true
+  loadError.value = ''
   try {
     const params: Record<string, any> = {
       per_page: filters.value.per_page,
@@ -267,12 +221,8 @@ async function loadSessions() {
       to:           result.to   || 0,
     }
 
-    stats.value.total   = result.total
-    stats.value.active  = sessions.value.filter(s => !s.is_revoked && !isExpired(s)).length
-    stats.value.revoked = sessions.value.filter(s => s.is_revoked).length
-    stats.value.expired = sessions.value.filter(s => !s.is_revoked && isExpired(s)).length
-  } catch (e) {
-    console.error('Failed to load sessions', e)
+  } catch (e: any) {
+    loadError.value = e?.response?.data?.message || 'Please check your connection and try again.'
   } finally {
     loading.value = false
   }
@@ -291,9 +241,11 @@ async function confirmRevoke() {
     await api.delete(`/admin/sessions/${confirmSession.value.id}`)
     confirmSession.value = null
     showRevokeModal.value = false
+    toast.success('Session revoked.')
     await loadSessions()
-  } catch (e) {
-    console.error('Failed to revoke session', e)
+    loadCounts()
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message || 'Could not revoke this session.')
   } finally {
     revoking.value   = false
     revokingId.value = null
@@ -303,15 +255,6 @@ async function confirmRevoke() {
 function goToPage(page: number) {
   filters.value.page = page
   loadSessions()
-}
-
-let debounceTimer: ReturnType<typeof setTimeout>
-function debouncedLoad() {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => {
-    filters.value.page = 1
-    loadSessions()
-  }, 350)
 }
 
 function isExpired(session: Session): boolean {
@@ -325,18 +268,18 @@ function getStatusLabel(session: Session): string {
 }
 
 function getStatusBadge(session: Session): string {
-  if (session.is_revoked) return 'badge-coral'
-  if (isExpired(session)) return 'badge-warm'
-  return 'badge-primary'
+  if (session.is_revoked) return 'badge-rejected'
+  if (isExpired(session)) return 'badge-cancelled'
+  return 'badge-confirmed'
 }
 
 function getRoleBadge(role?: string): string {
   const map: Record<string, string> = {
-    admin: 'badge-coral',
-    store_owner: 'badge-accent',
-    client: 'badge-primary',
+    admin: 'badge-info',
+    store_owner: 'badge-warning',
+    client: 'badge-neutral',
   }
-  return map[role || ''] || 'badge-warm'
+  return map[role || ''] || 'badge-neutral'
 }
 
 function formatRole(role?: string): string {
@@ -349,8 +292,8 @@ function formatRole(role?: string): string {
 }
 
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '---'
-  return new Intl.DateTimeFormat('en-US', {
+  if (!dateStr) return '—'
+  return new Intl.DateTimeFormat('en-GB', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   }).format(new Date(dateStr))
 }
@@ -371,37 +314,5 @@ function resetAndLoad() {
   loadSessions()
 }
 
-onMounted(() => {
-  loadSessions()
-  topBarActions.set({
-    searchPlaceholder: 'Search by user name or email...',
-    searchValue: filters.value.search,
-    filterOptions: [
-      { key: 'status', label: 'All Status', options: [
-        { value: 'active', label: 'Active' },
-        { value: 'revoked', label: 'Revoked' },
-        { value: 'expired', label: 'Expired' },
-      ]},
-      { key: 'role', label: 'All Roles', options: [
-        { value: 'admin', label: 'Support' },
-        { value: 'store_owner', label: 'Shop Owner' },
-        { value: 'client', label: 'Customer' },
-      ]},
-    ],
-    initialFilterValues: { status: filters.value.status, role: filters.value.role },
-    onSearch(q: string) {
-      filters.value.search = q
-      resetAndLoad()
-    },
-    onFilter(key: string, value: string) {
-      if (key === 'status') filters.value.status = value
-      else if (key === 'role') filters.value.role = value
-      resetAndLoad()
-    },
-  })
-})
-
-onUnmounted(() => {
-  topBarActions.clear()
-})
+onMounted(refreshAll)
 </script>

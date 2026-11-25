@@ -2,7 +2,7 @@
 
 export type SignalKey =
   | 'relevance' | 'quality' | 'popularity' | 'reliability' | 'price_fit'
-  | 'capacity_fit' | 'distance' | 'engagement' | 'freshness' | 'personal'
+  | 'capacity_fit' | 'distance' | 'engagement' | 'freshness' | 'personal' | 'sentiment'
 
 export interface RankingSettings {
   weights: Record<SignalKey, number>
@@ -37,7 +37,23 @@ export const SIGNALS: SignalMeta[] = [
   { key: 'engagement', label: 'Engagement (learning)', help: 'Venues customers click on more often in search results rise over time.', color: 'var(--sig-engagement)' },
   { key: 'freshness', label: 'Freshness (new venues)', help: 'Gives venues added in the last 45 days a chance to be seen.', color: 'var(--sig-freshness)' },
   { key: 'personal', label: 'Personalisation', help: 'Matches the cities, event types and price range the signed-in customer booked before.', color: 'var(--sig-personal)' },
+  // Added with the review-insights backend; only shown when the API returns a `sentiment` weight.
+  { key: 'sentiment', label: 'Guest sentiment', help: 'Guest sentiment — from AI analysis of review text. Venues whose written reviews read positive rank higher (needs 3+ analysed reviews).', color: 'var(--sig-sentiment)' },
 ]
+
+/**
+ * Signals to show for a settings object: the known ones the API actually returned
+ * (so an older backend without `sentiment` shows no empty slider), plus any extra
+ * numeric weight the API sends that this file doesn't know yet.
+ */
+export function signalsFor(weights: Record<string, unknown> | null | undefined): SignalMeta[] {
+  if (!weights) return SIGNALS
+  const known = SIGNALS.filter(s => typeof weights[s.key] === 'number')
+  const extra = Object.keys(weights)
+    .filter(k => !SIGNALS.some(s => s.key === k) && typeof weights[k] === 'number')
+    .map(k => ({ key: k as SignalKey, label: k.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()), help: '', color: 'var(--sig-boost)' }))
+  return [...known, ...extra]
+}
 
 export const SIGNAL_MAP: Record<string, SignalMeta> = Object.fromEntries(SIGNALS.map(s => [s.key, s]))
 

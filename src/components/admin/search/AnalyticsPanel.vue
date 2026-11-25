@@ -2,18 +2,16 @@
   <div class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="text-lg font-semibold text-warm-900 dark:text-warm-50">Search analytics</h2>
-        <p class="text-sm text-warm-500 dark:text-warm-400 mt-0.5">What customers search for, what they click, and where we have nothing to show.</p>
+        <h2 class="text-lg font-semibold text-ink">Search analytics</h2>
+        <p class="text-sm text-ink-muted mt-0.5">What customers search for, what they click, and where we have nothing to show.</p>
       </div>
       <div class="flex items-center gap-2">
-        <div class="inline-flex rounded-xl border border-warm-200 dark:border-warm-600 p-0.5 bg-white dark:bg-warm-800" role="group" aria-label="Date range">
+        <div class="segmented" role="group" aria-label="Date range">
           <button v-for="d in [7, 30, 90]" :key="d" type="button"
-            class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
-            :class="days === d ? 'bg-primary-500 text-white' : 'text-warm-600 hover:bg-warm-50 dark:text-warm-300 dark:hover:bg-warm-700'"
             :aria-pressed="days === d"
             @click="days = d; load()">{{ d }} days</button>
         </div>
-        <button class="btn-ghost !px-2.5 !py-2" title="Refresh" :disabled="loading" @click="load"><AppIcon icon="refresh" :class="loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" /></button>
+        <button class="btn-icon" aria-label="Refresh" title="Refresh" :disabled="loading" @click="load"><AppIcon icon="refresh" :class="loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" /></button>
       </div>
     </div>
 
@@ -28,7 +26,7 @@
       <!-- KPI tiles -->
       <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <template v-if="loading && !data">
-          <div v-for="i in 5" :key="i" class="skeleton h-24 rounded-2xl"></div>
+          <div v-for="i in 5" :key="i" class="skeleton h-24 rounded-xl"></div>
         </template>
         <template v-else-if="data">
           <div v-for="k in kpis" :key="k.label" class="stat-card !p-4 !gap-3">
@@ -44,7 +42,7 @@
       <div v-if="data" class="grid grid-cols-1 xl:grid-cols-3 gap-6" :class="{ 'opacity-60': loading }">
         <!-- Trend -->
         <div class="card p-5 xl:col-span-2 min-w-0">
-          <h3 class="text-sm font-semibold text-warm-900 dark:text-warm-50 mb-3">Searches &amp; clicks per day</h3>
+          <h3 class="text-sm font-semibold text-ink mb-3">Searches &amp; clicks per day</h3>
           <TrendChart v-if="data.totals.searches || data.totals.clicks" :points="data.per_day" />
           <div v-else class="empty-state !py-10">
             <div class="empty-state-icon"><AppIcon icon="search" class="w-6 h-6" /></div>
@@ -55,15 +53,15 @@
 
         <!-- Understood breakdown -->
         <div class="card p-5">
-          <h3 class="text-sm font-semibold text-warm-900 dark:text-warm-50">How often we understood…</h3>
-          <p class="text-xs text-warm-500 dark:text-warm-400 mb-4">Share of searches where the query or filters gave us this detail.</p>
+          <h3 class="text-sm font-semibold text-ink">How often we understood…</h3>
+          <p class="text-xs text-ink-muted mb-4">Share of searches where the query or filters gave us this detail.</p>
           <div class="space-y-4">
             <div v-for="b in understoodBars" :key="b.key">
               <div class="flex justify-between text-sm mb-1">
-                <span class="text-warm-700 dark:text-warm-300">{{ b.label }}</span>
-                <span class="font-semibold tabular-nums text-warm-900 dark:text-warm-50">{{ pct(b.value, 0) }}</span>
+                <span class="text-ink-secondary">{{ b.label }}</span>
+                <span class="font-semibold tabular-nums text-ink">{{ pct(b.value, 0) }}</span>
               </div>
-              <div class="h-2 rounded-full bg-warm-100 dark:bg-warm-700 overflow-hidden">
+              <div class="h-2 rounded-full bg-surface-sunken overflow-hidden">
                 <div class="h-full rounded-full bg-[var(--chart-1)] transition-all" :style="{ width: `${Math.min(100, b.value || 0)}%` }"></div>
               </div>
             </div>
@@ -72,17 +70,17 @@
 
         <!-- Top queries -->
         <div class="card overflow-hidden xl:col-span-2 min-w-0">
-          <div class="px-5 py-3 border-b border-warm-100 dark:border-warm-700"><h3 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Top queries</h3></div>
+          <div class="px-5 py-3 border-b border-line"><h3 class="text-sm font-semibold text-ink">Top queries</h3></div>
           <div v-if="!data.top_queries.length" class="empty-state !py-8"><p class="empty-state-desc">No typed queries yet.</p></div>
           <div v-else class="table-wrapper">
             <table class="w-full text-sm">
               <thead><tr class="table-header"><th class="px-5 py-2.5">Query</th><th class="px-3 py-2.5 text-right">Searches</th><th class="px-3 py-2.5 text-right">Avg results</th><th class="px-5 py-2.5 text-right">CTR</th></tr></thead>
-              <tbody class="divide-y divide-warm-100 dark:divide-warm-700">
+              <tbody class="divide-y divide-line">
                 <tr v-for="q in data.top_queries" :key="q.query">
-                  <td class="px-5 py-2.5 text-warm-800 dark:text-warm-200 max-w-[16rem] truncate" :title="q.query">{{ q.query }}</td>
-                  <td class="px-3 py-2.5 text-right tabular-nums text-warm-700 dark:text-warm-300">{{ num(q.count) }}</td>
-                  <td class="px-3 py-2.5 text-right tabular-nums text-warm-700 dark:text-warm-300">{{ Number(q.avg_results).toFixed(1) }}</td>
-                  <td class="px-5 py-2.5 text-right tabular-nums text-warm-700 dark:text-warm-300">{{ pct(q.ctr, 0) }}</td>
+                  <td class="px-5 py-2.5 text-ink max-w-[16rem] truncate" :title="q.query">{{ q.query }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-ink-secondary">{{ num(q.count) }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-ink-secondary">{{ Number(q.avg_results).toFixed(1) }}</td>
+                  <td class="px-5 py-2.5 text-right tabular-nums text-ink-secondary">{{ pct(q.ctr, 0) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -91,21 +89,21 @@
 
         <!-- Zero results -->
         <div class="card overflow-hidden min-w-0">
-          <div class="px-5 py-3 border-b border-warm-100 dark:border-warm-700">
-            <h3 class="text-sm font-semibold text-warm-900 dark:text-warm-50 flex items-center gap-1.5">
+          <div class="px-5 py-3 border-b border-line">
+            <h3 class="text-sm font-semibold text-ink flex items-center gap-1.5">
               <AppIcon icon="alert-triangle" class="w-4 h-4 text-amber-500" /> Zero-result searches
             </h3>
-            <p class="text-xs text-warm-500 dark:text-warm-400">Demand we can’t meet yet — good leads for new venues.</p>
+            <p class="text-xs text-ink-muted">Demand we can’t meet yet — good leads for new venues.</p>
           </div>
           <div v-if="!data.zero_result_queries.length" class="empty-state !py-8">
             <div class="empty-state-icon !w-10 !h-10"><AppIcon icon="circle-check" class="w-5 h-5 text-primary-500" /></div>
             <p class="empty-state-desc">Every search returned venues.</p>
           </div>
-          <ul v-else class="divide-y divide-warm-100 dark:divide-warm-700">
+          <ul v-else class="divide-y divide-line">
             <li v-for="z in data.zero_result_queries" :key="z.query" class="px-5 py-2.5 flex items-center justify-between gap-3 text-sm">
               <span class="min-w-0">
-                <span class="block truncate text-warm-800 dark:text-warm-200" :title="z.query">{{ z.query }}</span>
-                <span class="block text-[11px] text-warm-400">last {{ fmtAgo(z.last_at) }}</span>
+                <span class="block truncate text-ink" :title="z.query">{{ z.query }}</span>
+                <span class="block text-[11px] text-ink-muted">last {{ fmtAgo(z.last_at) }}</span>
               </span>
               <span class="badge-warning tabular-nums">{{ z.count }}×</span>
             </li>
@@ -114,21 +112,21 @@
 
         <!-- Top clicked venues -->
         <div class="card overflow-hidden xl:col-span-3 min-w-0">
-          <div class="px-5 py-3 border-b border-warm-100 dark:border-warm-700"><h3 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Most clicked venues</h3></div>
+          <div class="px-5 py-3 border-b border-line"><h3 class="text-sm font-semibold text-ink">Most clicked venues</h3></div>
           <div v-if="!data.top_clicked_venues.length" class="empty-state !py-8"><p class="empty-state-desc">No clicks from search results in this period.</p></div>
           <div v-else class="table-wrapper">
             <table class="w-full text-sm">
               <thead><tr class="table-header"><th class="px-5 py-2.5">Venue</th><th class="px-3 py-2.5 text-right">Clicks</th><th class="px-3 py-2.5 text-right">Impressions*</th><th class="px-5 py-2.5 text-right">CTR*</th></tr></thead>
-              <tbody class="divide-y divide-warm-100 dark:divide-warm-700">
+              <tbody class="divide-y divide-line">
                 <tr v-for="v in data.top_clicked_venues" :key="v.venue_id">
-                  <td class="px-5 py-2.5 text-warm-800 dark:text-warm-200">{{ v.name }}</td>
-                  <td class="px-3 py-2.5 text-right tabular-nums text-warm-700 dark:text-warm-300">{{ num(v.clicks) }}</td>
-                  <td class="px-3 py-2.5 text-right tabular-nums text-warm-700 dark:text-warm-300">{{ num(v.impressions) }}</td>
-                  <td class="px-5 py-2.5 text-right tabular-nums text-warm-700 dark:text-warm-300">{{ v.impressions ? pct(v.ctr) : '—' }}</td>
+                  <td class="px-5 py-2.5 text-ink">{{ v.name }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-ink-secondary">{{ num(v.clicks) }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-ink-secondary">{{ num(v.impressions) }}</td>
+                  <td class="px-5 py-2.5 text-right tabular-nums text-ink-secondary">{{ v.impressions ? pct(v.ctr) : '—' }}</td>
                 </tr>
               </tbody>
             </table>
-            <p class="px-5 py-2 text-[11px] text-warm-400">Clicks are for the selected period. *Impressions and CTR (clicks ÷ impressions) are all-time.</p>
+            <p class="px-5 py-2 text-[11px] text-ink-muted">Clicks are for the selected period. *Impressions and CTR (clicks ÷ impressions) are all-time.</p>
           </div>
         </div>
       </div>
@@ -174,11 +172,11 @@ const kpis = computed(() => {
   const t = data.value?.totals
   if (!t) return []
   return [
-    { label: 'Searches', value: num(t.searches), icon: 'search', bg: 'bg-primary-50 dark:bg-primary-900/30', fg: 'text-primary-600 dark:text-primary-400', hint: 'Searches run (first page only; paging is not counted again).' },
+    { label: 'Searches', value: num(t.searches), icon: 'search', bg: 'bg-brand-soft', fg: 'text-brand-text', hint: 'Searches run (first page only; paging is not counted again).' },
     { label: 'Unique queries', value: num(t.unique_queries), icon: 'hash', bg: 'bg-sky-50 dark:bg-sky-900/30', fg: 'text-sky-600 dark:text-sky-400', hint: 'Distinct typed queries (case-insensitive).' },
     { label: 'Result clicks', value: num(t.clicks), icon: 'eye', bg: 'bg-violet-50 dark:bg-violet-900/30', fg: 'text-violet-600 dark:text-violet-400', hint: 'Clicks on venues from search results.' },
     { label: 'Search CTR', value: pct(t.ctr), icon: 'bolt', bg: 'bg-amber-50 dark:bg-amber-900/30', fg: 'text-amber-600 dark:text-amber-400', hint: 'Share of searches with at least one click.' },
-    { label: 'Zero-result rate', value: pct(t.zero_result_rate), icon: 'map-pin-off', bg: 'bg-red-50 dark:bg-red-900/30', fg: 'text-red-600 dark:text-red-400', hint: 'Share of searches that returned no venues.' },
+    { label: 'Zero-result rate', value: pct(t.zero_result_rate), icon: 'map-pin-off', bg: 'bg-red-50 dark:bg-red-900/30', fg: 'text-danger-text', hint: 'Share of searches that returned no venues.' },
   ]
 })
 
