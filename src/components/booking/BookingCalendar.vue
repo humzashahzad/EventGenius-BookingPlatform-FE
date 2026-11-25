@@ -105,39 +105,24 @@
         <div class="time-pickers">
           <div class="time-picker-field">
             <label class="form-label">Start Time</label>
-            <select
-              :value="daySelections[dateStr]?.start_time || ''"
-              @change="setStartTime(dateStr, ($event.target as HTMLSelectElement).value)"
-              class="form-select"
-            >
-              <option value="">Select start</option>
-              <option
-                v-for="slot in getAvailableStartTimes(dateStr)"
-                :key="slot"
-                :value="slot"
-                :disabled="isTimeBlocked(dateStr, slot)"
-              >
-                {{ slot }}{{ isTimeBlocked(dateStr, slot) ? ' (unavailable)' : '' }}
-              </option>
-            </select>
+            <SelectInput
+              :model-value="daySelections[dateStr]?.start_time || ''"
+              aria-label="Start time"
+              placeholder="Select start"
+              :options="getAvailableStartTimes(dateStr).map(slot => ({ value: slot, label: `${to12h(slot)}${isTimeBlocked(dateStr, slot) ? ' (unavailable)' : ''}`, disabled: isTimeBlocked(dateStr, slot) }))"
+              @update:model-value="v => setStartTime(dateStr, String(v ?? ''))"
+            />
           </div>
           <div class="time-picker-field">
             <label class="form-label">End Time</label>
-            <select
-              :value="daySelections[dateStr]?.end_time || ''"
-              @change="setEndTime(dateStr, ($event.target as HTMLSelectElement).value)"
-              class="form-select"
+            <SelectInput
+              :model-value="daySelections[dateStr]?.end_time || ''"
+              aria-label="End time"
+              placeholder="Select end"
               :disabled="!daySelections[dateStr]?.start_time"
-            >
-              <option value="">Select end</option>
-              <option
-                v-for="slot in getAvailableEndTimes(dateStr)"
-                :key="slot"
-                :value="slot"
-              >
-                {{ slot }}
-              </option>
-            </select>
+              :options="getAvailableEndTimes(dateStr).map(slot => ({ value: slot, label: to12h(slot) }))"
+              @update:model-value="v => setEndTime(dateStr, String(v ?? ''))"
+            />
           </div>
         </div>
       </div>
@@ -162,6 +147,7 @@
 </template>
 
 <script setup lang="ts">
+import { SelectInput, to12h } from '@/components/forms'
 import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'

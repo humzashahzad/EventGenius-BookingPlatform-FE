@@ -267,30 +267,9 @@
                 <span v-if="rating" class="inline-flex items-center gap-1 text-sm text-ink-secondary"><AppIcon icon="star-filled" class="fill-current w-3.5 h-3.5 text-[#B45309]" /><span class="num">{{ rating }}</span></span>
               </div>
 
-              <div>
-                <label for="est-guests" class="form-label">Number of guests</label>
-                <div class="flex items-stretch gap-2">
-                  <button type="button" class="btn-secondary !px-0 w-11 shrink-0" aria-label="Fewer guests" :disabled="guests <= guestMin" @click="stepGuests(-1)">
-                    <AppIcon icon="minus" class="w-4 h-4" />
-                  </button>
-                  <input
-                    id="est-guests"
-                    v-model.number="guests"
-                    type="number"
-                    inputmode="numeric"
-                    class="form-input text-center num"
-                    :min="guestMin"
-                    :max="guestMax || undefined"
-                    :aria-invalid="!!guestError"
-                    aria-describedby="est-guests-hint"
-                  />
-                  <button type="button" class="btn-secondary !px-0 w-11 shrink-0" aria-label="More guests" :disabled="!!guestMax && guests >= guestMax" @click="stepGuests(1)">
-                    <AppIcon icon="plus" class="w-4 h-4" />
-                  </button>
-                </div>
-                <p v-if="guestError" id="est-guests-hint" class="form-error">{{ guestError }}</p>
-                <p v-else id="est-guests-hint" class="form-hint">This venue takes {{ capacityRange(venue) }} guests.</p>
-              </div>
+              <FormField id="est-guests" label="Number of guests" :error="guestError" :hint="`This venue takes ${capacityRange(venue)} guests.`">
+                <NumberInput v-model="guests" :min="guestMin" :max="guestMax || undefined" :step="estGuests >= 200 ? 50 : 10" :invalid="!!guestError" />
+              </FormField>
 
               <dl v-if="perHead > 0" class="panel-sunken px-4 py-1">
                 <div class="dl-row"><dt>PKR {{ formatNumber(perHead) }} × <span class="num">{{ formatNumber(estGuests) }}</span> guests</dt><dd>{{ formatPKR(estimate.base) }}</dd></div>
@@ -376,6 +355,7 @@ import ImageLightbox from '@/components/gallery/ImageLightbox.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import VenueReviews from '@/components/reviews/VenueReviews.vue'
 import StarRating from '@/components/reviews/StarRating.vue'
+import { FormField, NumberInput } from '@/components/forms'
 import ReviewSummary from '@/components/venue/ReviewSummary.vue'
 import type { LightboxImage } from '@/components/gallery/ImageLightbox.vue'
 import {

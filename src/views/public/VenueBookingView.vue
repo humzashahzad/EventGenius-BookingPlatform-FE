@@ -142,74 +142,50 @@
             </div>
             <form @submit.prevent="step = 3" novalidate>
               <div class="card-body space-y-5">
-                <div>
-                  <label for="bk-name" class="form-label">Event name <span class="req">*</span></label>
-                  <input
-                    id="bk-name"
-                    v-model="booking.event_name"
-                    type="text"
-                    required
-                    class="form-input"
-                    placeholder="e.g. Ayesha and Bilal's walima"
-                    :aria-invalid="touched.event_name && !booking.event_name ? 'true' : undefined"
-                    aria-describedby="bk-name-msg"
-                    @blur="touched.event_name = true"
-                  />
-                  <p v-if="touched.event_name && !booking.event_name" id="bk-name-msg" class="form-error">Enter a name for your event.</p>
-                  <p v-else id="bk-name-msg" class="form-hint">Shown to the venue owner with your request.</p>
-                </div>
+                <FormField id="bk-name" label="Event name" required :error="touched.event_name && !booking.event_name ? 'Enter a name for your event.' : ''" hint="Shown to the venue owner with your request.">
+                  <TextInput v-model="booking.event_name" required placeholder="e.g. Ayesha and Bilal's walima" @blur="touched.event_name = true" />
+                </FormField>
 
                 <div class="grid gap-5 sm:grid-cols-2">
-                  <div>
-                    <label for="bk-type" class="form-label">Event type <span class="req">*</span></label>
-                    <select
-                      id="bk-type"
+                  <FormField
+                    id="bk-type"
+                    label="Event type"
+                    required
+                    :error="touched.event_type && !booking.event_type ? 'Choose the type of event.' : ''"
+                    :hint="venue.event_types?.length ? `This venue hosts: ${eventTypeOptions.map(o => o.label).join(', ')}` : ''"
+                  >
+                    <SelectInput
                       v-model="booking.event_type"
                       required
-                      class="form-select"
-                      :aria-invalid="touched.event_type && !booking.event_type ? 'true' : undefined"
-                      aria-describedby="bk-type-msg"
+                      placeholder="Select an event type"
+                      placeholder-disabled
+                      :options="eventTypeOptions.map(o => ({ value: o.slug, label: o.label }))"
                       @blur="touched.event_type = true"
-                    >
-                      <option value="" disabled>Select an event type</option>
-                      <option v-for="opt in eventTypeOptions" :key="opt.slug" :value="opt.slug">
-                        {{ opt.label }}
-                      </option>
-                    </select>
-                    <p v-if="touched.event_type && !booking.event_type" id="bk-type-msg" class="form-error">Choose the type of event.</p>
-                    <p v-else-if="venue.event_types?.length" id="bk-type-msg" class="form-hint">
-                      This venue hosts: {{ eventTypeOptions.map(o => o.label).join(', ') }}
-                    </p>
-                  </div>
+                    />
+                  </FormField>
 
-                  <div>
-                    <label for="bk-guests" class="form-label">Expected guests <span class="req">*</span></label>
-                    <input
-                      id="bk-guests"
-                      v-model.number="booking.expected_guests"
-                      type="number"
-                      inputmode="numeric"
+                  <FormField
+                    id="bk-guests"
+                    label="Expected guests"
+                    required
+                    :error="guestError || (touched.expected_guests && !booking.expected_guests ? 'Enter how many guests you expect.' : '')"
+                    :hint="`Venue capacity: ${venue.capacity_min || 1} – ${venue.capacity_max || 'unlimited'}`"
+                  >
+                    <NumberInput
+                      v-model="booking.expected_guests"
                       required
-                      class="form-input num"
                       :min="venue.capacity_min || 1"
                       :max="venue.capacity_max || 10000"
+                      :step="10"
                       :placeholder="`${venue.capacity_min || 1}–${venue.capacity_max || '∞'}`"
-                      :aria-invalid="guestError || (touched.expected_guests && !booking.expected_guests) ? 'true' : undefined"
-                      aria-describedby="bk-guests-msg"
                       @blur="touched.expected_guests = true"
                     />
-                    <p v-if="guestError" id="bk-guests-msg" class="form-error">{{ guestError }}</p>
-                    <p v-else-if="touched.expected_guests && !booking.expected_guests" id="bk-guests-msg" class="form-error">Enter how many guests you expect.</p>
-                    <p v-else id="bk-guests-msg" class="form-hint">
-                      Venue capacity: {{ venue.capacity_min || 1 }} – {{ venue.capacity_max || 'unlimited' }}
-                    </p>
-                  </div>
+                  </FormField>
                 </div>
 
-                <div>
-                  <label for="bk-req" class="form-label">Special requirements <span class="font-normal text-ink-muted">(optional)</span></label>
-                  <textarea id="bk-req" v-model="booking.special_requirements" class="form-textarea" rows="3" placeholder="Menu preferences, decor, stage or sound needs, timings for baraat…"></textarea>
-                </div>
+                <FormField id="bk-req" label="Special requirements" optional>
+                  <TextareaInput v-model="booking.special_requirements" :rows="3" auto-grow placeholder="Menu preferences, decor, stage or sound needs, timings for baraat…" />
+                </FormField>
 
                 <div class="amenity-wrap">
                   <AmenityPicker v-model="selectedAmenityIds" :amenities="venue.amenities || []" />
@@ -357,6 +333,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput, SelectInput, NumberInput, TextareaInput } from '@/components/forms'
 import { formatTime, formatTimeRange } from '@/lib/format'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'

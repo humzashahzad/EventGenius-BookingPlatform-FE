@@ -7,14 +7,14 @@
     <span
       v-for="(chip, i) in chips"
       :key="`${chip.type}-${chip.value}-${i}`"
-      class="inline-flex items-center max-w-full min-w-0 rounded-md border pl-2.5 pr-0.5 h-8 text-[0.8125rem] font-medium"
+      class="inline-flex items-center max-w-full min-w-0 rounded-md border pl-2.5 pr-0 h-control-sm text-[0.8125rem] font-medium"
       :class="chipClass(chip)"
     >
       <AppIcon v-if="chip.type === 'near_me'" icon="map-pin" class="w-3 h-3 mr-1 shrink-0" />
       <span class="truncate" :title="chip.label">{{ chip.label }}</span>
       <button
         type="button"
-        class="chip-x ml-1 shrink-0 w-7 h-7 inline-flex items-center justify-center rounded"
+        class="chip-x ml-0.5 shrink-0 w-control-sm h-full inline-flex items-center justify-center rounded-r-md"
         :aria-label="`Remove ${chip.label}`"
         @click="emit('remove', chip)"
       >

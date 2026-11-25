@@ -1,7 +1,9 @@
 <template>
   <div ref="rootEl" class="smart-search relative w-full min-w-0" :class="variant === 'hero' ? 'smart-search--hero' : ''">
-    <form role="search" class="flex items-center gap-2 w-full min-w-0" :class="variant === 'hero' ? 'smart-hero-field' : 'smart-bar-field'" @submit.prevent="submit()">
-      <AppIcon icon="search" class="shrink-0 w-[18px] h-[18px] text-ink-muted" aria-hidden="true" />
+    <!-- One control box on the shared size scale: bar = md (40px, 44 on touch),
+         hero = lg (48px). Buttons inside are inset one size smaller. -->
+    <form role="search" class="control" :class="variant === 'hero' ? 'control-lg smart-hero-field' : ''" data-control @submit.prevent="submit()">
+      <span class="control-affix"><AppIcon icon="search" :class="variant === 'hero' ? 'w-5 h-5' : 'w-4 h-4'" aria-hidden="true" /></span>
       <input
         :id="inputId"
         ref="inputEl"
@@ -18,7 +20,7 @@
         :aria-activedescendant="activeIndex >= 0 ? optionId(activeIndex) : undefined"
         :aria-label="ariaLabel"
         :placeholder="placeholder"
-        class="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 text-ink placeholder:text-ink-muted truncate"
+        class="control-input truncate"
         :class="variant === 'hero' ? 'text-base' : 'text-[0.9375rem]'"
         @input="onInput"
         @focus="onFocus"
@@ -27,7 +29,7 @@
       <button
         v-if="modelValue"
         type="button"
-        class="shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-md text-ink-muted hover:text-ink hover:bg-surface-hover"
+        class="control-btn"
         aria-label="Clear search"
         @click="clear"
       >
@@ -35,8 +37,8 @@
       </button>
       <button
         type="submit"
-        class="smart-submit shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold text-sm"
-        :class="variant === 'hero' ? 'h-11 px-3 sm:px-5' : 'h-9 px-3'"
+        class="control-btn control-btn-text smart-submit"
+        :class="variant === 'hero' ? 'sm:!px-5' : ''"
         aria-label="Search"
       >
         <AppIcon icon="search" class="w-4 h-4" />
@@ -283,36 +285,11 @@ defineExpose({ focus: () => inputEl.value?.focus() })
 </script>
 
 <style scoped>
-.smart-bar-field {
-  min-height: 44px;
-  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  border: 1px solid rgb(var(--c-line-strong) / 0.55);
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-.smart-bar-field:hover { border-color: var(--line-strong); }
+.smart-hero-field { box-shadow: var(--shadow-md); }
+.smart-hero-field:focus-within { box-shadow: var(--shadow-md), var(--control-ring); }
 
-.smart-hero-field {
-  min-height: 56px;
-  padding: 0.375rem 0.375rem 0.375rem 1rem;
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  border: 1px solid rgb(var(--c-line-strong) / 0.55);
-  box-shadow: var(--shadow-md);
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-
-/* The focus ring goes around the whole field, not the bare input inside it. */
-.smart-search input:focus-visible { outline: none; }
-.smart-bar-field:focus-within,
-.smart-hero-field:focus-within {
-  border-color: var(--focus-ring);
-  box-shadow: 0 0 0 1px var(--focus-ring);
-}
-
-.smart-submit { background: var(--brand-strong); color: var(--on-brand); transition: background-color .15s ease; }
-.smart-submit:hover { background: var(--brand-hover); }
+.smart-submit { background: var(--brand-strong); color: var(--on-brand); }
+.smart-submit:hover:not(:disabled) { background: var(--brand-hover); color: var(--on-brand); }
 
 /* Hide the browser's own clear button; we draw our own. */
 input[type='search']::-webkit-search-cancel-button {

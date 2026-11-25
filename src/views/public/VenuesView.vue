@@ -28,20 +28,11 @@
           </div>
           <div class="min-w-0">
             <label for="venue-city" class="sr-only">City</label>
-            <div class="relative">
-              <AppIcon icon="map-pin" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" />
-              <input id="venue-city" v-model="cityModel" @change="onCityChange" type="text" list="venue-cities" class="form-input !pl-9" placeholder="Any city" autocomplete="off" />
-            </div>
-            <datalist id="venue-cities">
-              <option v-for="c in knownCities" :key="c" :value="c" />
-            </datalist>
+            <Combobox id="venue-city" v-model="cityModel" :options="knownCities" prefix-icon="map-pin" placeholder="Any city" allow-custom clearable aria-label="City" empty-text="Press Enter to search this city" @select="onCityChange" />
           </div>
           <div class="min-w-0">
             <label for="venue-type" class="sr-only">Event type</label>
-            <select id="venue-type" v-model="eventModel" @change="onEventChange" class="form-select">
-              <option value="">Any event type</option>
-              <option v-for="c in categories" :key="c.slug" :value="c.slug">{{ c.name }}</option>
-            </select>
+            <SelectInput id="venue-type" v-model="eventModel" :options="[{ value: '', label: 'Any event type' }, ...categories.map(c => ({ value: c.slug, label: c.name }))]" @change="onEventChange" />
           </div>
           <button
             type="button"
@@ -74,17 +65,19 @@
             <span class="font-semibold text-ink num">{{ meta.total }}</span> {{ meta.total === 1 ? 'venue' : 'venues' }}
             <template v-if="meta.total > 0 && meta.last_page > 1"> · showing {{ rangeFrom }}–{{ rangeTo }}</template>
           </p>
-          <button v-if="hasFilters" type="button" class="link text-sm" @click="clearFilters">Clear filters</button>
+          <button v-if="hasFilters" type="button" class="btn-link" @click="clearFilters">Clear filters</button>
         </div>
         <div class="flex items-center gap-2">
           <label for="venue-sort" class="text-[0.8125rem] text-ink-muted whitespace-nowrap">Sort by</label>
-          <select id="venue-sort" v-model="filters.sort_by" @change="applyFilters" class="form-select !w-auto !min-h-[36px] !py-1 text-sm">
-            <option value="best_match">Best match</option>
-            <option value="created_at">Newest</option>
-            <option value="avg_rating">Top rated</option>
-            <option value="price_per_head">Price: low to high</option>
-          </select>
-          <div class="segmented hidden sm:inline-flex" role="group" aria-label="Layout">
+          <SelectInput
+            id="venue-sort"
+            v-model="filters.sort_by"
+            size="sm"
+            class="!w-auto"
+            :options="[{ value: 'best_match', label: 'Best match' }, { value: 'created_at', label: 'Newest' }, { value: 'avg_rating', label: 'Top rated' }, { value: 'price_per_head', label: 'Price: low to high' }]"
+            @change="applyFilters"
+          />
+          <div class="segmented control-sm hidden sm:inline-flex" role="group" aria-label="Layout">
             <button type="button" :aria-pressed="density === 'grid'" aria-label="Grid view" title="Grid view" @click="setDensity('grid')">
               <AppIcon icon="layout-grid" class="w-4 h-4" />
             </button>
@@ -201,6 +194,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import SmartSearchBox from '@/components/search/SmartSearchBox.vue'
+import { Combobox, SelectInput } from '@/components/forms'
 import UnderstoodChips from '@/components/search/UnderstoodChips.vue'
 import VenueCard from '@/components/venue/VenueCard.vue'
 import VenueCardSkeleton from '@/components/venue/VenueCardSkeleton.vue'
@@ -619,7 +613,7 @@ onBeforeUnmount(() => clearTimeout(geoMessageTimer))
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  min-height: 44px;
+  height: var(--control-h-md);
   padding: 0 0.875rem;
   white-space: nowrap;
   font-size: 0.875rem;
@@ -650,8 +644,8 @@ onBeforeUnmount(() => clearTimeout(geoMessageTimer))
   align-items: center;
   justify-content: center;
   gap: 0.25rem;
-  min-width: 40px;
-  height: 40px;
+  min-width: var(--control-h-md);
+  height: var(--control-h-md);
   padding: 0 0.625rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
@@ -664,7 +658,4 @@ onBeforeUnmount(() => clearTimeout(geoMessageTimer))
 .page-btn:hover:not(:disabled) { background: var(--surface-hover); border-color: rgb(var(--c-line-strong) / 0.55); color: var(--ink); }
 .page-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .page-btn[aria-current='page'] { background: var(--brand-strong); border-color: var(--brand-strong); color: var(--on-brand); font-weight: 600; }
-@media (max-width: 639.98px) {
-  .page-btn { min-width: 44px; height: 44px; }
-}
 </style>
