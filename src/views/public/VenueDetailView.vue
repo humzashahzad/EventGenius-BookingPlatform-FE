@@ -148,7 +148,7 @@
         <!-- Amenities -->
         <div v-if="venue.amenities?.length" class="detail-section">
           <h3 class="detail-section-title">
-            <AppIcon icon="sparkles" class="w-[18px] h-[18px] text-[#10B981]" />
+            <AppIcon icon="circle-check" class="w-[18px] h-[18px] text-[#10B981]" />
             Amenities
           </h3>
           <div class="amenities-grid">

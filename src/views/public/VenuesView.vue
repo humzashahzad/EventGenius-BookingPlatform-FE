@@ -126,7 +126,7 @@
                 <AppIcon icon="image" class="w-10 h-10 text-[var(--color-text-muted)]" />
               </div>
               <div v-if="venue.is_featured" class="browse-venue-featured">
-                <AppIcon icon="sparkles" class="w-3 h-3" />
+                <AppIcon icon="star-filled" class="w-3 h-3" />
                 Featured
               </div>
               <div class="browse-venue-rating-badge" v-if="venue.avg_rating">

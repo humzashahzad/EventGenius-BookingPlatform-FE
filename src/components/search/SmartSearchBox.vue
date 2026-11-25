@@ -1,7 +1,7 @@
 <template>
   <div ref="rootEl" class="smart-search relative w-full min-w-0" :class="variant === 'hero' ? 'smart-search--hero' : ''">
     <form role="search" class="flex items-center gap-2 w-full min-w-0" :class="variant === 'hero' ? 'smart-hero-field' : 'smart-bar-field'" @submit.prevent="submit()">
-      <AppIcon icon="sparkles" class="shrink-0 w-[18px] h-[18px]" :class="variant === 'hero' ? 'text-primary-600' : 'text-primary-500 dark:text-primary-400'" />
+      <AppIcon icon="search" class="shrink-0 w-[18px] h-[18px]" :class="variant === 'hero' ? 'text-primary-600' : 'text-primary-500 dark:text-primary-400'" />
       <input
         :id="inputId"
         ref="inputEl"

@@ -86,7 +86,7 @@
             <div class="step-card">
               <div class="step-number">3</div>
               <div class="step-icon step-icon-emerald">
-                <AppIcon icon="sparkles" class="w-6 h-6 text-white" />
+                <AppIcon icon="calendar-check" class="w-6 h-6 text-white" />
               </div>
               <h3 class="step-title">Celebrate</h3>
               <p class="step-desc">Get confirmed by the venue owner and enjoy your perfectly planned event.</p>

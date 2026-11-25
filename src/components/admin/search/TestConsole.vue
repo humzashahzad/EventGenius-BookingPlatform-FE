@@ -110,7 +110,7 @@
           </div>
         </div>
         <div v-else-if="!ran" class="empty-state">
-          <div class="empty-state-icon"><AppIcon icon="sparkles" class="w-6 h-6" /></div>
+          <div class="empty-state-icon"><AppIcon icon="search" class="w-6 h-6" /></div>
           <p class="empty-state-title">Run a search to see the ranking</p>
           <p class="empty-state-desc">Each result shows its score, why it ranked there, and how much each signal contributed.</p>
         </div>

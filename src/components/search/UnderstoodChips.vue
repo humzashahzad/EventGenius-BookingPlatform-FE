@@ -1,7 +1,7 @@
 <template>
   <div v-if="chips.length" class="flex flex-wrap items-center gap-1.5 min-w-0" role="group" aria-label="What we understood from your search">
     <span class="text-xs font-semibold text-warm-500 dark:text-warm-400 mr-0.5 inline-flex items-center gap-1">
-      <AppIcon icon="sparkles" class="w-3.5 h-3.5 text-primary-500" />
+      <AppIcon icon="list-filter" class="w-3.5 h-3.5 text-primary-500" />
       We understood
     </span>
     <span
