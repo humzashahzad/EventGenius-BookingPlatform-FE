@@ -21,14 +21,9 @@
 
     <!-- Form state -->
     <form v-else class="space-y-4" novalidate @submit.prevent="onSubmit">
-      <div>
-        <label for="forgot-email" class="form-label">Email address</label>
-        <input
-          id="forgot-email" v-model="email" type="email" required class="form-input" placeholder="you@example.com" autocomplete="email" inputmode="email"
-          :aria-invalid="!!emailError" :aria-describedby="emailError ? 'forgot-email-error' : undefined" @blur="touched = true"
-        />
-        <p v-if="emailError" id="forgot-email-error" class="form-error">{{ emailError }}</p>
-      </div>
+      <FormField id="forgot-email" label="Email address" :error="emailError">
+        <TextInput v-model="email" type="email" required placeholder="you@example.com" autocomplete="email" inputmode="email" @blur="touched = true" />
+      </FormField>
 
       <div v-if="errorMsg" class="alert-danger" role="alert">
         <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
@@ -48,6 +43,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput } from '@/components/forms'
 import { ref, computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'

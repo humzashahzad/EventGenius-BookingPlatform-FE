@@ -1,46 +1,25 @@
 <template>
-  <div>
-    <div class="flex items-center justify-between gap-2 mb-1.5">
-      <label :for="id" class="form-label !mb-0">{{ label }}<span v-if="markRequired" class="req !ml-1.5" aria-hidden="true">*</span></label>
-      <slot name="label-extra" />
-    </div>
-    <div class="relative">
-      <input
-        :id="id"
-        :value="modelValue"
-        :type="visible ? 'text' : 'password'"
-        class="form-input !pr-11"
-        :placeholder="placeholder"
-        :autocomplete="autocomplete"
-        :required="required"
-        :minlength="minlength"
-        :aria-invalid="!!error"
-        :aria-describedby="describedBy"
-        @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-        @blur="emit('blur')"
-      />
-      <button
-        type="button"
-        class="absolute right-1 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-md text-ink-muted hover:text-ink hover:bg-surface-hover"
-        :aria-label="visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`"
-        :aria-pressed="visible"
-        :aria-controls="id"
-        @click="visible = !visible"
-      >
-        <AppIcon :icon="visible ? 'eye-off' : 'eye'" class="w-[18px] h-[18px]" />
-      </button>
-    </div>
-    <p v-if="error" :id="`${id}-error`" class="form-error">{{ error }}</p>
-    <p v-else-if="hint" :id="`${id}-hint`" class="form-hint">{{ hint }}</p>
-    <slot />
-  </div>
+  <FormField :id="id" :label="label" :required="markRequired" :error="error" :hint="hint">
+    <template #label-extra><slot name="label-extra" /></template>
+    <PasswordInput
+      :model-value="modelValue"
+      :placeholder="placeholder"
+      :autocomplete="autocomplete as 'current-password' | 'new-password'"
+      :required="required"
+      :minlength="minlength"
+      :toggle-name="label.toLowerCase()"
+      @update:model-value="v => emit('update:modelValue', v ?? '')"
+      @blur="emit('blur')"
+    />
+    <template #after><slot /></template>
+  </FormField>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import AppIcon from '@/components/ui/AppIcon.vue'
+/** Password field used by the auth and profile forms (FormField + PasswordInput). */
+import { FormField, PasswordInput } from '@/components/forms'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   id: string
   label: string
   modelValue: string
@@ -62,7 +41,4 @@ const props = withDefaults(defineProps<{
   hint: '',
 })
 const emit = defineEmits<{ 'update:modelValue': [value: string]; blur: [] }>()
-
-const visible = ref(false)
-const describedBy = computed(() => (props.error ? `${props.id}-error` : props.hint ? `${props.id}-hint` : undefined))
 </script>

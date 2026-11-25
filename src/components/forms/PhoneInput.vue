@@ -18,7 +18,6 @@
       autocomplete="tel"
       maxlength="20"
       @input="onInput"
-      @blur="onBlur"
     />
     <span v-if="showValid && valid" class="control-affix is-end text-success-text"><AppIcon icon="check" :class="ctl.iconClass.value" /><span class="sr-only">Valid number</span></span>
   </div>
@@ -31,7 +30,7 @@
  *  - "formatted" (default) "0300-1234567"
  *  - "digits"   "03001234567"
  *  - "intl"     "+92 300 1234567"
- *  - "raw"      exactly what was typed (only the display is tidied on blur)
+ *  - "raw"      exactly what was typed (no formatting; for forms whose API accepts any format)
  * Validate with `rules.pkMobile()` from useValidation.
  */
 import { computed, ref, useAttrs, watch } from 'vue'
@@ -87,9 +86,6 @@ function onInput(e: Event) {
   while (pos < formatted.length && seen < digitsBefore) { if (/\d/.test(formatted[pos])) seen++; pos++ }
   el.setSelectionRange(pos, pos)
   model.value = out(formatted)
-}
-function onBlur() {
-  if (props.modelFormat === 'raw' && text.value && looksPk(text.value)) text.value = formatPkMobile(text.value)
 }
 defineExpose({ focus: () => inputEl.value?.focus() })
 </script>
