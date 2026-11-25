@@ -2,7 +2,6 @@
   <div class="font-['DM_Sans']">
     <!-- Hero Header -->
     <div class="venues-hero">
-      <div class="venues-hero-bg"></div>
       <div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-[2]">
         <h1 class="venues-hero-title">Explore Venues</h1>
         <p class="venues-hero-subtitle">Find the perfect space for your next unforgettable event</p>
@@ -585,16 +584,10 @@ onBeforeUnmount(() => clearTimeout(geoMessageTimer))
 .venues-hero {
   position: relative;
   padding: 4rem 1rem 3rem;
-  background: linear-gradient(145deg, #064E3B, #065F46, #047857);
+  background: #064E3B;
   overflow: hidden;
 }
 
-.venues-hero-bg {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
-  background-size: 32px 32px;
-}
 
 .venues-hero-title {
   font-family: 'DM Sans', sans-serif;
@@ -788,7 +781,7 @@ onBeforeUnmount(() => clearTimeout(geoMessageTimer))
   top: 12px; left: 12px;
   display: flex; align-items: center; gap: 4px;
   padding: 4px 10px;
-  background: linear-gradient(135deg, #F59E0B, #D97706);
+  background: #FBBF24;
   color: #1C1917;
   border-radius: 9999px;
   font-size: 0.6875rem;

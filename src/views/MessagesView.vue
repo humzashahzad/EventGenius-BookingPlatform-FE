@@ -1282,17 +1282,11 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 22rem),
-    radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.07), transparent 24rem),
-    linear-gradient(180deg, rgba(250, 250, 249, 0.6), rgba(250, 250, 249, 0.95));
+  background: var(--canvas);
 }
 
 :root.dark .nexus-chat {
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 6%, transparent), transparent 22rem),
-    radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.05), transparent 24rem),
-    linear-gradient(180deg, var(--color-warm-900), var(--color-warm-950));
+  background: var(--canvas);
 }
 
 .nexus-container {
@@ -1641,8 +1635,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #34D399, #10B981);
-  color: #fff;
+  background: var(--brand-soft);
+  color: var(--brand-text);
   font-size: 1rem;
   font-weight: 700;
   box-shadow: var(--shadow-card);
@@ -1691,9 +1685,8 @@ onBeforeUnmount(() => {
   width: 5rem;
   height: 5rem;
   border-radius: var(--radius-full);
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--color-primary) 20%, transparent), color-mix(in srgb, var(--color-primary) 6%, transparent));
-  color: var(--color-primary);
+  background: var(--brand-soft);
+  color: var(--brand-text);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     var(--shadow-card);
@@ -1739,7 +1732,7 @@ onBeforeUnmount(() => {
 }
 
 .chat-item-active {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 16%, transparent), color-mix(in srgb, var(--color-primary) 8%, transparent)) !important;
+  background: var(--brand-soft) !important;
   border-color: color-mix(in srgb, var(--color-primary) 24%, transparent);
   box-shadow: var(--shadow-card);
 }
@@ -1820,7 +1813,7 @@ onBeforeUnmount(() => {
   min-width: 1.35rem;
   padding: 0.15rem 0.45rem;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #34D399, #10B981);
+  background: #047857;
   color: #fff;
   font-size: 0.6875rem;
   font-weight: 700;
@@ -1867,17 +1860,13 @@ onBeforeUnmount(() => {
   padding: 2.5rem 2.25rem;
   border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
   border-radius: var(--radius-xl);
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 16rem),
-    rgba(255, 255, 255, 0.88);
+  background: var(--surface);
   box-shadow: var(--shadow-card);
   text-align: center;
 }
 
 :root.dark .no-chat-card {
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 16rem),
-    var(--color-warm-800);
+  background: var(--surface);
 }
 
 .no-chat-orb {
@@ -1888,9 +1877,8 @@ onBeforeUnmount(() => {
   height: 6.25rem;
   margin-bottom: 1.25rem;
   border-radius: var(--radius-full);
-  background:
-    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95), color-mix(in srgb, var(--color-primary) 15%, transparent));
-  color: var(--color-primary);
+  background: var(--brand-soft);
+  color: var(--brand-text);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
     var(--shadow-elevated);
@@ -2262,7 +2250,7 @@ onBeforeUnmount(() => {
 .reply-bar {
   width: 3px;
   border-radius: var(--radius-full);
-  background: linear-gradient(180deg, #34D399, #10B981);
+  background: #10B981;
 }
 
 .reply-content {
@@ -2307,7 +2295,7 @@ onBeforeUnmount(() => {
 /* Sent messages: teal bubble */
 .message-own .message-bubble {
   border-bottom-right-radius: var(--radius-sm);
-  background: linear-gradient(135deg, #34D399, #10B981);
+  background: #047857;
   color: #fff;
 }
 
@@ -2828,9 +2816,9 @@ onBeforeUnmount(() => {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #34D399, #10B981);
+  background: #047857;
   color: #fff;
-  box-shadow: var(--shadow-elevated), 0 0 20px rgba(16, 185, 129, 0.25);
+  box-shadow: var(--shadow-elevated);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   margin: 0 auto;
@@ -2839,7 +2827,7 @@ onBeforeUnmount(() => {
 
 .scroll-to-bottom-btn:hover {
   transform: translateX(-50%) translateY(-2px);
-  box-shadow: var(--shadow-float), 0 0 28px rgba(16, 185, 129, 0.3);
+  box-shadow: var(--shadow-float);
 }
 
 .scroll-unread {
@@ -2866,7 +2854,7 @@ onBeforeUnmount(() => {
 }
 
 .message-row.message-own:hover .message-bubble {
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 /* ── Transition Helpers ── */
@@ -3218,7 +3206,7 @@ onBeforeUnmount(() => {
   font-size: 2.5rem;
   font-weight: 700;
   color: white;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  background: #047857;
 }
 
 .profile-panel-name {
@@ -3245,7 +3233,7 @@ onBeforeUnmount(() => {
 
 .status-dot.online {
   background: #10B981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 .status-dot.offline {

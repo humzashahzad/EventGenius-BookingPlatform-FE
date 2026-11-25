@@ -278,7 +278,7 @@ onMounted(fetchStoreProfile)
 .store-hero {
   position: relative;
   padding: 5rem 1rem;
-  background: linear-gradient(135deg, #064E3B 0%, #065F46 35%, #047857 65%, #064E3B 100%);
+  background-color: #064E3B;
   background-size: cover;
   background-position: center;
 }
@@ -351,20 +351,20 @@ onMounted(fetchStoreProfile)
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #10B981;
+  background: #047857;
   color: white;
   font-weight: 600;
   font-size: 0.9375rem;
   border: none;
   border-radius: 0.75rem;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
 }
 
 .store-hero-btn:hover {
-  background: #059669;
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+  background: #065F46;
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 

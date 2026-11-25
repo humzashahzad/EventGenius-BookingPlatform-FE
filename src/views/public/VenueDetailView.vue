@@ -575,8 +575,8 @@ onMounted(loadVenue)
 .review-avatar {
   width: 32px; height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #10B981, #34D399);
-  color: white;
+  background: var(--brand-soft);
+  color: var(--brand-text);
   font-weight: 700;
   font-size: 0.75rem;
   display: flex; align-items: center; justify-content: center;
@@ -641,19 +641,19 @@ onMounted(loadVenue)
   gap: 0.5rem;
   width: 100%;
   padding: 0.875rem 1.5rem;
-  background: linear-gradient(135deg, #10B981, #34D399);
+  background: var(--brand-strong);
   color: white;
   font-weight: 700;
   font-size: 1rem;
   border-radius: 0.75rem;
   text-decoration: none;
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+  box-shadow: var(--shadow-sm);
   transition: all 0.25s ease;
 }
 
 .booking-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.4);
+  background: var(--brand-hover);
+  box-shadow: var(--shadow-md);
   color: white;
 }
 

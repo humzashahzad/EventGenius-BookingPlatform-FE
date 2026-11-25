@@ -8,7 +8,7 @@
         </div>
 
         <!-- Loading overlay -->
-        <div v-if="uploading" class="absolute inset-0 flex items-center justify-center bg-warm-900/50 backdrop-blur-sm">
+        <div v-if="uploading" class="absolute inset-0 flex items-center justify-center bg-warm-900/60">
           <div class="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
         </div>
       </div>

@@ -2,33 +2,11 @@
   <div class="fixed inset-0 overflow-hidden overscroll-none flex items-center justify-center bg-warm-100 dark:bg-warm-950 p-3 sm:p-6">
     <div class="w-full h-full max-h-full flex rounded-3xl overflow-hidden shadow-elevated bg-warm-50 dark:bg-warm-900">
       <!-- Left: Brand Panel (desktop) -->
-      <div class="hidden lg:flex lg:w-[58%] xl:w-[66%] items-center justify-center relative bg-gradient-to-br from-primary-800 via-primary-700 to-primary-600 overflow-hidden rounded-3xl m-2">
-        <PixelCanvas ref="canvasRef" variant="glow" />
-
-        <div class="absolute top-0 right-0 w-[350px] h-[350px] rounded-full bg-primary-400/30 blur-[80px] -translate-y-20 translate-x-10" />
-        <div class="absolute bottom-0 left-0 w-[250px] h-[250px] rounded-full bg-accent/20 blur-[80px] translate-y-10 -translate-x-10" />
-        <div class="relative z-10 max-w-[480px] px-8">
-          <div class="flex items-center gap-3 mb-8">
-            <div class="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
-              <AppLogo tone="white" class="w-7 h-7" />
-            </div>
-            <div>
-              <p class="text-primary-200 font-extrabold uppercase text-xs tracking-widest">EventGenius</p>
-              <p class="text-white font-semibold opacity-80">Booking Platform</p>
-            </div>
-          </div>
-          <h2 class="text-white font-bold text-3xl tracking-tight mb-4">Start your journey with us today.</h2>
-          <p class="text-white/60 leading-relaxed mb-8">Whether you're booking your next event or listing your venue, EventGenius makes it effortless.</p>
-          <div class="flex flex-col gap-3">
-            <div v-for="f in features" :key="f" class="flex items-center gap-3">
-              <span class="w-6 h-6 rounded-full bg-primary-400/20 border border-primary-400/30 flex items-center justify-center shrink-0 text-primary-300">
-                <AppIcon icon="check" class="w-3 h-3" />
-              </span>
-              <span class="text-white/75 text-sm">{{ f }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AuthPhotoPanel
+        eyebrow="Create your account"
+        title="Start your journey with us today."
+        text="Whether you're booking your next event or listing your venue, EventGenius makes it effortless." :features="features"
+      />
 
       <!-- Right: Form -->
       <div class="flex-1 flex overflow-y-auto overscroll-contain p-4 sm:p-12">
@@ -136,7 +114,7 @@ import { ref, reactive, computed } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import PixelCanvas from '@/components/ui/PixelCanvas.vue'
+import AuthPhotoPanel from '@/components/auth/AuthPhotoPanel.vue'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -149,7 +127,6 @@ const loading      = ref(false)
 const errorMsg     = ref('')
 const showPassword = ref(false)
 const errors       = reactive<Record<string, string[]>>({})
-const canvasRef    = ref<InstanceType<typeof PixelCanvas> | null>(null)
 
 const form = reactive({
   name:                  '',
@@ -184,7 +161,6 @@ async function handleRegister() {
   const result = await authStore.register(payload)
 
   if (result.success) {
-    canvasRef.value?.triggerPulse('success')
     setTimeout(() => {
       loading.value = false
       // Customers who signed up mid-booking go straight back to it.
@@ -196,12 +172,6 @@ async function handleRegister() {
     loading.value = false
     if (result.errors) Object.assign(errors, result.errors)
     else errorMsg.value = result.message || 'Registration failed. Please try again.'
-    
-    if (errors.password) {
-      canvasRef.value?.triggerPulse('warning')
-    } else {
-      canvasRef.value?.triggerPulse('error')
-    }
   }
 }
 </script>

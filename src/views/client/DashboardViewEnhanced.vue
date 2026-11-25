@@ -109,7 +109,7 @@
           <span class="text-sm font-bold text-primary-600">{{ completionRate }}%</span>
         </div>
         <div class="h-2 bg-warm-100 rounded-full overflow-hidden dark:bg-warm-700">
-          <div class="h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full transition-all duration-500" :style="{ width: completionRate + '%' }"></div>
+          <div class="h-full bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-500" :style="{ width: completionRate + '%' }"></div>
         </div>
         <div class="flex justify-between mt-2 text-xs text-warm-400">
           <span>{{ stats.completed_bookings }} completed</span>
@@ -297,47 +297,6 @@ onMounted(load)
 </script>
 
 <style scoped>
-/* Gradient Stat Cards */
-.gradient-stat-card {
-  border-radius: 1rem;
-  padding: 1.25rem;
-  color: white;
-  position: relative;
-  overflow: hidden;
-  box-shadow: var(--shadow-card), 0 4px 15px rgba(16, 185, 129, 0.2);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.gradient-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-elevated), 0 8px 25px rgba(16, 185, 129, 0.3);
-}
-
-.gradient-stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0.75rem;
-}
-
-.gradient-stat-value {
-  font-size: 1.875rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.gradient-stat-label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  margin-top: 0.25rem;
-  opacity: 0.9;
-}
-
 /* Event Card Styles */
 .event-card {
   display: flex;
@@ -365,8 +324,9 @@ onMounted(load)
   width: 3.5rem;
   height: 3.5rem;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, #10B981, #34D399);
-  color: white;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  border: 1px solid var(--line);
   flex-shrink: 0;
 }
 

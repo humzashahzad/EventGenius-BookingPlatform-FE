@@ -2,12 +2,6 @@
   <div>
     <!-- Hero Section -->
     <section class="hero-section">
-      <PixelCanvas variant="glow" />
-      <div class="hero-bg">
-        <div class="hero-orb hero-orb-1"></div>
-        <div class="hero-orb hero-orb-2"></div>
-        <div class="hero-orb hero-orb-3"></div>
-      </div>
       <div class="relative text-center px-4 mx-auto z-10" style="max-width:72rem;">
         <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-4 hero-trust-badge">
           <span class="trust-dot"></span>
@@ -15,7 +9,7 @@
         </div>
         <h1 class="hero-title">
           Find the Perfect Venue<br>
-          <span class="hero-gradient-text">for Every Event</span>
+          <span class="hero-accent-text">for Every Event</span>
         </h1>
         <p class="hero-subtext mx-auto mb-8" style="max-width:38rem;">
           Weddings, corporate events, film shoots &amp; more — discover, compare and book venues across Pakistan in minutes.
@@ -183,7 +177,6 @@
 
     <!-- For Store Owners CTA -->
     <section class="cta-section">
-      <div class="cta-pattern"></div>
       <div class="mx-auto text-center px-4 relative z-10" style="max-width:56rem;">
         <span class="cta-badge">For Venue Owners</span>
         <h2 class="cta-heading">Grow Your Venue Business</h2>
@@ -210,7 +203,6 @@ import { RouterLink, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import PixelCanvas from '@/components/ui/PixelCanvas.vue'
 import SmartSearchBox from '@/components/search/SmartSearchBox.vue'
 import type { Suggestion } from '@/components/search/types'
 
@@ -291,59 +283,17 @@ onMounted(fetchFeaturedVenues)
 .hero-section {
   position: relative;
   padding: 7rem 1rem 6rem;
-  background: linear-gradient(145deg, #064E3B 0%, #065F46 35%, #047857 65%, #064E3B 100%);
+  background: #064E3B;
   overflow: hidden;
 }
 
-.hero-bg {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
 
-.hero-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 80%);
-}
 
-.hero-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-}
-
-.hero-orb-1 {
-  width: 500px; height: 500px;
-  background: rgba(16, 185, 129, 0.3);
-  top: -150px; right: -100px;
-  animation: orbFloat 16s ease-in-out infinite alternate;
-}
-
-.hero-orb-2 {
-  width: 400px; height: 400px;
-  background: rgba(245, 158, 11, 0.15);
-  bottom: -100px; left: -80px;
-  animation: orbFloat 20s ease-in-out infinite alternate-reverse;
-}
-
-.hero-orb-3 {
-  width: 250px; height: 250px;
-  background: rgba(110, 231, 183, 0.2);
-  top: 40%; left: 45%;
-  animation: orbPulse 10s ease-in-out infinite;
-}
 
 .hero-trust-badge {
   color: rgba(255,255,255,0.85);
   border: 1px solid rgba(110, 231, 183, 0.3);
   background: rgba(16, 185, 129, 0.15);
-  backdrop-filter: blur(20px);
   font-size: 0.8125rem;
 }
 
@@ -364,13 +314,8 @@ onMounted(fetchFeaturedVenues)
   margin-bottom: 1.25rem;
 }
 
-.hero-gradient-text {
-  background: linear-gradient(135deg, #34D399, #F59E0B, #38BDF8);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: gradientShift 6s ease infinite;
+.hero-accent-text {
+  color: #6EE7B7;
 }
 
 .hero-subtext {
@@ -384,20 +329,21 @@ onMounted(fetchFeaturedVenues)
   align-items: center;
   gap: 0.625rem;
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  color: white;
+  background: #10B981;
+  color: #052E22;
   font-weight: 700;
   font-size: 1rem;
   border-radius: var(--radius-xl);
   text-decoration: none;
-  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.35);
+  box-shadow: var(--shadow-sm);
   transition: all 0.25s ease;
 }
 
 .hero-btn-primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.45);
-  color: white;
+  background: #34D399;
+  box-shadow: var(--shadow-md);
+  color: #052E22;
 }
 
 .hero-btn-secondary {
@@ -410,7 +356,6 @@ onMounted(fetchFeaturedVenues)
   font-weight: 600;
   font-size: 1rem;
   border: 1px solid rgba(255,255,255,0.15);
-  backdrop-filter: blur(12px);
   border-radius: var(--radius-xl);
   text-decoration: none;
   transition: all 0.25s ease;
@@ -509,10 +454,10 @@ onMounted(fetchFeaturedVenues)
   left: calc(16.67% + 24px);
   right: calc(16.67% + 24px);
   height: 2px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-accent), #10B981);
+  background: var(--line);
   border-radius: var(--radius-full);
   z-index: 0;
-  opacity: 0.3;
+  opacity: 1;
 }
 
 .step-card {
@@ -551,20 +496,20 @@ onMounted(fetchFeaturedVenues)
 .step-icon {
   width: 64px; height: 64px;
   border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  background: #047857;
   display: flex; align-items: center; justify-content: center;
   margin: 0.5rem auto 1.25rem;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
+  box-shadow: var(--shadow-sm);
 }
 
 .step-icon-accent {
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
-  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25);
+  background: #B45309;
+  box-shadow: var(--shadow-sm);
 }
 
 .step-icon-emerald {
-  background: linear-gradient(135deg, #10B981, #6EE7B7);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
+  background: #0369A1;
+  box-shadow: var(--shadow-sm);
 }
 
 .step-title {
@@ -630,7 +575,6 @@ onMounted(fetchFeaturedVenues)
   display: flex; align-items: center; gap: 4px;
   padding: 5px 10px;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
   border-radius: var(--radius-sm);
   color: white;
   font-size: 0.8125rem;
@@ -640,7 +584,7 @@ onMounted(fetchFeaturedVenues)
 .featured-venue-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.6) 100%);
+  background: rgba(28, 25, 23, 0.45);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -726,11 +670,10 @@ onMounted(fetchFeaturedVenues)
 }
 
 .view-all-btn:hover {
-  background: var(--color-primary);
+  background: var(--brand-strong);
   color: white;
-  border-color: var(--color-primary);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
-  transform: translateY(-2px);
+  border-color: var(--brand-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ─── Testimonials ─────────────────────────────────────────────────────────── */
@@ -790,12 +733,12 @@ onMounted(fetchFeaturedVenues)
 .testimonial-avatar {
   width: 44px; height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  color: white;
+  background: var(--brand-soft);
+  color: var(--brand-text);
   font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.125rem;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  border: 1px solid var(--line);
 }
 
 .testimonial-name {
@@ -814,16 +757,10 @@ onMounted(fetchFeaturedVenues)
 .cta-section {
   position: relative;
   padding: 5rem 1rem;
-  background: linear-gradient(145deg, #064E3B, #065F46, #047857);
+  background: #064E3B;
   overflow: hidden;
 }
 
-.cta-pattern {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
-  background-size: 32px 32px;
-}
 
 .cta-badge {
   display: inline-block;
@@ -833,9 +770,9 @@ onMounted(fetchFeaturedVenues)
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #FCD34D;
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #A7F3D0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   margin-bottom: 1.25rem;
 }
 
@@ -859,19 +796,20 @@ onMounted(fetchFeaturedVenues)
   align-items: center;
   gap: 0.5rem;
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
-  color: white;
+  background: #FFFFFF;
+  color: #064E3B;
   font-weight: 700;
   font-size: 1rem;
   border-radius: var(--radius-xl);
   text-decoration: none;
-  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.35);
+  box-shadow: var(--shadow-sm);
   transition: all 0.25s ease;
 }
 
 .cta-btn-primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(245, 158, 11, 0.45);
+  background: #ECFDF5;
+  box-shadow: var(--shadow-md);
   color: white;
 }
 
@@ -897,15 +835,7 @@ onMounted(fetchFeaturedVenues)
 }
 
 /* ─── Animations ───────────────────────────────────────────────────────────── */
-@keyframes orbFloat {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  100% { transform: translate3d(0, 25px, 0) scale(1.08); }
-}
 
-@keyframes orbPulse {
-  0%, 100% { opacity: 0.15; transform: translate(-50%, -50%) scale(1); }
-  50%      { opacity: 0.3;  transform: translate(-50%, -50%) scale(1.15); }
-}
 
 /* ─── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
