@@ -1,196 +1,196 @@
 <template>
-  <div class="font-['DM_Sans']">
-    <!-- Hero Header -->
-    <div class="venues-hero">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 relative z-[2]">
-        <h1 class="venues-hero-title">Explore Venues</h1>
-        <p class="venues-hero-subtitle">Find the perfect space for your next unforgettable event</p>
+  <div class="bg-canvas min-h-[70vh]">
+    <!-- Page header -->
+    <header class="border-b border-line bg-surface">
+      <div class="content-container pt-6 pb-5 sm:pt-8">
+        <nav aria-label="Breadcrumb" class="text-[0.8125rem] text-ink-muted">
+          <RouterLink to="/" class="hover:text-ink">Home</RouterLink>
+          <span class="mx-1.5" aria-hidden="true">/</span>
+          <span class="text-ink-secondary">Venues</span>
+        </nav>
+        <h1 class="heading-1 mt-2">{{ pageTitle }}</h1>
+        <p class="mt-1 text-[0.9375rem] text-ink-muted">Search in plain words — city, occasion, guest count and budget are picked up automatically.</p>
       </div>
-    </div>
+    </header>
 
-    <div class="max-w-7xl mx-auto flex-grow px-4 py-8">
-      <!-- Filters -->
-      <div class="filter-bar">
-        <div class="filter-search">
-          <SmartSearchBox
-            v-model="filters.q"
-            aria-label="Search venues"
-            @submit="onSearchSubmit"
-            @select="onSuggestionSelect"
-            @clear="onSearchClear"
-          />
-        </div>
-        <div class="filter-divider"></div>
-        <div class="filter-group">
-          <input v-model="cityModel" @change="onCityChange" type="text" list="venue-cities" class="filter-input" placeholder="City" aria-label="City" />
-          <datalist id="venue-cities">
-            <option v-for="c in knownCities" :key="c" :value="c" />
-          </datalist>
-        </div>
-        <div class="filter-divider"></div>
-        <div class="filter-group">
-          <select v-model="eventModel" @change="onEventChange" class="filter-select" aria-label="Event type">
-            <option value="">All Types</option>
-            <option v-for="c in categories" :key="c.slug" :value="c.slug">{{ c.name }}</option>
-          </select>
-        </div>
-        <div class="filter-divider"></div>
-        <div class="filter-group">
-          <select v-model="filters.sort_by" @change="applyFilters" class="filter-select" aria-label="Sort by">
-            <option value="best_match">Best match</option>
-            <option value="created_at">Newest</option>
-            <option value="avg_rating">Top Rated</option>
-            <option value="price_per_head">Price (Low-High)</option>
-          </select>
-        </div>
-        <div class="filter-divider"></div>
-        <div class="filter-near">
+    <!-- Sticky search & filter bar -->
+    <div class="filter-shell">
+      <div class="content-container py-3">
+        <div class="filter-grid">
+          <div class="filter-search min-w-0">
+            <SmartSearchBox
+              v-model="filters.q"
+              aria-label="Search venues"
+              @submit="onSearchSubmit"
+              @select="onSuggestionSelect"
+              @clear="onSearchClear"
+            />
+          </div>
+          <div class="min-w-0">
+            <label for="venue-city" class="sr-only">City</label>
+            <div class="relative">
+              <AppIcon icon="map-pin" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" />
+              <input id="venue-city" v-model="cityModel" @change="onCityChange" type="text" list="venue-cities" class="form-input !pl-9" placeholder="Any city" autocomplete="off" />
+            </div>
+            <datalist id="venue-cities">
+              <option v-for="c in knownCities" :key="c" :value="c" />
+            </datalist>
+          </div>
+          <div class="min-w-0">
+            <label for="venue-type" class="sr-only">Event type</label>
+            <select id="venue-type" v-model="eventModel" @change="onEventChange" class="form-select">
+              <option value="">Any event type</option>
+              <option v-for="c in categories" :key="c.slug" :value="c.slug">{{ c.name }}</option>
+            </select>
+          </div>
           <button
             type="button"
             class="near-me-btn"
-            :class="{ 'near-me-btn--on': hasLocation, 'near-me-btn--hint': wantsNearMe && !hasLocation }"
+            :class="{ 'is-on': hasLocation, 'is-hint': wantsNearMe && !hasLocation }"
             :aria-pressed="hasLocation ? 'true' : 'false'"
             :disabled="locating"
             @click="hasLocation ? clearLocation() : useMyLocation()"
           >
             <AppIcon :icon="locating ? 'loader' : 'map-pin'" :class="locating ? 'w-4 h-4 shrink-0 animate-spin' : 'w-4 h-4 shrink-0'" />
-            <span>{{ locating ? 'Locating…' : 'Near me' }}</span>
+            <span>{{ locating ? 'Locating…' : hasLocation ? 'Near me · on' : 'Near me' }}</span>
           </button>
+        </div>
+
+        <p v-if="geoMessage" class="mt-2 text-[0.8125rem] font-medium text-warning-text flex items-start gap-1.5" role="status">
+          <AppIcon icon="alert-circle" class="w-4 h-4 mt-px shrink-0" />
+          <span>{{ geoMessage }}</span>
+        </p>
+
+        <UnderstoodChips v-if="displayChips.length" :chips="displayChips" class="mt-2.5" @remove="removeChip" />
+      </div>
+    </div>
+
+    <div class="content-container py-6 sm:py-8">
+      <!-- Results toolbar -->
+      <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 min-h-[2rem]" aria-live="polite">
+          <p v-if="loading" class="text-sm font-medium text-ink-muted">Searching…</p>
+          <p v-else class="text-sm text-ink-secondary">
+            <span class="font-semibold text-ink num">{{ meta.total }}</span> {{ meta.total === 1 ? 'venue' : 'venues' }}
+            <template v-if="meta.total > 0 && meta.last_page > 1"> · showing {{ rangeFrom }}–{{ rangeTo }}</template>
+          </p>
+          <button v-if="hasFilters" type="button" class="link text-sm" @click="clearFilters">Clear filters</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <label for="venue-sort" class="text-[0.8125rem] text-ink-muted whitespace-nowrap">Sort by</label>
+          <select id="venue-sort" v-model="filters.sort_by" @change="applyFilters" class="form-select !w-auto !min-h-[36px] !py-1 text-sm">
+            <option value="best_match">Best match</option>
+            <option value="created_at">Newest</option>
+            <option value="avg_rating">Top rated</option>
+            <option value="price_per_head">Price: low to high</option>
+          </select>
+          <div class="segmented hidden sm:inline-flex" role="group" aria-label="Layout">
+            <button type="button" :aria-pressed="density === 'grid'" aria-label="Grid view" title="Grid view" @click="setDensity('grid')">
+              <AppIcon icon="layout-grid" class="w-4 h-4" />
+            </button>
+            <button type="button" :aria-pressed="density === 'list'" aria-label="List view" title="List view" @click="setDensity('list')">
+              <AppIcon icon="menu" class="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      <p v-if="geoMessage" class="-mt-5 mb-4 text-xs font-medium text-amber-700 dark:text-amber-400 flex items-start gap-1.5" role="status">
-        <AppIcon icon="alert-circle" class="w-3.5 h-3.5 mt-px shrink-0" />
-        <span>{{ geoMessage }}</span>
-      </p>
-
-      <UnderstoodChips v-if="displayChips.length" :chips="displayChips" class="-mt-4 mb-5" @remove="removeChip" />
-
-      <!-- Results Count -->
-      <div v-if="hasFilters || (!loading && venues.length > 0)" class="mb-6 min-h-[20px]">
-        <span v-if="loading" class="text-sm font-semibold text-warm-500">Searching…</span>
-        <span v-else class="text-sm font-semibold text-warm-500">{{ meta.total }} {{ meta.total === 1 ? 'venue' : 'venues' }} found</span>
-        <button v-if="hasFilters" type="button" class="ml-3 text-sm font-semibold text-primary-700 dark:text-primary-400 hover:underline" @click="clearFilters">Clear filters</button>
+      <!-- Loading -->
+      <div v-if="loading" :class="gridClass">
+        <VenueCardSkeleton v-for="i in 6" :key="i" :layout="density" />
       </div>
 
-      <!-- Loading -->
-      <div v-if="loading">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="i in 6" :key="i" class="venue-skeleton">
-            <div class="venue-skeleton-img shimmer"></div>
-            <div class="venue-skeleton-body">
-              <div class="shimmer" style="height:16px;width:75%;border-radius:8px;margin-bottom:8px;"></div>
-              <div class="shimmer" style="height:12px;width:50%;border-radius:8px;margin-bottom:16px;"></div>
-              <div class="shimmer" style="height:14px;width:40%;border-radius:8px;"></div>
-            </div>
-          </div>
+      <!-- Error -->
+      <div v-else-if="loadFailed" class="card">
+        <div class="empty-state">
+          <div class="empty-state-icon"><AppIcon icon="alert-triangle" class="w-5 h-5" /></div>
+          <p class="empty-state-title">We couldn't load venues</p>
+          <p class="empty-state-desc">Check your connection and try again.</p>
+          <div class="empty-state-actions"><button type="button" class="btn-primary" @click="loadVenues">Try again</button></div>
         </div>
       </div>
 
       <!-- Empty state -->
-      <div v-else-if="venues.length === 0" class="empty-state">
-        <div class="empty-state-icon">
-          <AppIcon icon="map-pin-off" class="w-8 h-8" />
+      <div v-else-if="venues.length === 0" class="card">
+        <div class="empty-state">
+          <div class="empty-state-icon"><AppIcon icon="map-pin-off" class="w-5 h-5" /></div>
+          <p class="empty-state-title">No venues found</p>
+          <template v-if="relaxOptions.length">
+            <p class="empty-state-desc">Nothing matches all of that. Try relaxing one of these:</p>
+            <div class="empty-state-actions">
+              <button
+                v-for="opt in relaxOptions"
+                :key="opt.key"
+                type="button"
+                class="btn-secondary btn-sm max-w-full"
+                @click="removeChips(opt.chips)"
+              >
+                <AppIcon icon="x" class="w-3.5 h-3.5 shrink-0" />
+                <span class="truncate">{{ opt.label }}</span>
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            <p class="empty-state-desc">Try a different search, or browse every venue we list.</p>
+            <div class="empty-state-actions">
+              <button v-if="hasFilters" type="button" class="btn-primary" @click="clearFilters">Clear filters</button>
+              <RouterLink v-else to="/" class="btn-primary">Back to home</RouterLink>
+            </div>
+          </template>
         </div>
-        <p class="empty-state-title">No venues found</p>
-        <template v-if="relaxOptions.length">
-          <p class="empty-state-desc">Nothing matches all of that. Try relaxing one of these:</p>
-          <div class="flex flex-wrap justify-center gap-2 mt-4">
-            <button
-              v-for="opt in relaxOptions"
-              :key="opt.key"
-              type="button"
-              class="inline-flex items-center gap-1.5 rounded-full border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-3 py-1.5 text-sm font-semibold hover:bg-primary-100 dark:hover:bg-primary-900/50 max-w-full"
-              @click="removeChips(opt.chips)"
-            >
-              <AppIcon icon="x" class="w-3.5 h-3.5 shrink-0" />
-              <span class="truncate">{{ opt.label }}</span>
-            </button>
-          </div>
-        </template>
-        <p v-else class="empty-state-desc">Try adjusting your search or filters to find what you're looking for.</p>
       </div>
 
-      <!-- Venue Grid -->
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
-        <div v-for="(venue, index) in venues" :key="venue.id" class="animate-fade-in-up min-w-0">
-          <RouterLink :to="`/venues/${venue.id}`" class="browse-venue-card" @click="trackClick(venue, index)" @auxclick="(e: MouseEvent) => e.button === 1 && trackClick(venue, index)">
-            <div class="browse-venue-img">
-              <img
-                v-if="venueCardImage(venue)"
-                :src="getImageUrl(venueCardImage(venue)!)"
-                :alt="venue.name"
-                @error="imgError"
-              />
-              <div v-else class="browse-venue-placeholder">
-                <AppIcon icon="image" class="w-10 h-10 text-[var(--color-text-muted)]" />
-              </div>
-              <div v-if="venue.is_featured" class="browse-venue-featured">
-                <AppIcon icon="star-filled" class="w-3 h-3" />
-                Featured
-              </div>
-              <div class="browse-venue-rating-badge" v-if="venue.avg_rating">
-                <AppIcon icon="star-filled" class="w-2.5 h-2.5 text-[#F59E0B]" />
-                {{ venue.avg_rating?.toFixed(1) }}
-              </div>
-            </div>
-            <div class="browse-venue-body">
-              <h3 class="browse-venue-name">{{ venue.name }}</h3>
-              <p class="browse-venue-location">
-                <AppIcon icon="map-pin" class="w-3 h-3" />
-                {{ venue.city }}, {{ venue.country }}
-              </p>
-              <MatchReasons v-if="showReasons" :reasons="venue.match?.reasons" />
-              <p class="browse-venue-desc">{{ venue.description }}</p>
-              <div class="browse-venue-footer">
-                <div>
-                  <span class="browse-venue-price">PKR {{ formatPrice(venue) }}</span>
-                  <span class="browse-venue-price-label"> / head</span>
-                </div>
-                <div class="browse-venue-tags">
-                  <span v-for="type in (venue.event_types || []).slice(0, 2)" :key="type" class="browse-venue-tag">{{ type.replace(/_/g, ' ') }}</span>
-                </div>
-              </div>
-            </div>
-          </RouterLink>
-        </div>
-      </div>
+      <!-- Results -->
+      <ul v-else :class="gridClass" aria-label="Venue results">
+        <li v-for="(venue, index) in venues" :key="venue.id" class="min-w-0">
+          <VenueCard
+            :venue="venue"
+            :layout="density"
+            :categories="categories"
+            :show-reasons="showReasons"
+            :eager="index < 3"
+            heading-tag="h2"
+            @open="trackClick(venue, index)"
+          />
+        </li>
+      </ul>
 
       <!-- Pagination -->
-      <div v-if="meta.last_page > 1" class="pagination-bar">
-        <p class="pagination-info">Page {{ meta.current_page }} of {{ meta.last_page }} ({{ meta.total }} venues)</p>
-        <nav>
-          <ul class="flex items-center gap-1">
-            <li>
-              <button
-                class="pagination-btn"
-                :class="{ 'opacity-40 pointer-events-none': meta.current_page === 1 }"
-                :disabled="meta.current_page === 1"
-                @click="changePage(meta.current_page - 1)"
-              >
-                <AppIcon icon="chevron-left" class="w-3.5 h-3.5" />
-              </button>
-            </li>
-            <li v-for="page in visiblePages" :key="page">
-              <button
-                class="pagination-btn"
-                :class="{ 'pagination-btn--active': page === meta.current_page }"
-                @click="changePage(page)"
-              >{{ page }}</button>
-            </li>
-            <li>
-              <button
-                class="pagination-btn"
-                :class="{ 'opacity-40 pointer-events-none': meta.current_page === meta.last_page }"
-                :disabled="meta.current_page === meta.last_page"
-                @click="changePage(meta.current_page + 1)"
-              >
-                <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
-              </button>
-            </li>
-          </ul>
-        </nav>
-      </div>
+      <nav v-if="!loading && meta.last_page > 1" class="pagination-bar" aria-label="Pagination">
+        <p class="text-[0.8125rem] text-ink-muted">Page {{ meta.current_page }} of {{ meta.last_page }}</p>
+        <ul class="flex items-center gap-1">
+          <li>
+            <button
+              class="page-btn"
+              :disabled="meta.current_page === 1"
+              aria-label="Previous page"
+              @click="changePage(meta.current_page - 1)"
+            >
+              <AppIcon icon="chevron-left" class="w-4 h-4" />
+              <span class="hidden sm:inline">Previous</span>
+            </button>
+          </li>
+          <li v-for="page in visiblePages" :key="page">
+            <button
+              class="page-btn page-num"
+              :aria-current="page === meta.current_page ? 'page' : undefined"
+              :aria-label="`Page ${page}`"
+              @click="changePage(page)"
+            >{{ page }}</button>
+          </li>
+          <li>
+            <button
+              class="page-btn"
+              :disabled="meta.current_page === meta.last_page"
+              aria-label="Next page"
+              @click="changePage(meta.current_page + 1)"
+            >
+              <span class="hidden sm:inline">Next</span>
+              <AppIcon icon="chevron-right" class="w-4 h-4" />
+            </button>
+          </li>
+        </ul>
+      </nav>
     </div>
   </div>
 </template>
@@ -199,11 +199,11 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
-import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import SmartSearchBox from '@/components/search/SmartSearchBox.vue'
 import UnderstoodChips from '@/components/search/UnderstoodChips.vue'
-import MatchReasons from '@/components/search/MatchReasons.vue'
+import VenueCard from '@/components/venue/VenueCard.vue'
+import VenueCardSkeleton from '@/components/venue/VenueCardSkeleton.vue'
 import { normalizeUnderstood, type SearchChip, type Suggestion, type Understood } from '@/components/search/types'
 import { removeChipFromQuery } from '@/components/search/queryRewrite'
 
@@ -218,6 +218,7 @@ const venues = ref<any[]>([])
 const categories = ref<any[]>([])
 const knownCities = ref<string[]>([])
 const loading = ref(false)
+const loadFailed = ref(false)
 const meta = ref({ current_page: 1, last_page: 1, total: 0 })
 const understood = ref<Understood | null>(null)
 const resultSort = ref<string>(DEFAULT_SORT)
@@ -308,6 +309,7 @@ let requestId = 0
 async function loadVenues() {
   const id = ++requestId
   loading.value = true
+  loadFailed.value = false
   try {
     // track=1: this page is a real search even with no text or filters, so the backend logs it
     // (background lists such as the city look-up below are not logged).
@@ -335,6 +337,7 @@ async function loadVenues() {
     if (filters.page === 1 || !searchId) searchId = search?.search_id ?? null
   } catch (e) {
     if (id !== requestId) return
+    loadFailed.value = true
     venues.value = []
     meta.value = { current_page: 1, last_page: 1, total: 0 }
   } finally {
@@ -544,22 +547,30 @@ watch(() => route.fullPath, () => {
   loadVenues()
 })
 
-function formatPrice(venue: any) {
-  const price = venue.price_per_head
-  return price ? Number(price).toLocaleString() : 'Contact'
+// ─── Layout density (per-viewer preference) ──────────────────────────────────
+const DENSITY_KEY = 'eg.venues.density'
+function readDensity(): 'grid' | 'list' {
+  try { return localStorage.getItem(DENSITY_KEY) === 'list' ? 'list' : 'grid' } catch { return 'grid' }
 }
+const density = ref<'grid' | 'list'>(readDensity())
+function setDensity(d: 'grid' | 'list') {
+  density.value = d
+  try { localStorage.setItem(DENSITY_KEY, d) } catch { /* ignore */ }
+}
+const gridClass = computed(() =>
+  density.value === 'list' ? 'grid grid-cols-1 gap-4 sm:grid-cols-1 lg:grid-cols-1' : 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3',
+)
 
-function venueCardImage(venue: any): string | null {
-  return venue.thumbnail || venue.images?.[0]?.path || null
-}
+const rangeFrom = computed(() => (meta.value.current_page - 1) * PER_PAGE + 1)
+const rangeTo = computed(() => Math.min(meta.value.total, meta.value.current_page * PER_PAGE))
 
-function getImageUrl(path: string) {
-  return getStorageUrl(path)
-}
-
-function imgError(e: Event) {
-  (e.target as HTMLImageElement).style.display = 'none'
-}
+const pageTitle = computed(() => {
+  const city = filters.city.trim() || understood.value?.city || ''
+  const ev = filters.event_type || understood.value?.event_type || ''
+  const name = ev ? categoryName(ev).replace(/\b\w/g, (ch: string) => ch.toUpperCase()) : ''
+  const what = ev ? `Venues for ${name}` : 'Event venues'
+  return city ? `${what} in ${city}` : `${what} in Pakistan`
+})
 
 onMounted(() => {
   readQuery()
@@ -580,56 +591,27 @@ onBeforeUnmount(() => clearTimeout(geoMessageTimer))
 </script>
 
 <style scoped>
-/* ─── Hero ─────────────────────────────────────────────────────────────────── */
-.venues-hero {
-  position: relative;
-  padding: 4rem 1rem 3rem;
-  background: #064E3B;
-  overflow: hidden;
+.filter-shell {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+@media (min-width: 768px) {
+  .filter-shell { position: sticky; top: 64px; z-index: var(--z-sticky); box-shadow: var(--shadow-xs); }
 }
 
-
-.venues-hero-title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 2.25rem;
-  font-weight: 800;
-  color: white;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
+.filter-grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
-
-.venues-hero-subtitle {
-  color: rgba(255,255,255,0.6);
-  font-size: 1rem;
-  margin-bottom: 0;
+.filter-search { grid-column: 1 / -1; }
+.near-me-btn { grid-column: 1 / -1; }
+@media (min-width: 768px) {
+  .filter-grid { grid-template-columns: minmax(0, 1fr) 11rem 12rem auto; }
+  .filter-search, .near-me-btn { grid-column: auto; }
 }
-
-/* ─── Filter Bar ───────────────────────────────────────────────────────────── */
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,0.08));
-  padding: 0.375rem;
-  margin-top: -1.5rem;
-  margin-bottom: 2rem;
-  position: relative;
-  z-index: 10;
-}
-
-.filter-search {
-  display: flex;
-  align-items: center;
-  flex: 3;
-  min-width: 0;
-}
-
-.filter-near {
-  flex: 0 0 auto;
-  padding: 0 0.25rem;
+@media (min-width: 1024px) {
+  .filter-grid { grid-template-columns: minmax(0, 1fr) 13rem 14rem auto; }
 }
 
 .near-me-btn {
@@ -637,349 +619,52 @@ onBeforeUnmount(() => clearTimeout(geoMessageTimer))
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
+  min-height: 44px;
+  padding: 0 0.875rem;
   white-space: nowrap;
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
-  border: 1px solid transparent;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid rgb(var(--c-line-strong) / 0.55);
+  border-radius: var(--radius-md);
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
+.near-me-btn:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--line-strong); }
+.near-me-btn.is-on { color: rgb(var(--c-info-text)); background: rgb(var(--c-info-soft)); border-color: rgb(var(--c-info-line)); }
+.near-me-btn.is-hint { color: var(--brand-text); border-color: var(--brand-strong); }
+.near-me-btn:disabled { opacity: 0.7; cursor: progress; }
 
-.near-me-btn:hover,
-.near-me-btn:focus-visible {
-  background: var(--color-bg-hover);
-  outline: none;
-}
-
-.near-me-btn--on {
-  color: #0369A1;
-  background: #F0F9FF;
-  border-color: #BAE6FD;
-}
-
-.near-me-btn--hint {
-  color: #047857;
-  border-color: #6EE7B7;
-}
-
-:root.dark .near-me-btn--on {
-  color: #7DD3FC;
-  background: rgba(14, 165, 233, 0.15);
-  border-color: rgba(14, 165, 233, 0.4);
-}
-
-:root.dark .near-me-btn--hint {
-  color: #34D399;
-  border-color: rgba(16, 185, 129, 0.5);
-}
-
-.near-me-btn:disabled {
-  opacity: 0.7;
-  cursor: progress;
-}
-
-.filter-divider {
-  width: 1px;
-  height: 28px;
-  background: var(--color-border-light);
-  flex-shrink: 0;
-}
-
-.filter-group {
-  flex: 1;
-  padding: 0 0.25rem;
-}
-
-.filter-input,
-.filter-select {
-  border: none;
-  background: transparent;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.875rem;
-  color: var(--color-text);
-  padding: 0.5rem 0.75rem;
-  width: 100%;
-  outline: none;
-  cursor: pointer;
-  border-radius: 0.75rem;
-  transition: background 0.15s;
-}
-
-.filter-input:focus,
-.filter-select:focus {
-  background: var(--color-bg-hover);
-}
-
-.filter-input::placeholder {
-  color: var(--color-text-muted);
-}
-
-/* ─── Skeleton ─────────────────────────────────────────────────────────────── */
-.venue-skeleton {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  overflow: hidden;
-}
-
-.venue-skeleton-img {
-  aspect-ratio: 16/10;
-  background: var(--color-bg-hover);
-}
-
-.venue-skeleton-body {
-  padding: 1.25rem;
-}
-
-/* ─── Venue Cards ──────────────────────────────────────────────────────────── */
-.browse-venue-card {
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  overflow: hidden;
-  text-decoration: none;
-  transition: all 0.35s ease;
-  height: 100%;
-  box-shadow: var(--shadow-soft, 0 1px 2px rgba(0,0,0,0.05));
-}
-
-.browse-venue-card:hover {
-  border-color: #6EE7B7;
-  box-shadow: var(--shadow-elevated, 0 10px 40px rgba(0,0,0,0.1));
-  transform: translateY(-6px);
-}
-
-.browse-venue-img {
-  position: relative;
-  aspect-ratio: 16/10;
-  background: var(--color-bg-hover);
-  overflow: hidden;
-}
-
-.browse-venue-img img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.browse-venue-card:hover .browse-venue-img img {
-  transform: scale(1.06);
-}
-
-.browse-venue-placeholder {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-}
-
-.browse-venue-featured {
-  position: absolute;
-  top: 12px; left: 12px;
-  display: flex; align-items: center; gap: 4px;
-  padding: 4px 10px;
-  background: #FBBF24;
-  color: #1C1917;
-  border-radius: 9999px;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.browse-venue-rating-badge {
-  position: absolute;
-  top: 12px; right: 12px;
-  display: flex; align-items: center; gap: 3px;
-  padding: 4px 8px;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(8px);
-  border-radius: 0.375rem;
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.browse-venue-body {
-  padding: 1.125rem 1.25rem 1.375rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.browse-venue-name {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1.0625rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 0.25rem;
-  letter-spacing: -0.01em;
-}
-
-.browse-venue-location {
-  display: flex; align-items: center; gap: 0.375rem;
-  font-size: 0.8125rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 0.5rem;
-}
-
-.browse-venue-desc {
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin-bottom: 1rem;
-}
-
-.browse-venue-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
-}
-
-.browse-venue-price {
-  font-weight: 800;
-  color: #10B981;
-  font-size: 1rem;
-  letter-spacing: -0.02em;
-}
-
-.browse-venue-price-label {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  font-weight: 400;
-}
-
-.browse-venue-tags {
-  display: flex; gap: 0.375rem;
-}
-
-.browse-venue-tag {
-  padding: 0.2rem 0.5rem;
-  background: #ECFDF5;
-  color: #10B981;
-  border-radius: 9999px;
-  font-size: 0.625rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-:root.dark .browse-venue-tag {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34D399;
-}
-
-/* ─── Pagination ───────────────────────────────────────────────────────────── */
 .pagination-bar {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   align-items: center;
-  margin-top: 2.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border-light);
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
 }
-
-.pagination-info {
-  font-size: 0.8125rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 0;
-}
-
-.pagination-btn {
-  display: flex;
+.page-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
-  height: 36px;
-  padding: 0 0.5rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--color-border-light);
-  background: var(--color-bg-card);
-  color: var(--color-text-secondary);
+  gap: 0.25rem;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 0.625rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-secondary);
   font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 500;
+  transition: background-color .15s ease, border-color .15s ease;
 }
-
-.pagination-btn:hover {
-  border-color: #10B981;
-  color: #10B981;
-  background: #ECFDF5;
-}
-
-.pagination-btn--active {
-  background: #10B981;
-  border-color: #10B981;
-  color: white;
-}
-
-.pagination-btn--active:hover {
-  background: #059669;
-  border-color: #059669;
-  color: white;
-}
-
-:root.dark .pagination-btn:hover {
-  background: rgba(16, 185, 129, 0.15);
-}
-
-:root.dark .pagination-btn--active {
-  background: #10B981;
-  border-color: #10B981;
-  color: white;
-}
-
-/* ─── Responsive ───────────────────────────────────────────────────────────── */
-@media (max-width: 767.98px) {
-  .filter-bar {
-    flex-direction: column;
-    gap: 0;
-    border-radius: 0.75rem;
-  }
-
-  .filter-search {
-    width: 100%;
-  }
-
-  .filter-divider {
-    width: 100%;
-    height: 1px;
-  }
-
-  .filter-group {
-    width: 100%;
-  }
-
-  .filter-near {
-    width: 100%;
-    padding: 0.25rem;
-  }
-
-  .near-me-btn {
-    width: 100%;
-  }
-
-  .venues-hero-title {
-    font-size: 1.75rem;
-  }
-
-  .venues-hero-subtitle {
-    font-size: 0.875rem;
-  }
-}
-
-@media (max-width: 400px) {
-  .venues-hero-title {
-    font-size: 1.5rem;
-  }
+.page-btn:hover:not(:disabled) { background: var(--surface-hover); border-color: rgb(var(--c-line-strong) / 0.55); color: var(--ink); }
+.page-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.page-btn[aria-current='page'] { background: var(--brand-strong); border-color: var(--brand-strong); color: var(--on-brand); font-weight: 600; }
+@media (max-width: 639.98px) {
+  .page-btn { min-width: 44px; height: 44px; }
 }
 </style>
