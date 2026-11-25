@@ -265,6 +265,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       payment_completed: 'credit-card',
       new_review: 'star',
       review_reply: 'message-circle',
+      review_request: 'message-star',
       store_approved: 'building-store',
       store_suspended: 'alert-triangle',
       chat_message: 'message',
@@ -279,6 +280,11 @@ export const useNotificationStore = defineStore('notifications', () => {
     const bookingId = data.booking_id
     const prefix = role === 'admin' ? '/support' : role === 'store_owner' ? '/shop' : '/customer'
     if (n.type === 'chat_message') return `${prefix}/messages`
+    // "How was your event?" → the booking page, scrolled to the review form.
+    if (n.type === 'review_request') {
+      if (role === 'store_owner' || role === 'admin') return null
+      return bookingId ? `/customer/bookings/${bookingId}#review` : '/customer/bookings?status=completed'
+    }
     if (n.type === 'new_review' || n.type === 'review_reply') {
       if (role === 'store_owner') return '/shop/reviews'
       if (role === 'admin') return '/support/reviews'
@@ -300,6 +306,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       booking_rejected: 'danger',
       booking_cancelled: 'warning',
       new_booking_received: 'info',
+      review_request: 'warning',
       store_approved: 'success',
       store_suspended: 'danger',
       chat_message: 'primary',
