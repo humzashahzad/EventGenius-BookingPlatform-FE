@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { hostPortal, sharedCookieDomain } from '@/lib/portalHost'
 
 export type Portal = 'customer' | 'shop' | 'support'
 
@@ -14,8 +15,9 @@ export const TOKEN_KEYS: Record<Portal, string> = {
 /** The currently active portal — updated by the router guard on every navigation. */
 export const currentPortal = ref<Portal>('customer')
 
-/** Detect portal from a URL path. */
+/** Detect portal from a router path (on a portal subdomain, the subdomain decides). */
 export function detectPortalFromPath(path: string): Portal {
+  if (hostPortal) return hostPortal
   if (path.startsWith('/support')) return 'support'
   if (path.startsWith('/shop'))    return 'shop'
   return 'customer'
@@ -26,20 +28,58 @@ export function getTokenKey(portal?: Portal): string {
   return TOKEN_KEYS[portal ?? currentPortal.value]
 }
 
+// On the real domain, tokens live in a cookie shared by eventgenius.m-dev.me and its
+// customer./shop./support. subdomains, so signing in on one is seen by all of them.
+// Elsewhere (localhost, previews) they stay in localStorage as before.
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 days; the API still enforces the JWT expiry
+
+function readCookie(name: string): string | null {
+  const hit = document.cookie.split('; ').find(c => c.startsWith(name + '='))
+  return hit ? decodeURIComponent(hit.slice(name.length + 1)) : null
+}
+
+function writeCookie(name: string, value: string, maxAge: number): void {
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = `${name}=${encodeURIComponent(value)}; Domain=${sharedCookieDomain}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`
+}
+
+function safeLocal<T>(fn: () => T, fallback: T): T {
+  try { return fn() } catch { return fallback }
+}
+
 /** Read the JWT token for a portal (defaults to current). */
 export function getToken(portal?: Portal): string | null {
-  return localStorage.getItem(getTokenKey(portal))
+  const key = getTokenKey(portal)
+  if (!sharedCookieDomain) return safeLocal(() => localStorage.getItem(key), null)
+
+  const fromCookie = readCookie(key)
+  if (fromCookie) return fromCookie
+  // Sessions created before subdomains existed: move the token into the shared cookie.
+  const legacy = safeLocal(() => localStorage.getItem(key), null)
+  if (legacy) {
+    writeCookie(key, legacy, COOKIE_MAX_AGE)
+    safeLocal(() => localStorage.removeItem(key), undefined)
+  }
+  return legacy
 }
 
 /** Store a JWT token for a portal (defaults to current). */
 export function setToken(token: string, portal?: Portal): void {
-  localStorage.setItem(getTokenKey(portal ?? currentPortal.value), token)
+  const key = getTokenKey(portal ?? currentPortal.value)
+  if (sharedCookieDomain) {
+    writeCookie(key, token, COOKIE_MAX_AGE)
+    safeLocal(() => localStorage.removeItem(key), undefined)
+  } else {
+    safeLocal(() => localStorage.setItem(key, token), undefined)
+  }
   tokenVersion.value++
 }
 
 /** Remove the JWT token for a portal (defaults to current). */
 export function removeToken(portal?: Portal): void {
-  localStorage.removeItem(getTokenKey(portal ?? currentPortal.value))
+  const key = getTokenKey(portal ?? currentPortal.value)
+  if (sharedCookieDomain) writeCookie(key, '', 0)
+  safeLocal(() => localStorage.removeItem(key), undefined)
   tokenVersion.value++
 }
 
@@ -53,7 +93,7 @@ export async function migrateOldToken(): Promise<void> {
   if (!oldToken) return
 
   // Check if any new key already has a token — if so, skip migration
-  const hasNewTokens = Object.values(TOKEN_KEYS).some(k => localStorage.getItem(k))
+  const hasNewTokens = (Object.keys(TOKEN_KEYS) as Portal[]).some(p => getToken(p))
   if (hasNewTokens) {
     localStorage.removeItem('auth_token')
     return
@@ -79,7 +119,7 @@ export async function migrateOldToken(): Promise<void> {
     }
   } catch {
     // Token is invalid — just clean up
-    Object.values(TOKEN_KEYS).forEach(k => localStorage.removeItem(k))
+    ;(Object.keys(TOKEN_KEYS) as Portal[]).forEach(p => removeToken(p))
   } finally {
     localStorage.removeItem('auth_token')
   }

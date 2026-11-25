@@ -65,12 +65,6 @@
         <RouterLink to="/customer/bookings" class="btn-ghost">All bookings</RouterLink>
       </div>
     </section>
-
-    <!-- Sandbox Notice -->
-    <p class="mt-4 flex items-start justify-center gap-2 text-xs text-ink-muted text-center">
-      <AppIcon icon="info-circle" class="w-4 h-4 shrink-0" />
-      <span><strong class="font-semibold text-ink-secondary">Sandbox mode:</strong> test payment via the PayFast sandbox. No real money is charged.</span>
-    </p>
   </div>
 </template>
 

@@ -1,9 +1,11 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { detectPortalFromPath } from '@/lib/portalToken'
+import { createPortalHistory, setRouteMatcher, crossHostHref, cleanAddressBar } from '@/lib/portalHost'
 
 const router = createRouter({
-  history: createWebHistory('/'),
+  // Portal subdomains (customer./shop./support.) map to /customer, /shop, /support routes.
+  history: createPortalHistory(),
   routes: [
     // ── Public ───────────────────────────────────────────────────────────
     {
@@ -112,7 +114,7 @@ const router = createRouter({
       meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
 
-    // ── PayFast Payment (SANDBOX) ─────────────────────────────────────────
+    // ── PayFast Payment ────────────────────────────────────────────────────
     {
       path: '/customer/bookings/:id/pay',
       name: 'customer-payment',
@@ -318,6 +320,12 @@ const router = createRouter({
   ],
 })
 
+// Lets the subdomain history tell real routes from the catch-all.
+setRouteMatcher(path => {
+  const matched = router.resolve(path).matched
+  return matched.length > 0 && matched[matched.length - 1].name !== 'not-found'
+})
+
 // Determine the correct login route based on the path being accessed
 function loginRouteForPath(path: string): { name: string } {
   if (path.startsWith('/support')) return { name: 'support-login' }
@@ -327,6 +335,13 @@ function loginRouteForPath(path: string): { name: string } {
 
 // ── Navigation Guard ───────────────────────────────────────────────────────────
 router.beforeEach(async (to) => {
+  // Pages of another portal (or the public site) live on their own subdomain.
+  const external = crossHostHref(to.fullPath)
+  if (external) {
+    window.location.assign(external)
+    return false
+  }
+
   const authStore = useAuthStore()
 
   // Wait for initial auth check to complete
@@ -354,5 +369,7 @@ router.beforeEach(async (to) => {
     return authStore.defaultRoute
   }
 })
+
+router.isReady().then(() => cleanAddressBar(router.currentRoute.value.fullPath)).catch(() => {})
 
 export default router
