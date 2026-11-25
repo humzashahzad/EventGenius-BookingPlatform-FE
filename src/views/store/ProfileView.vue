@@ -44,85 +44,45 @@
         <section class="card">
           <div class="card-header"><div><h2 class="card-title">Personal information</h2><p class="card-subtitle">Only used for your account.</p></div></div>
           <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label for="pf-name" class="form-label">Full name</label>
-              <input id="pf-name" v-model="form.name" class="form-input" placeholder="Your full name" autocomplete="name" />
-            </div>
-            <div>
-              <label for="pf-phone" class="form-label">Phone number</label>
-              <input id="pf-phone" v-model="form.phone" class="form-input" placeholder="+92 300 0000000" autocomplete="tel" />
-            </div>
+            <FormField id="pf-name" label="Full name"><TextInput v-model="form.name" placeholder="Your full name" autocomplete="name" /></FormField>
+            <FormField id="pf-phone" label="Phone number"><PhoneInput v-model="form.phone" model-format="raw" placeholder="+92 300 0000000" /></FormField>
           </div>
         </section>
 
         <section class="card">
           <div class="card-header"><div><h2 class="card-title">Store details</h2><p class="card-subtitle">Shown on your public store page and venue listings.</p></div></div>
           <div class="card-body space-y-4">
-            <div>
-              <label for="pf-store" class="form-label">Store name</label>
-              <input id="pf-store" v-model="form.store_name" class="form-input" placeholder="My Venue Business" />
-            </div>
-            <div>
-              <label for="pf-desc" class="form-label">Description</label>
-              <textarea id="pf-desc" v-model="form.description" class="form-textarea" rows="4" placeholder="Describe your store and the kind of venues you offer…"></textarea>
-            </div>
+            <FormField id="pf-store" label="Store name"><TextInput v-model="form.store_name" placeholder="My Venue Business" /></FormField>
+            <FormField id="pf-desc" label="Description" :count="(form.description || '').length">
+              <TextareaInput v-model="form.description" :rows="4" auto-grow placeholder="Describe your store and the kind of venues you offer…" />
+            </FormField>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label for="pf-sphone" class="form-label">Store phone</label>
-                <input id="pf-sphone" v-model="form.store_phone" class="form-input" placeholder="+92 300 0000000" />
-              </div>
-              <div>
-                <label for="pf-semail" class="form-label">Store email</label>
-                <input id="pf-semail" v-model="form.store_email" type="email" class="form-input" placeholder="store@example.com" />
-              </div>
+              <FormField id="pf-sphone" label="Store phone"><PhoneInput v-model="form.store_phone" model-format="raw" placeholder="+92 300 0000000" /></FormField>
+              <FormField id="pf-semail" label="Store email"><TextInput v-model="form.store_email" type="email" prefix-icon="mail" placeholder="store@example.com" /></FormField>
             </div>
-            <div>
-              <label for="pf-web" class="form-label">Website</label>
-              <div class="flex">
-                <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-line-strong/60 bg-surface-sunken text-ink-muted text-sm">https://</span>
-                <input id="pf-web" v-model="form.website" class="form-input !rounded-l-none min-w-0" placeholder="yourwebsite.com" />
-              </div>
-            </div>
+            <FormField id="pf-web" label="Website"><TextInput v-model="form.website" prefix="https://" placeholder="yourwebsite.com" /></FormField>
           </div>
         </section>
 
         <section class="card">
           <div class="card-header"><div><h2 class="card-title">Location</h2><p class="card-subtitle">Your business address.</p></div></div>
           <div class="card-body space-y-4">
-            <div>
-              <label for="pf-addr" class="form-label">Street address</label>
-              <input id="pf-addr" v-model="form.address" class="form-input" placeholder="123 Main Street" autocomplete="street-address" />
-            </div>
+            <FormField id="pf-addr" label="Street address"><TextInput v-model="form.address" prefix-icon="map-pin" placeholder="123 Main Street" autocomplete="street-address" /></FormField>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label for="pf-city" class="form-label">City</label>
-                <input id="pf-city" v-model="form.city" class="form-input" placeholder="Lahore" />
-              </div>
-              <div>
-                <label for="pf-state" class="form-label">State / province</label>
-                <input id="pf-state" v-model="form.state" class="form-input" placeholder="Punjab" />
-              </div>
+              <FormField id="pf-city" label="City"><TextInput v-model="form.city" placeholder="Lahore" autocomplete="address-level2" /></FormField>
+              <FormField id="pf-state" label="State / province"><TextInput v-model="form.state" placeholder="Punjab" autocomplete="address-level1" /></FormField>
             </div>
           </div>
         </section>
 
-        <div class="save-bar">
-          <div class="min-w-0 flex-1 text-sm" aria-live="polite">
-            <p v-if="errorMsg" class="flex items-center gap-2 text-danger-text font-medium"><AppIcon icon="alert-circle" class="w-4 h-4 shrink-0" /><span class="truncate">{{ errorMsg }}</span></p>
-            <p v-else-if="successMsg" class="flex items-center gap-2 text-success-text font-medium"><AppIcon icon="circle-check" class="w-4 h-4 shrink-0" /><span class="truncate">{{ successMsg }}</span></p>
-            <p v-else class="text-ink-muted hidden sm:block">Changes are saved when you press Save.</p>
-          </div>
-          <button type="submit" :disabled="saving" class="btn-primary">
-            <AppIcon :icon="saving ? 'loader' : 'check'" :class="saving ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
-            {{ saving ? 'Saving…' : 'Save changes' }}
-          </button>
-        </div>
+        <FormActions sticky submit :saving="saving" :error="errorMsg" :success="successMsg" idle-text="Changes are saved when you press Save." />
       </div>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput, TextareaInput, PhoneInput, FormActions } from '@/components/forms'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'
@@ -202,13 +162,3 @@ async function save() {
 
 onMounted(load)
 </script>
-
-<style scoped>
-.save-bar {
-  position: sticky; bottom: 0; z-index: var(--z-sticky);
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem;
-  padding: 0.75rem 1rem;
-  background-color: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-}
-</style>
