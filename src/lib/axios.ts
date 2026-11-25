@@ -13,6 +13,13 @@ const api = axios.create({
   },
 })
 
+// Websocket socket id (set by the Echo client) so the API can leave this tab out of
+// broadcasts about its own actions (Laravel's toOthers()).
+let socketIdProvider: (() => string | null) | null = null
+export function setSocketIdProvider(fn: (() => string | null) | null): void {
+  socketIdProvider = fn
+}
+
 /** Which portal/token a request was sent with, so a 401 only clears that exact token. */
 type AuthTaggedConfig = InternalAxiosRequestConfig & { _authPortal?: Portal; _authToken?: string | null }
 
@@ -39,6 +46,8 @@ api.interceptors.request.use((config: AuthTaggedConfig) => {
     config.headers.Authorization = `Bearer ${token}`
     config._authToken = token
   }
+  const socketId = isApiRequest(config) ? socketIdProvider?.() : null
+  if (socketId) config.headers['X-Socket-ID'] = socketId
   return config
 })
 

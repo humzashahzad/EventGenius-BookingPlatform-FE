@@ -1,11 +1,37 @@
-import { computed, ref } from 'vue'
+import { computed, markRaw, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { toast } from 'vue-sonner'
 import type { Channel } from 'laravel-echo'
 import api from '@/lib/axios'
 import { getEcho } from '@/lib/echo'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { soundService } from '@/services/soundService'
+import ChatMessageToast from '@/components/chat/ChatMessageToast.vue'
+
+export interface ChatMessageAlert {
+  chatId: number
+  senderName: string
+  senderAvatar?: string | null
+  body: string | null
+  type?: string
+  /** The conversation is open on screen (tab visible). */
+  viewing: boolean
+}
+
+function previewFor(body: string | null, type?: string): string {
+  const text = (body || '').trim()
+  if (text) return text.length > 140 ? text.slice(0, 140) + '…' : text
+  const labels: Record<string, string> = {
+    image: 'Sent a photo',
+    video: 'Sent a video',
+    audio: 'Sent an audio clip',
+    voice: 'Sent a voice message',
+    file: 'Sent a file',
+    gif: 'Sent a GIF',
+  }
+  return labels[type || ''] || 'Sent an attachment'
+}
 
 export interface AppNotification {
   id: number
@@ -26,24 +52,13 @@ export const useNotificationStore = defineStore('notifications', () => {
   const userChannel = ref<Channel | null>(null)
   const connectedUserId = ref<number | null>(null)
 
-  // Dedupe: chat socket may already show sound/browser notification before
-  // the persisted app notification reaches the same user channel.
-  const lastChatNotifConversationId = ref<number | null>(null)
-  const lastChatNotifTime = ref(0)
-  const CHAT_NOTIF_DEDUPE_MS = 4000
+  // New-message toasts per conversation (one toast per chat, updated as more arrive).
+  const chatToastCounts = new Map<number, number>()
+  const desktopPermission = ref<NotificationPermission | 'unsupported'>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported',
+  )
 
   const unread = computed(() => notifications.value.filter(n => !n.is_read))
-
-  function recordChatNotificationShown(conversationId: number) {
-    lastChatNotifConversationId.value = conversationId
-    lastChatNotifTime.value = Date.now()
-  }
-
-  function shouldSkipChatNotifSoundAndBrowser(conversationId: number | undefined): boolean {
-    if (conversationId == null) return false
-    if (lastChatNotifConversationId.value !== conversationId) return false
-    return Date.now() - lastChatNotifTime.value < CHAT_NOTIF_DEDUPE_MS
-  }
 
   function mergeNotification(notification: AppNotification): boolean {
     const existing = notifications.value.find(n => n.id === notification.id)
@@ -117,16 +132,18 @@ export const useNotificationStore = defineStore('notifications', () => {
     disconnectRealtime()
 
     connectedUserId.value = authStore.user.id
+    soundService.setUser(authStore.user.id)
+    soundService.installUnlock()
     userChannel.value = getEcho().private(`user.${authStore.user.id}`)
+    userChannel.value.stopListening('.notification.created')
     userChannel.value.listen('.notification.created', (event: any) => {
       handleIncomingNotification(event.notification as AppNotification)
     })
   }
 
   function disconnectRealtime() {
-    if (connectedUserId.value != null) {
-      getEcho().leave(`user.${connectedUserId.value}`)
-    }
+    // Only drop our own listener: the chat store listens on the same personal channel.
+    try { userChannel.value?.stopListening('.notification.created') } catch { /* socket already gone */ }
     userChannel.value = null
     connectedUserId.value = null
   }
@@ -137,6 +154,19 @@ export const useNotificationStore = defineStore('notifications', () => {
     }
 
     if (notification.type === 'chat_message') {
+      // Chat messages have their own unread counts; this is only a backup signal in case
+      // the chat events were missed. The chat store ignores messages it already knows.
+      const data = notification.data || {}
+      useChatStore().handleNewMessageSignal({
+        chat_id: data.chat_id ?? data.conversation_id,
+        message_id: data.message_id,
+        sender_id: data.sender_id,
+        sender_name: data.sender_name,
+        sender_avatar: data.sender_avatar,
+        type: data.type,
+        body: notification.body,
+        created_at: notification.created_at,
+      })
       return
     }
 
@@ -199,58 +229,108 @@ export const useNotificationStore = defineStore('notifications', () => {
   }
 
   function showBrowserNotification(notification: AppNotification) {
-    if (!('Notification' in window)) return
-    if (Notification.permission === 'granted') {
-      try {
-        new Notification(notification.title, {
-          body: notification.body,
-          icon: '/notification-icon.png',
-          tag: `notif-${notification.id}`,
-        })
-      } catch (error) {
-        console.warn('Browser notification failed:', error)
-      }
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    if (document.visibilityState === 'visible' && document.hasFocus()) return
+    try {
+      new Notification(notification.title, {
+        body: notification.body,
+        icon: '/notification-icon.png',
+        tag: `notif-${notification.id}`,
+      })
+    } catch (error) {
+      console.warn('Browser notification failed:', error)
+    }
+  }
+
+  function chatLinkFor(chatId: number): string {
+    const role = useAuthStore().user?.role
+    const prefix = role === 'admin' ? '/support' : role === 'store_owner' ? '/shop' : '/customer'
+    return `${prefix}/messages?chat=${chatId}`
+  }
+
+  async function openChatFromAlert(chatId: number) {
+    dismissChatToast(chatId)
+    const { default: router } = await import('@/router')
+    await router.push(chatLinkFor(chatId))
+  }
+
+  function dismissChatToast(chatId: number) {
+    if (chatToastCounts.has(chatId)) {
+      chatToastCounts.delete(chatId)
+      toast.dismiss(`chat-msg-${chatId}`)
+    }
+  }
+
+  /**
+   * Alert the user about an incoming chat message: an in-app toast (click opens the chat),
+   * a short chime (rate-limited, can be muted) and, when the tab is in the background and
+   * the user allowed it, a system notification. Nothing is shown for the conversation the
+   * user is looking at, except a chime when the window itself is not focused.
+   */
+  function notifyChatMessage(alert: ChatMessageAlert) {
+    const focused = document.visibilityState === 'visible' && document.hasFocus()
+    if (alert.viewing) {
+      if (!focused) soundService.playMessage()
       return
     }
 
-    if (Notification.permission === 'default') {
-      Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') {
-          try {
-            new Notification(notification.title, {
-              body: notification.body,
-              icon: '/notification-icon.png',
-              tag: `notif-${notification.id}`,
-            })
-          } catch (error) {
-            console.warn('Browser notification failed:', error)
-          }
-        }
-      })
-    }
-  }
+    const preview = previewFor(alert.body, alert.type)
+    const count = (chatToastCounts.get(alert.chatId) || 0) + 1
+    chatToastCounts.set(alert.chatId, count)
+    const id = `chat-msg-${alert.chatId}`
+    toast.custom(markRaw(ChatMessageToast), {
+      id,
+      duration: 7000,
+      unstyled: true,
+      componentProps: {
+        senderName: alert.senderName || 'New message',
+        preview,
+        avatar: alert.senderAvatar || null,
+        count,
+        onOpen: () => { void openChatFromAlert(alert.chatId) },
+      },
+      onDismiss: () => chatToastCounts.delete(alert.chatId),
+      onAutoClose: () => chatToastCounts.delete(alert.chatId),
+    })
 
-  function showChatMessageNotification(title: string, body: string, conversationId: number) {
-    recordChatNotificationShown(conversationId)
+    soundService.playMessage()
 
-    const chatStore = useChatStore()
-    const isViewingThisChat = chatStore.currentChatId === conversationId && document.hasFocus()
-    if (!isViewingThisChat) {
-      soundService.playMessage()
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-          body,
+    if (!focused && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        const n = new Notification(alert.senderName || 'New message', {
+          body: preview,
           icon: '/notification-icon.png',
-          tag: `chat-${conversationId}-${Date.now()}`,
+          tag: `chat-${alert.chatId}`,
         })
+        n.onclick = () => {
+          window.focus()
+          void openChatFromAlert(alert.chatId)
+          n.close()
+        }
+      } catch (error) {
+        console.warn('Browser notification failed:', error)
       }
     }
   }
 
-  function requestBrowserPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission()
+  /** Back-compat wrapper for older callers. */
+  function showChatMessageNotification(title: string, body: string, conversationId: number) {
+    notifyChatMessage({ chatId: conversationId, senderName: title, body, viewing: false })
+  }
+
+  /** Ask for system notification permission. Call only from a user action (click). */
+  async function requestBrowserPermission(): Promise<NotificationPermission | 'unsupported'> {
+    if (!('Notification' in window)) return 'unsupported'
+    if (Notification.permission === 'default') {
+      try {
+        desktopPermission.value = await Notification.requestPermission()
+      } catch {
+        desktopPermission.value = Notification.permission
+      }
+    } else {
+      desktopPermission.value = Notification.permission
     }
+    return desktopPermission.value
   }
 
   /** Lucide icon name (rendered with <AppIcon>) for a notification type. */
@@ -279,7 +359,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     const data: any = (n as any).data || {}
     const bookingId = data.booking_id
     const prefix = role === 'admin' ? '/support' : role === 'store_owner' ? '/shop' : '/customer'
-    if (n.type === 'chat_message') return `${prefix}/messages`
+    if (n.type === 'chat_message') return data.chat_id ? `${prefix}/messages?chat=${data.chat_id}` : `${prefix}/messages`
     // "How was your event?" → the booking page, scrolled to the review form.
     if (n.type === 'review_request') {
       if (role === 'store_owner' || role === 'admin') return null
@@ -343,7 +423,11 @@ export const useNotificationStore = defineStore('notifications', () => {
     colorForType,
     timeAgo,
     requestBrowserPermission,
+    desktopPermission,
     showBrowserNotification,
     showChatMessageNotification,
+    notifyChatMessage,
+    dismissChatToast,
+    openChatFromAlert,
   }
 })
