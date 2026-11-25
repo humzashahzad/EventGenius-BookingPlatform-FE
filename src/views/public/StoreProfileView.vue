@@ -1,179 +1,184 @@
 <template>
-  <div class="store-profile-page font-['DM_Sans']">
+  <div class="bg-canvas min-h-[70vh]">
     <!-- Loading -->
-    <div v-if="loading" class="loading-container">
-      <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin"></div>
-      <p class="text-sm text-warm-500 mt-4">Loading store profile...</p>
+    <div v-if="loading" aria-busy="true" aria-label="Loading store profile">
+      <div class="skeleton h-40 sm:h-56 !rounded-none"></div>
+      <div class="content-container">
+        <div class="-mt-10 flex items-end gap-4">
+          <div class="skeleton h-20 w-20 !rounded-xl border-4 border-canvas"></div>
+          <div class="flex-1 space-y-2 pb-1"><div class="skeleton h-6 w-56 max-w-full"></div><div class="skeleton h-4 w-32"></div></div>
+        </div>
+        <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 pb-16">
+          <VenueCardSkeleton v-for="i in 3" :key="i" />
+        </div>
+      </div>
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="error-container">
-      <div class="w-16 h-16 rounded-full bg-coral/10 flex items-center justify-center mx-auto mb-4">
-        <AppIcon icon="alert-circle" class="w-8 h-8 text-coral" />
+    <div v-else-if="error" class="content-container py-16">
+      <div class="card">
+        <div class="empty-state">
+          <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
+          <p class="empty-state-title">Store not found</p>
+          <p class="empty-state-desc">{{ error }}</p>
+          <div class="empty-state-actions">
+            <button type="button" class="btn-secondary" @click="fetchStoreProfile">Try again</button>
+            <RouterLink to="/venues" class="btn-primary">Browse all venues</RouterLink>
+          </div>
+        </div>
       </div>
-      <h5 class="font-semibold text-warm-800 dark:text-warm-200 mb-2">Store Not Found</h5>
-      <p class="text-warm-500">{{ error }}</p>
-      <RouterLink to="/venues" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-soft hover:shadow-elevated">Browse All Venues</RouterLink>
     </div>
 
-    <!-- Store Landing Page -->
-    <div v-else-if="store">
-      <!-- Hero -->
-      <section class="store-hero" :style="heroStyle">
-        <div class="store-hero-overlay"></div>
-        <div class="store-hero-content">
-          <div class="store-hero-avatar">
-            <img v-if="store.logo" :src="getAvatarUrl(store.logo)" :alt="store.name" />
-            <img v-else-if="store.user?.avatar" :src="getAvatarUrl(store.user.avatar)" :alt="store.name" />
-            <span v-else class="store-hero-initials">{{ getInitials(store.name || '') }}</span>
+    <!-- Store page -->
+    <div v-else-if="store" class="pb-16">
+      <!-- Cover -->
+      <div class="relative h-40 sm:h-56 lg:h-64 overflow-hidden border-b border-line bg-surface-sunken">
+        <img v-if="coverUrl" :src="coverUrl" :alt="`${store.name} venue`" class="h-full w-full object-cover" />
+      </div>
+
+      <div class="content-container">
+        <!-- Profile header -->
+        <header class="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div class="flex items-end gap-4 min-w-0">
+            <div class="store-logo -mt-10 sm:-mt-12">
+              <img v-if="store.logo" :src="getAvatarUrl(store.logo)" :alt="`${store.name} logo`" />
+              <img v-else-if="store.user?.avatar" :src="getAvatarUrl(store.user.avatar)" :alt="store.name" />
+              <span v-else class="font-display text-2xl font-bold text-brand-text">{{ getInitials(store.name || '') }}</span>
+            </div>
+            <div class="min-w-0 pb-1">
+              <h1 class="font-display text-2xl sm:text-[1.875rem] font-bold leading-tight tracking-tight text-ink break-words">{{ store.name }}</h1>
+              <p class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-secondary">
+                <span v-if="store.city" class="inline-flex items-center gap-1"><AppIcon icon="map-pin" class="w-4 h-4 text-ink-muted" />{{ [store.city, store.country].filter(Boolean).join(', ') }}</span>
+                <span v-if="stats?.total_reviews" class="inline-flex items-center gap-1"><AppIcon icon="star-filled" class="fill-current w-4 h-4 text-[#B45309]" /><span class="font-semibold text-ink num">{{ Number(stats.avg_rating).toFixed(1) }}</span><span class="text-ink-muted num">({{ stats.total_reviews }} reviews)</span></span>
+                <span class="badge-success"><AppIcon icon="shield-check" class="w-3 h-3" />Verified host</span>
+              </p>
+            </div>
           </div>
-          <h1 class="store-hero-name">{{ store.name }}</h1>
-          <p v-if="store.city" class="store-hero-tagline" style="margin-top:0.25rem;">{{ [store.city, store.country].filter(Boolean).join(', ') }}</p>
-          <p v-if="landing?.tagline" class="store-hero-tagline">{{ landing.tagline }}</p>
-          <div class="store-hero-actions">
-            <button v-if="authStore.isLoggedIn && store.user?.id && authStore.user?.id !== store.user.id" @click="startChat" class="store-hero-btn">
-              <AppIcon icon="message-circle" class="w-5 h-5" />
-              Contact Store
+          <div class="flex flex-wrap gap-2 sm:pb-1">
+            <button v-if="authStore.isLoggedIn && store.user?.id && authStore.user?.id !== store.user.id" type="button" @click="startChat" class="btn-primary">
+              <AppIcon icon="message-circle" class="w-4 h-4" />
+              Contact store
             </button>
+            <a v-if="store.venues?.length" href="#venues" class="btn-secondary">View venues</a>
           </div>
-        </div>
-      </section>
+        </header>
 
-      <!-- Stats -->
-      <section class="store-stats-row">
-        <div class="max-w-7xl mx-auto flex flex-wrap justify-center gap-8 sm:gap-12">
-          <div class="stat-item">
-            <div class="stat-number">{{ stats?.total_venues || 0 }}</div>
-            <div class="stat-text">Venues</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">{{ stats?.total_bookings || 0 }}</div>
-            <div class="stat-text">Bookings</div>
-          </div>
-          <div v-if="stats?.total_reviews" class="stat-item">
-            <div class="stat-number">{{ Number(stats.avg_rating).toFixed(1) }} &#9733;</div>
-            <div class="stat-text">{{ stats.total_reviews }} Review{{ stats.total_reviews === 1 ? '' : 's' }}</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">{{ stats?.member_since || 'N/A' }}</div>
-            <div class="stat-text">Member Since</div>
-          </div>
-        </div>
-      </section>
+        <p v-if="landing?.tagline" class="mt-5 max-w-3xl text-lg text-ink-secondary">{{ landing.tagline }}</p>
 
-      <!-- About -->
-      <section v-if="landing?.about_text" class="py-12 px-4">
-        <div class="mx-auto max-w-3xl">
-          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-4">About Us</h4>
-          <p class="text-warm-500 leading-relaxed whitespace-pre-line">{{ landing.about_text }}</p>
-        </div>
-      </section>
-
-      <!-- Services -->
-      <section v-if="landing?.services?.length" class="py-12 px-4 bg-warm-50 dark:bg-warm-900/50">
-        <div class="mx-auto max-w-6xl">
-          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">Our Services</h4>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="(s, i) in landing.services" :key="i" class="service-card">
-              <h5 class="font-semibold text-warm-800 dark:text-warm-100 mb-2">{{ s.title }}</h5>
-              <p class="text-sm text-warm-500 mb-0">{{ s.description }}</p>
-            </div>
+        <!-- Stats -->
+        <dl class="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
+          <div v-for="st in statTiles" :key="st.label" class="bg-surface px-4 py-4">
+            <dt class="text-[0.8125rem] text-ink-muted">{{ st.label }}</dt>
+            <dd class="mt-0.5 font-display text-xl font-semibold text-ink num">{{ st.value }}</dd>
           </div>
-        </div>
-      </section>
+        </dl>
 
-      <!-- Gallery -->
-      <section v-if="landing?.gallery?.length" class="py-12 px-4">
-        <div class="mx-auto max-w-6xl">
-          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">Gallery</h4>
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <img
-              v-for="(g, i) in landing.gallery"
-              :key="i"
-              :src="getImageUrl(g)"
-              :alt="`${store.name} photo ${i + 1}`"
-              class="w-full aspect-square object-cover rounded-2xl"
-              loading="lazy"
-            />
-          </div>
-        </div>
-      </section>
-
-      <!-- Venues -->
-      <section v-if="store.venues?.length" class="py-12 px-4">
-        <div class="mx-auto max-w-6xl">
-          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">Our Venues</h4>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="venue in store.venues" :key="venue.id">
-              <RouterLink :to="`/venues/${venue.id}`" class="venue-card">
-                <div class="venue-card-img">
-                  <img v-if="venue.images?.length" :src="getImageUrl((venue.images.find((i: any) => i.is_primary) || venue.images[0]).path)" :alt="venue.name" />
-                  <div v-else class="venue-card-placeholder">
-                    <AppIcon icon="building" class="w-10 h-10" style="color:var(--color-text-muted);" />
-                  </div>
-                </div>
-                <div class="venue-card-body">
-                  <h6 class="font-semibold text-warm-800 dark:text-warm-100 mb-1">{{ venue.name }}</h6>
-                  <p class="text-sm text-warm-500 mb-2">{{ venue.city }}</p>
-                  <div class="flex justify-between items-center">
-                    <span class="font-bold text-primary-500">PKR {{ venue.price_per_head ? Number(venue.price_per_head).toLocaleString() : 'Contact' }}/head</span>
-                    <span class="text-sm text-warm-400">{{ venue.capacity_min }}-{{ venue.capacity_max }} guests</span>
-                  </div>
-                </div>
-              </RouterLink>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Testimonials -->
-      <section v-if="landing?.testimonials?.length" class="py-12 px-4 bg-warm-50 dark:bg-warm-900/50">
-        <div class="mx-auto max-w-6xl">
-          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">What Customers Say</h4>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div v-for="(t, i) in landing.testimonials" :key="i" class="testimonial-card">
-              <div class="flex gap-1 mb-3 text-accent">
-                <span v-for="s in (t.rating || 5)" :key="s">&#9733;</span>
-              </div>
-              <p class="text-sm text-warm-500 italic mb-4">"{{ t.quote }}"</p>
-              <p class="text-sm font-semibold text-warm-700 dark:text-warm-300 mb-0">&mdash; {{ t.name }}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- FAQ -->
-      <section v-if="landing?.faq?.length" class="py-12 px-4">
-        <div class="mx-auto max-w-3xl">
-          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">Frequently Asked Questions</h4>
-          <div class="flex flex-col gap-3">
-            <div v-for="(f, i) in landing.faq" :key="i" class="faq-item">
-              <button class="faq-question" @click="toggleFaq(i)">
-                <span>{{ f.question }}</span>
-                <span class="flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': openFaqs.has(i) }">
-                  <AppIcon icon="chevron-down" class="w-5 h-5" />
-                </span>
-              </button>
-              <div v-if="openFaqs.has(i)" class="faq-answer">
-                {{ f.answer }}
+        <div class="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div class="min-w-0 space-y-12">
+            <!-- Venues -->
+            <section v-if="store.venues?.length" id="venues" class="scroll-mt-24" aria-labelledby="venues-title">
+              <h2 id="venues-title" class="heading-2">Venues <span class="text-ink-muted font-normal num">({{ store.venues.length }})</span></h2>
+              <ul class="mt-4 grid gap-5 sm:grid-cols-2">
+                <li v-for="venue in store.venues" :key="venue.id" class="min-w-0"><VenueCard :venue="venue" /></li>
+              </ul>
+            </section>
+            <div v-else class="card">
+              <div class="empty-state">
+                <div class="empty-state-icon"><AppIcon icon="building" class="w-5 h-5" /></div>
+                <p class="empty-state-title">No venues listed yet</p>
+                <p class="empty-state-desc">This host hasn't published a venue yet. Browse other venues in the meantime.</p>
+                <div class="empty-state-actions"><RouterLink to="/venues" class="btn-primary">Browse venues</RouterLink></div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
 
-      <!-- Social Links -->
-      <section v-if="hasSocialLinks" class="py-12 px-4 bg-warm-50 dark:bg-warm-900/50 border-t border-warm-200 dark:border-warm-800">
-        <div class="mx-auto text-center max-w-3xl">
-          <h5 class="font-semibold text-warm-800 dark:text-warm-100 mb-4">Connect With Us</h5>
-          <div class="flex justify-center gap-3">
-            <a v-if="landing?.social_links?.facebook" :href="landing.social_links.facebook" target="_blank" rel="noopener" class="social-link">Facebook</a>
-            <a v-if="landing?.social_links?.instagram" :href="landing.social_links.instagram" target="_blank" rel="noopener" class="social-link">Instagram</a>
-            <a v-if="landing?.social_links?.twitter" :href="landing.social_links.twitter" target="_blank" rel="noopener" class="social-link">Twitter</a>
-            <a v-if="landing?.social_links?.website" :href="landing.social_links.website" target="_blank" rel="noopener" class="social-link">Website</a>
+            <!-- About -->
+            <section v-if="landing?.about_text || store.description" aria-labelledby="about-title">
+              <h2 id="about-title" class="heading-2">About</h2>
+              <p class="mt-3 whitespace-pre-line leading-relaxed text-ink-secondary">{{ landing?.about_text || store.description }}</p>
+            </section>
+
+            <!-- Services -->
+            <section v-if="landing?.services?.length" aria-labelledby="services-title">
+              <h2 id="services-title" class="heading-2">Services</h2>
+              <ul class="mt-4 grid gap-4 sm:grid-cols-2">
+                <li v-for="(s, i) in landing.services" :key="i" class="card card-body">
+                  <span class="icon-chip icon-chip-sm tone-brand"><AppIcon icon="circle-check" class="w-4 h-4" /></span>
+                  <h3 class="heading-3 mt-3">{{ s.title }}</h3>
+                  <p class="mt-1 text-sm leading-relaxed text-ink-secondary">{{ s.description }}</p>
+                </li>
+              </ul>
+            </section>
+
+            <!-- Gallery -->
+            <section v-if="landing?.gallery?.length" aria-labelledby="gallery-title">
+              <h2 id="gallery-title" class="heading-2">Gallery</h2>
+              <ul class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+                <li v-for="(g, i) in landing.gallery" :key="i">
+                  <button type="button" class="block w-full overflow-hidden rounded-lg border border-line bg-surface-sunken cursor-zoom-in" :aria-label="`Open photo ${i + 1}`" @click="lightboxRef?.open(i)">
+                    <img :src="getImageUrl(g)" :alt="`${store.name} photo ${i + 1}`" class="aspect-square w-full object-cover" loading="lazy" />
+                  </button>
+                </li>
+              </ul>
+            </section>
+
+            <!-- Testimonials -->
+            <section v-if="landing?.testimonials?.length" aria-labelledby="testi-title">
+              <h2 id="testi-title" class="heading-2">What customers say</h2>
+              <ul class="mt-4 grid gap-4 md:grid-cols-2">
+                <li v-for="(t, i) in landing.testimonials" :key="i" class="card card-body">
+                  <StarRating :model-value="Number(t.rating) || 5" readonly size="sm" />
+                  <p class="mt-3 text-sm leading-relaxed text-ink-secondary">“{{ t.quote }}”</p>
+                  <p class="mt-3 text-sm font-semibold text-ink">{{ t.name }}</p>
+                </li>
+              </ul>
+            </section>
+
+            <!-- FAQ -->
+            <section v-if="landing?.faq?.length" aria-labelledby="faq-title">
+              <h2 id="faq-title" class="heading-2">Frequently asked questions</h2>
+              <div class="mt-4 card divide-y divide-line overflow-hidden">
+                <div v-for="(f, i) in landing.faq" :key="i">
+                  <h3>
+                    <button
+                      type="button"
+                      class="faq-q"
+                      :aria-expanded="openFaqs.has(i) ? 'true' : 'false'"
+                      :aria-controls="`faq-${i}`"
+                      @click="toggleFaq(i)"
+                    >
+                      <span>{{ f.question }}</span>
+                      <span class="shrink-0 text-ink-muted transition-transform duration-200" :class="{ 'rotate-180': openFaqs.has(i) }"><AppIcon icon="chevron-down" class="w-5 h-5" /></span>
+                    </button>
+                  </h3>
+                  <div v-show="openFaqs.has(i)" :id="`faq-${i}`" class="px-5 pb-4 text-sm leading-relaxed text-ink-secondary">{{ f.answer }}</div>
+                </div>
+              </div>
+            </section>
           </div>
+
+          <!-- Contact sidebar -->
+          <aside class="lg:sticky lg:top-20 lg:self-start" aria-label="Contact details">
+            <div class="card">
+              <div class="card-header"><h2 class="card-title">Contact and details</h2></div>
+              <div class="card-body space-y-3 text-sm">
+                <p v-if="store.address || store.city" class="flex gap-2.5 text-ink-secondary"><AppIcon icon="map-pin" class="w-4 h-4 mt-0.5 shrink-0 text-ink-muted" /><span>{{ [store.address, store.city, store.state].filter(Boolean).join(', ') }}</span></p>
+                <p v-if="store.phone" class="flex gap-2.5 min-w-0"><AppIcon icon="phone" class="w-4 h-4 mt-0.5 shrink-0 text-ink-muted" /><a :href="`tel:${store.phone}`" class="link truncate">{{ store.phone }}</a></p>
+                <p v-if="store.email" class="flex gap-2.5 min-w-0"><AppIcon icon="mail" class="w-4 h-4 mt-0.5 shrink-0 text-ink-muted" /><a :href="`mailto:${store.email}`" class="link truncate">{{ store.email }}</a></p>
+                <p v-if="store.website" class="flex gap-2.5 min-w-0"><AppIcon icon="globe" class="w-4 h-4 mt-0.5 shrink-0 text-ink-muted" /><a :href="store.website" target="_blank" rel="noopener" class="link truncate">{{ store.website.replace(/^https?:\/\//, '') }}</a></p>
+                <p v-if="stats?.member_since" class="flex gap-2.5 text-ink-secondary"><AppIcon icon="calendar" class="w-4 h-4 mt-0.5 shrink-0 text-ink-muted" />On EventGenius since {{ stats.member_since }}</p>
+              </div>
+              <div v-if="hasSocialLinks" class="card-footer flex flex-wrap gap-2">
+                <a v-if="landing?.social_links?.facebook" :href="landing.social_links.facebook" target="_blank" rel="noopener" class="btn-secondary btn-sm"><AppIcon icon="brand-facebook" class="w-4 h-4" />Facebook</a>
+                <a v-if="landing?.social_links?.instagram" :href="landing.social_links.instagram" target="_blank" rel="noopener" class="btn-secondary btn-sm"><AppIcon icon="brand-instagram" class="w-4 h-4" />Instagram</a>
+                <a v-if="landing?.social_links?.twitter" :href="landing.social_links.twitter" target="_blank" rel="noopener" class="btn-secondary btn-sm"><AppIcon icon="brand-x" class="w-4 h-4" />Twitter</a>
+                <a v-if="landing?.social_links?.website" :href="landing.social_links.website" target="_blank" rel="noopener" class="btn-secondary btn-sm"><AppIcon icon="globe" class="w-4 h-4" />Website</a>
+              </div>
+            </div>
+          </aside>
         </div>
-      </section>
+      </div>
+
+      <ImageLightbox v-if="landing?.gallery?.length" ref="lightboxRef" :images="galleryImages" />
     </div>
   </div>
 </template>
@@ -186,6 +191,11 @@ import { useChat } from '@/composables/useChat'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { useAuthStore } from '@/stores/auth'
+import VenueCard from '@/components/venue/VenueCard.vue'
+import VenueCardSkeleton from '@/components/venue/VenueCardSkeleton.vue'
+import StarRating from '@/components/reviews/StarRating.vue'
+import ImageLightbox from '@/components/gallery/ImageLightbox.vue'
+import type { LightboxImage } from '@/components/gallery/ImageLightbox.vue'
 
 const route = useRoute()
 const { startConversation } = useChat()
@@ -198,12 +208,25 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const openFaqs = ref(new Set<number>())
 
-const heroStyle = computed(() => {
-  if (landing.value?.hero_image) {
-    return { backgroundImage: `url(${getStorageUrl(landing.value.hero_image)})` }
-  }
-  return {}
+const lightboxRef = ref<InstanceType<typeof ImageLightbox> | null>(null)
+
+const coverUrl = computed(() => {
+  const path = landing.value?.hero_image || store.value?.cover_image
+  return path ? getStorageUrl(path) : ''
 })
+
+const galleryImages = computed<LightboxImage[]>(() => (landing.value?.gallery || []).map((g: string, i: number) => ({
+  url: getStorageUrl(g),
+  thumbnail: getStorageUrl(g),
+  alt: `${store.value?.name || 'Store'} photo ${i + 1}`,
+})))
+
+const statTiles = computed(() => [
+  { label: 'Venues', value: Number(stats.value?.total_venues || 0).toLocaleString('en-PK') },
+  { label: 'Bookings hosted', value: Number(stats.value?.total_bookings || 0).toLocaleString('en-PK') },
+  { label: 'Average rating', value: stats.value?.total_reviews ? `${Number(stats.value.avg_rating).toFixed(1)} / 5` : 'No reviews yet' },
+  { label: 'Member since', value: stats.value?.member_since || '—' },
+])
 
 const hasSocialLinks = computed(() => {
   const links = landing.value?.social_links
@@ -211,11 +234,10 @@ const hasSocialLinks = computed(() => {
 })
 
 function toggleFaq(i: number) {
-  if (openFaqs.value.has(i)) {
-    openFaqs.value.delete(i)
-  } else {
-    openFaqs.value.add(i)
-  }
+  const next = new Set(openFaqs.value)
+  if (next.has(i)) next.delete(i)
+  else next.add(i)
+  openFaqs.value = next
 }
 
 async function fetchStoreProfile() {
@@ -259,317 +281,35 @@ onMounted(fetchStoreProfile)
 </script>
 
 <style scoped>
-.store-profile-page {
-  min-height: 100vh;
-  background: var(--color-bg);
-}
-
-.loading-container,
-.error-container {
+.store-logo {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 60vh;
-  text-align: center;
-}
-
-/* Hero */
-.store-hero {
-  position: relative;
-  padding: 5rem 1rem;
-  background-color: #064E3B;
-  background-size: cover;
-  background-position: center;
-}
-
-.store-hero-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-}
-
-.store-hero-content {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.store-hero-avatar {
-  width: 100px;
-  height: 100px;
-  border-radius: 9999px;
+  width: 5rem;
+  height: 5rem;
+  flex-shrink: 0;
   overflow: hidden;
-  margin: 0 auto 1.5rem;
-  border: 4px solid #6EE7B7;
-  background: rgba(0, 0, 0, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.2s ease;
-}
-
-.store-hero-avatar:hover {
-  border-color: #34D399;
-}
-
-.store-hero-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.store-hero-initials {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #34D399;
-}
-
-.store-hero-name {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: white;
-  margin-bottom: 0.5rem;
-}
-
-.store-hero-tagline {
-  font-size: 1.125rem;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 2rem;
-}
-
-.store-hero-actions {
-  display: flex;
-  justify-content: center;
-}
-
-.store-hero-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: #047857;
-  color: white;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  border: none;
-  border-radius: 0.75rem;
-  cursor: pointer;
+  border-radius: var(--radius-xl);
+  border: 4px solid var(--canvas);
+  background: var(--brand-soft);
   box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
 }
+@media (min-width: 640px) { .store-logo { width: 6rem; height: 6rem; } }
+.store-logo img { width: 100%; height: 100%; object-fit: cover; }
 
-.store-hero-btn:hover {
-  background: #065F46;
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-/* Stats */
-.store-stats-row {
-  padding: 2rem 1rem;
-  background: var(--color-bg-card);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-number {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #10B981;
-}
-
-.stat-text {
-  font-size: 0.8125rem;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  margin-top: 0.125rem;
-}
-
-/* Service cards */
-.service-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  transition: all 0.2s ease;
-  height: 100%;
-}
-
-.service-card:hover {
-  border-color: #6EE7B7;
-  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.08));
-}
-
-/* Venue cards */
-.venue-card {
-  display: block;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  overflow: hidden;
-  text-decoration: none;
-  transition: all 0.25s ease;
-  height: 100%;
-}
-
-.venue-card:hover {
-  border-color: #6EE7B7;
-  box-shadow: var(--shadow-elevated, 0 10px 40px rgba(0,0,0,0.1));
-  transform: translateY(-4px);
-}
-
-.venue-card-img {
-  aspect-ratio: 16/10;
-  background: var(--color-bg-hover);
-  overflow: hidden;
-}
-
-.venue-card-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.venue-card:hover .venue-card-img img {
-  transform: scale(1.03);
-}
-
-.venue-card-placeholder {
-  width: 100%;
-  height: 100%;
+.faq-q {
   display: flex;
+  width: 100%;
   align-items: center;
-  justify-content: center;
-}
-
-.venue-card-body {
-  padding: 1rem 1.25rem 1.25rem;
-}
-
-/* Testimonial cards */
-.testimonial-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  height: 100%;
-  transition: box-shadow 0.2s ease;
-}
-
-.testimonial-card:hover {
-  box-shadow: var(--shadow-soft, 0 2px 6px rgba(0,0,0,0.06));
-}
-
-/* FAQ */
-.faq-item {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 0.75rem;
-  overflow: hidden;
-  transition: border-color 0.15s ease;
-}
-
-.faq-item:hover {
-  border-color: #6EE7B7;
-}
-
-.faq-question {
-  width: 100%;
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.25rem;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  color: var(--color-text);
+  gap: 1rem;
+  min-height: 52px;
+  padding: 0.875rem 1.25rem;
   text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink);
+  transition: background-color .15s ease;
 }
-
-.faq-question:hover {
-  background: var(--color-bg-hover);
-}
-
-.faq-answer {
-  padding: 0 1.25rem 1rem;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-}
-
-/* Social links */
-.social-link {
-  padding: 0.5rem 1.25rem;
-  border: 1px solid var(--color-border-light);
-  border-radius: 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text);
-  text-decoration: none;
-  transition: all 0.15s ease;
-}
-
-.social-link:hover {
-  border-color: #10B981;
-  color: #10B981;
-  background: #ECFDF5;
-  box-shadow: var(--shadow-soft, 0 1px 3px rgba(0,0,0,0.06));
-}
-
-:root.dark .social-link:hover {
-  background: rgba(16, 185, 129, 0.1);
-  color: #34D399;
-  border-color: #34D399;
-}
-
-@media (max-width: 768px) {
-  .store-hero-name {
-    font-size: 1.75rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .store-hero {
-    padding: 2.5rem 1rem;
-  }
-
-  .store-hero-avatar {
-    width: 72px;
-    height: 72px;
-    margin-bottom: 1rem;
-  }
-
-  .store-hero-initials {
-    font-size: 1.5rem;
-  }
-
-  .store-hero-name {
-    font-size: 1.5rem;
-  }
-
-  .store-hero-tagline {
-    font-size: 0.9375rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .store-stats-row {
-    padding: 1.5rem 1rem;
-  }
-
-  .stat-number {
-    font-size: 1.25rem;
-  }
-}
+.faq-q:hover { background: var(--surface-hover); }
 </style>
