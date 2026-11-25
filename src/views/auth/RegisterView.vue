@@ -1,142 +1,101 @@
 <template>
-  <div class="fixed inset-0 overflow-hidden overscroll-none flex items-center justify-center bg-warm-100 dark:bg-warm-950 p-3 sm:p-6">
-    <div class="w-full h-full max-h-full flex rounded-3xl overflow-hidden shadow-elevated bg-warm-50 dark:bg-warm-900">
-      <!-- Left: Brand Panel (desktop) -->
-      <div class="hidden lg:flex lg:w-[58%] xl:w-[66%] items-center justify-center relative bg-gradient-to-br from-primary-800 via-primary-700 to-primary-600 overflow-hidden rounded-3xl m-2">
-        <PixelCanvas ref="canvasRef" variant="glow" />
-
-        <div class="absolute top-0 right-0 w-[350px] h-[350px] rounded-full bg-primary-400/30 blur-[80px] -translate-y-20 translate-x-10" />
-        <div class="absolute bottom-0 left-0 w-[250px] h-[250px] rounded-full bg-accent/20 blur-[80px] translate-y-10 -translate-x-10" />
-        <div class="relative z-10 max-w-[480px] px-8">
-          <div class="flex items-center gap-3 mb-8">
-            <div class="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
-              <AppLogo tone="white" class="w-7 h-7" />
-            </div>
-            <div>
-              <p class="text-primary-200 font-extrabold uppercase text-xs tracking-widest">EventGenius</p>
-              <p class="text-white font-semibold opacity-80">Booking Platform</p>
-            </div>
-          </div>
-          <h2 class="text-white font-bold text-3xl tracking-tight mb-4">Start your journey with us today.</h2>
-          <p class="text-white/60 leading-relaxed mb-8">Whether you're booking your next event or listing your venue, EventGenius makes it effortless.</p>
-          <div class="flex flex-col gap-3">
-            <div v-for="f in features" :key="f" class="flex items-center gap-3">
-              <span class="w-6 h-6 rounded-full bg-primary-400/20 border border-primary-400/30 flex items-center justify-center shrink-0 text-primary-300">
-                <AppIcon icon="check" class="w-3 h-3" />
-              </span>
-              <span class="text-white/75 text-sm">{{ f }}</span>
-            </div>
-          </div>
-        </div>
+  <AuthShell
+    :badge="portal === 'shop' ? 'Venue owner' : 'Customer'"
+    :badge-icon="portal === 'shop' ? 'building-store' : 'user'"
+    :heading="portal === 'shop' ? 'List your venue on EventGenius' : 'Create your account'"
+    :subheading="portal === 'shop' ? 'Register as a store owner to list venues and take bookings.' : 'Join EventGenius to browse and book venues across Pakistan.'"
+    :panel-eyebrow="portal === 'shop' ? 'For venue owners' : 'Create your account'"
+    :panel-title="portal === 'shop' ? 'Reach customers planning their next event.' : 'Plan your next event in minutes.'"
+    :panel-text="portal === 'shop' ? 'Create your store, add venues with photos and pricing, and manage every request in one place.' : 'Compare venues, send a booking request and pay securely once the venue confirms.'"
+    :features="features"
+  >
+    <form class="space-y-4" novalidate @submit.prevent="onSubmit">
+      <div>
+        <label for="reg-name" class="form-label">Full name <span class="req" aria-hidden="true">*</span></label>
+        <input
+          id="reg-name" v-model="form.name" type="text" required class="form-input" placeholder="e.g. Ayesha Khan" autocomplete="name"
+          :aria-invalid="!!fieldError('name')" :aria-describedby="fieldError('name') ? 'reg-name-error' : undefined" @blur="touched.name = true"
+        />
+        <p v-if="fieldError('name')" id="reg-name-error" class="form-error">{{ fieldError('name') }}</p>
       </div>
 
-      <!-- Right: Form -->
-      <div class="flex-1 flex overflow-y-auto overscroll-contain p-4 sm:p-12">
-        <div class="w-full max-w-[400px] m-auto">
-        <div class="lg:hidden flex items-center gap-2 mb-8">
-          <AppLogo class="w-9 h-9" />
-          <span class="font-bold text-warm-800 dark:text-white">EventGenius</span>
-        </div>
-
-        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-sm text-warm-500 hover:text-primary-600 dark:text-warm-400 mb-8">
-
-          <AppIcon icon="arrow-left" class="w-4 h-4" /> Back to EventGenius
-
-        </RouterLink>
-
-        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-white mb-1">Create your account</h1>
-        <p class="text-warm-500 dark:text-warm-400 mb-6">
-          {{ portal === 'shop' ? 'Register as a store owner to list your venues.' : 'Join EventGenius to browse and book venues.' }}
-        </p>
-
-        <form @submit.prevent="handleRegister" class="space-y-4">
-          <div>
-            <label class="form-label">Full Name</label>
-            <input v-model="form.name" type="text" required class="form-input" placeholder="John Doe" autocomplete="name" />
-            <p v-if="errors.name" class="mt-1 text-sm text-coral">{{ errors.name[0] }}</p>
-          </div>
-
-          <div>
-            <label class="form-label">Email Address</label>
-            <input v-model="form.email" type="email" required class="form-input" placeholder="you@example.com" autocomplete="email" />
-            <p v-if="errors.email" class="mt-1 text-sm text-coral">{{ errors.email[0] }}</p>
-          </div>
-
-          <div v-if="portal === 'shop'">
-            <label class="form-label">Store Name</label>
-            <input v-model="form.store_name" type="text" required class="form-input" placeholder="My Venue Co." />
-            <p v-if="errors.store_name" class="mt-1 text-sm text-coral">{{ errors.store_name[0] }}</p>
-          </div>
-
-          <div>
-            <label class="form-label">Password</label>
-            <div class="flex rounded-xl border border-warm-300 dark:border-warm-600 overflow-hidden bg-white dark:bg-warm-800 focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500 transition-all duration-200">
-              <input
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                required
-                class="flex-1 px-4 py-2.5 bg-transparent text-warm-800 dark:text-warm-100 placeholder-warm-400 dark:placeholder-warm-500 outline-none"
-                placeholder="Min. 8 characters"
-                autocomplete="new-password"
-              />
-              <button
-                type="button"
-                class="px-3 text-warm-500 hover:text-warm-700 dark:hover:text-warm-300 transition-colors"
-                @click="showPassword = !showPassword"
-              >
-                <AppIcon :icon="showPassword ? 'eye' : 'eye-off'" class="w-5 h-5" />
-              </button>
-            </div>
-            <p v-if="errors.password" class="mt-1 text-sm text-coral">{{ errors.password[0] }}</p>
-          </div>
-
-          <div>
-            <label class="form-label">Confirm Password</label>
-            <input
-              v-model="form.password_confirmation"
-              :type="showPassword ? 'text' : 'password'"
-              required
-              class="form-input"
-              placeholder="Repeat password"
-              autocomplete="new-password"
-            />
-          </div>
-
-          <div v-if="errorMsg" class="flex items-center gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-coral dark:text-red-300 text-sm">
-            <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
-            <span>{{ errorMsg }}</span>
-          </div>
-
-          <button
-            type="submit"
-            :disabled="loading"
-            class="w-full py-3 rounded-xl font-semibold text-white bg-primary-500 hover:bg-primary-600 focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 shadow-soft hover:shadow-card"
-          >
-            <span v-if="loading" class="inline-flex items-center justify-center gap-2">
-              <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Creating account...
-            </span>
-            <span v-else>Create Account</span>
-          </button>
-        </form>
-
-        <p class="mt-6 text-center text-sm text-warm-500 dark:text-warm-400">
-          Already have an account?
-          <RouterLink :to="loginPath" class="ml-1 font-semibold text-primary-600 hover:text-primary-700">Sign in</RouterLink>
-        </p>
-        </div>
+      <div>
+        <label for="reg-email" class="form-label">Email address <span class="req" aria-hidden="true">*</span></label>
+        <input
+          id="reg-email" v-model="form.email" type="email" required class="form-input" placeholder="you@example.com" autocomplete="email" inputmode="email"
+          :aria-invalid="!!fieldError('email')" :aria-describedby="fieldError('email') ? 'reg-email-error' : undefined" @blur="touched.email = true"
+        />
+        <p v-if="fieldError('email')" id="reg-email-error" class="form-error">{{ fieldError('email') }}</p>
       </div>
-    </div>
-  </div>
+
+      <div v-if="portal === 'shop'">
+        <label for="reg-store" class="form-label">Store name <span class="req" aria-hidden="true">*</span></label>
+        <input
+          id="reg-store" v-model="form.store_name" type="text" required class="form-input" placeholder="e.g. Shalimar Banquets" autocomplete="organization"
+          :aria-invalid="!!fieldError('store_name')" :aria-describedby="fieldError('store_name') ? 'reg-store-error' : 'reg-store-hint'" @blur="touched.store_name = true"
+        />
+        <p v-if="fieldError('store_name')" id="reg-store-error" class="form-error">{{ fieldError('store_name') }}</p>
+        <p v-else id="reg-store-hint" class="form-hint">The business name customers will see.</p>
+      </div>
+
+      <PasswordField
+        id="reg-password"
+        v-model="form.password"
+        label="Password"
+        placeholder="At least 8 characters"
+        autocomplete="new-password"
+        required
+        mark-required
+        :error="fieldError('password')"
+        @blur="touched.password = true"
+      >
+        <PasswordStrength :password="form.password" />
+      </PasswordField>
+
+      <PasswordField
+        id="reg-password-confirm"
+        v-model="form.password_confirmation"
+        label="Confirm password"
+        placeholder="Repeat your password"
+        autocomplete="new-password"
+        required
+        mark-required
+        :error="fieldError('password_confirmation')"
+        @blur="touched.password_confirmation = true"
+      />
+
+      <div v-if="errorMsg" class="alert-danger" role="alert">
+        <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
+        <p>{{ errorMsg }}</p>
+      </div>
+
+      <button type="submit" :disabled="loading" class="btn-primary btn-lg btn-block">
+        <span v-if="loading" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        {{ loading ? 'Creating account…' : portal === 'shop' ? 'Create shop account' : 'Create account' }}
+      </button>
+    </form>
+
+    <template #footer>
+      <p>
+        Already have an account?
+        <RouterLink :to="loginPath" class="link ml-1">Sign in</RouterLink>
+      </p>
+      <p class="pt-3 border-t border-line text-xs">
+        <template v-if="portal === 'shop'">Booking an event instead? <RouterLink to="/customer/sign-up" class="link">Create a customer account</RouterLink></template>
+        <template v-else>Own a venue? <RouterLink to="/shop/sign-up" class="link">Register your shop</RouterLink></template>
+      </p>
+    </template>
+  </AuthShell>
 </template>
 
 <script setup lang="ts">
-import AppLogo from '@/components/brand/AppLogo.vue'
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import PixelCanvas from '@/components/ui/PixelCanvas.vue'
+import AuthShell from '@/components/auth/AuthShell.vue'
+import PasswordField from '@/components/auth/PasswordField.vue'
+import PasswordStrength from '@/components/auth/PasswordStrength.vue'
 
 const router    = useRouter()
 const route     = useRoute()
@@ -147,9 +106,7 @@ const loginPath = computed(() => portal.value === 'shop' ? '/shop/sign-in' : '/c
 
 const loading      = ref(false)
 const errorMsg     = ref('')
-const showPassword = ref(false)
 const errors       = reactive<Record<string, string[]>>({})
-const canvasRef    = ref<InstanceType<typeof PixelCanvas> | null>(null)
 
 const form = reactive({
   name:                  '',
@@ -159,11 +116,37 @@ const form = reactive({
   password_confirmation: '',
 })
 
-const features = [
-  'Free to join as a client or store owner',
-  'Manage bookings, venues, and your profile in one place',
-  'Real-time booking and venue management',
-]
+const features = computed(() => portal.value === 'shop'
+  ? ['Free to list your venues', 'Accept or decline requests in one tap', 'Payments and reviews tracked for you']
+  : ['Free to join, no booking fees', 'Verified venues with real photos and prices', 'Track every booking and payment in one place'])
+
+type Field = 'name' | 'email' | 'store_name' | 'password' | 'password_confirmation'
+const touched = reactive<Record<Field | 'submit', boolean>>({ name: false, email: false, store_name: false, password: false, password_confirmation: false, submit: false })
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Inline error for a field: server error first, then client checks once touched. */
+function fieldError(f: Field): string {
+  if (errors[f]?.length) return errors[f][0]
+  if (!touched[f] && !touched.submit) return ''
+  if (f === 'name') return form.name.trim() ? '' : 'Enter your full name.'
+  if (f === 'email') return !form.email.trim() ? 'Enter your email address.' : EMAIL_RE.test(form.email.trim()) ? '' : 'Enter a valid email, like name@example.com.'
+  if (f === 'store_name') return portal.value !== 'shop' || form.store_name.trim() ? '' : 'Enter your store name.'
+  if (f === 'password') return !form.password ? 'Choose a password.' : form.password.length < 8 ? 'Use at least 8 characters.' : ''
+  if (f === 'password_confirmation') return form.password_confirmation === form.password ? '' : "Passwords don't match."
+  return ''
+}
+
+// Clear a server error as soon as the user edits that field.
+for (const f of ['name', 'email', 'store_name', 'password', 'password_confirmation'] as Field[]) {
+  watch(() => form[f], () => { if (errors[f]) delete errors[f] })
+}
+
+function onSubmit() {
+  touched.submit = true
+  const fields: Field[] = ['name', 'email', 'store_name', 'password', 'password_confirmation']
+  if (fields.some(f => fieldError(f))) return
+  handleRegister()
+}
 
 async function handleRegister() {
   loading.value = true
@@ -184,7 +167,6 @@ async function handleRegister() {
   const result = await authStore.register(payload)
 
   if (result.success) {
-    canvasRef.value?.triggerPulse('success')
     setTimeout(() => {
       loading.value = false
       // Customers who signed up mid-booking go straight back to it.
@@ -196,12 +178,6 @@ async function handleRegister() {
     loading.value = false
     if (result.errors) Object.assign(errors, result.errors)
     else errorMsg.value = result.message || 'Registration failed. Please try again.'
-    
-    if (errors.password) {
-      canvasRef.value?.triggerPulse('warning')
-    } else {
-      canvasRef.value?.triggerPulse('error')
-    }
   }
 }
 </script>

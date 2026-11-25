@@ -3,7 +3,7 @@
   <div class="card">
     <div class="border-b border-warm-200 dark:border-warm-700 px-5 py-4 sm:px-6 flex items-center gap-3">
       <div class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-        <AppIcon icon="sparkles" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
+        <AppIcon icon="circle-check" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
       </div>
       <div>
         <h2 class="text-sm font-semibold text-warm-900 dark:text-warm-50">Amenities</h2>

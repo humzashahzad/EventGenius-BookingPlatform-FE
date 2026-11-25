@@ -1,83 +1,81 @@
 <template>
   <aside
-    class="fixed top-3 left-3 bottom-3 z-40 flex flex-col bg-white dark:bg-warm-800 border border-warm-200 dark:border-warm-700 rounded-2xl shadow-float transition-all duration-300 ease-out lg:translate-x-0 overflow-hidden"
+    class="fixed inset-y-0 left-0 z-40 flex flex-col bg-surface border-r border-line transition-[width,transform] duration-200 ease-out lg:translate-x-0 overflow-hidden"
     :class="[
-      collapsed ? 'w-[4.5rem]' : 'w-64',
-      collapsed ? '-translate-x-[calc(100%+1rem)]' : 'translate-x-0',
+      collapsed ? 'w-[4.5rem] -translate-x-full shadow-none' : 'w-64 translate-x-0 max-lg:shadow-xl',
     ]"
     :aria-label="`${portalLabel} navigation`"
   >
     <!-- Brand -->
-    <div class="flex items-center h-14 px-3 border-b border-warm-200 dark:border-warm-700 shrink-0">
-      <RouterLink :to="homeTo" class="flex items-center gap-2.5 min-w-0 flex-1" :title="collapsed ? 'EventGenius' : undefined">
-        <AppLogo class="w-8 h-8" />
+    <div class="flex items-center h-16 px-4 border-b border-line shrink-0" :class="collapsed ? 'justify-center px-0' : ''">
+      <RouterLink :to="homeTo" class="flex items-center gap-2.5 min-w-0 rounded-md" :title="collapsed ? 'EventGenius' : undefined">
+        <AppLogo class="w-8 h-8 shrink-0" />
         <span v-show="!collapsed" class="min-w-0">
-          <span class="block font-bold text-sm text-warm-900 dark:text-white leading-tight truncate">EventGenius</span>
-          <span class="block text-[11px] font-medium uppercase tracking-wider text-primary-600 dark:text-primary-400 leading-tight">{{ portalLabel }}</span>
+          <span class="block font-display font-bold text-[0.9375rem] text-ink leading-tight truncate">EventGenius</span>
+          <span class="block text-[11px] font-semibold uppercase tracking-wider text-brand-text leading-tight">{{ portalLabel }}</span>
         </span>
       </RouterLink>
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto scrollbar-thin py-3">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin py-4" :class="collapsed ? 'px-3' : 'px-3'">
       <template v-for="(section, si) in sections" :key="si">
         <p
-          v-if="section.title"
-          v-show="!collapsed"
-          class="px-4 text-[11px] font-semibold uppercase tracking-wider text-warm-400 dark:text-warm-500 mb-1"
-          :class="si > 0 ? 'mt-5' : ''"
+          v-if="section.title && !collapsed"
+          class="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-muted"
+          :class="si > 0 ? 'mt-6' : ''"
         >
           {{ section.title }}
         </p>
-        <div v-else-if="si > 0" class="my-3 mx-4 border-t border-warm-100 dark:border-warm-700" />
+        <div v-else-if="si > 0" class="my-3 mx-2 border-t border-line" />
         <RouterLink
           v-for="item in section.items"
           :key="item.to"
           :to="item.to"
           :title="collapsed ? item.label : undefined"
-          class="group relative flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl text-sm transition-colors duration-150"
-          :class="isActive(item)
-            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-semibold'
-            : item.accent
-              ? 'text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 font-medium'
-              : 'text-warm-600 dark:text-warm-300 hover:bg-warm-50 dark:hover:bg-warm-700/60 hover:text-warm-900 dark:hover:text-white'"
+          class="group relative flex items-center gap-3 h-10 max-lg:h-11 mb-0.5 rounded-md text-sm transition-colors duration-150"
+          :class="[
+            collapsed ? 'justify-center px-0' : 'px-3',
+            isActive(item)
+              ? 'bg-brand-soft text-brand-text font-semibold'
+              : item.accent
+                ? 'text-brand-text font-medium hover:bg-brand-soft'
+                : 'text-ink-secondary font-medium hover:bg-surface-hover hover:text-ink',
+          ]"
           :aria-current="isActive(item) ? 'page' : undefined"
           @click="onNavigate"
         >
           <span
             v-if="isActive(item)"
-            class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary-500"
+            class="absolute -left-3 top-2 bottom-2 w-[3px] rounded-r bg-brand-strong dark:bg-brand"
             aria-hidden="true"
           />
           <span class="relative shrink-0">
-            <AppIcon :icon="item.icon" class="w-5 h-5" />
+            <AppIcon :icon="item.icon" class="w-[18px] h-[18px]" />
             <span
               v-if="item.badge && collapsed"
-              class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center text-[10px] font-bold rounded-full bg-coral text-white"
+              class="count-badge absolute -top-2 -right-2.5 !min-w-[1rem] !h-4 !px-1 !text-[10px]"
             >{{ item.badge > 99 ? '99+' : item.badge }}</span>
           </span>
           <span v-show="!collapsed" class="flex-1 truncate">{{ item.label }}</span>
-          <span
-            v-if="item.badge && !collapsed"
-            class="min-w-[20px] px-1.5 py-0.5 text-[11px] font-bold text-center rounded-full bg-coral text-white"
-          >{{ item.badge > 99 ? '99+' : item.badge }}</span>
+          <span v-if="item.badge && !collapsed" class="count-badge">{{ item.badge > 99 ? '99+' : item.badge }}</span>
         </RouterLink>
       </template>
     </nav>
 
     <!-- User + sign out -->
-    <div class="border-t border-warm-200 dark:border-warm-700 p-2 shrink-0">
-      <div class="flex items-center gap-2.5 px-2 py-2" :class="collapsed ? 'justify-center' : ''">
-        <img v-if="avatarUrl" :src="avatarUrl" alt="" class="w-8 h-8 rounded-full object-cover shrink-0" />
-        <span v-else class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 flex items-center justify-center text-xs font-semibold shrink-0">{{ initials }}</span>
+    <div class="border-t border-line p-3 shrink-0">
+      <div class="flex items-center gap-2.5" :class="collapsed ? 'justify-center' : 'px-1'">
+        <img v-if="avatarUrl" :src="avatarUrl" alt="" class="w-9 h-9 rounded-full object-cover shrink-0 border border-line" />
+        <span v-else class="avatar">{{ initials }}</span>
         <span v-show="!collapsed" class="min-w-0 flex-1">
-          <span class="block text-sm font-medium text-warm-900 dark:text-white truncate">{{ authStore.user?.name }}</span>
-          <span class="block text-xs text-warm-500 dark:text-warm-400 truncate">{{ authStore.user?.email }}</span>
+          <span class="block text-sm font-semibold text-ink truncate">{{ authStore.user?.name }}</span>
+          <span class="block text-xs text-ink-muted truncate">{{ authStore.user?.email }}</span>
         </span>
         <button
           v-show="!collapsed"
           type="button"
-          class="p-2 rounded-lg text-warm-400 hover:text-coral hover:bg-red-50 dark:hover:bg-red-900/20"
+          class="btn-icon btn-icon-sm hover:!text-danger-text hover:!bg-danger-soft"
           title="Sign out"
           aria-label="Sign out"
           @click="signOut"

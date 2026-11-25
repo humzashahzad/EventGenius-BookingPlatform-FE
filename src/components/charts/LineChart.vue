@@ -51,14 +51,10 @@ const chartOptions = computed(() => ({
     width: 3,
     curve: 'smooth' as const,
   },
+  // Flat fill only: a light solid tint under the line.
   fill: {
-    type: props.showArea ? 'gradient' : 'solid',
-    gradient: {
-      shadeIntensity: 1,
-      opacityFrom: 0.3,
-      opacityTo: 0.05,
-      stops: [0, 95, 100],
-    },
+    type: 'solid',
+    opacity: props.showArea ? 0.12 : 1,
   },
   markers: {
     size: props.showPoints ? 4 : 0,

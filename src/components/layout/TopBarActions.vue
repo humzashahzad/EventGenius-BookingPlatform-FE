@@ -1,14 +1,14 @@
 <template>
   <div v-if="actionsStore.visible" class="flex items-center gap-2">
     <div class="relative">
-      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 dark:text-warm-500 pointer-events-none">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none">
         <AppIcon icon="search" class="w-4 h-4" />
       </span>
       <input
         :value="actionsStore.searchValue"
         @input="onSearchInput"
         type="text"
-        class="w-44 xl:w-56 pl-9 pr-3 py-1.5 text-sm border border-warm-300 dark:border-warm-600 rounded-lg bg-white dark:bg-warm-800 text-warm-800 dark:text-warm-200 placeholder-warm-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        class="form-input !min-h-[36px] !py-1.5 !text-sm w-44 xl:w-60 !pl-9"
         :placeholder="actionsStore.searchPlaceholder"
         aria-label="Search"
       />
@@ -17,7 +17,7 @@
       <select
         :value="actionsStore.filterValues[f.key] ?? ''"
         @change="onFilterChange(f.key, ($event.target as HTMLSelectElement).value)"
-        class="py-1.5 pl-3 pr-8 text-sm border border-warm-300 dark:border-warm-600 rounded-lg bg-white dark:bg-warm-800 text-warm-800 dark:text-warm-200 min-w-[110px] focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        class="form-select !min-h-[36px] !py-1.5 !text-sm !w-auto min-w-[120px]"
         :aria-label="f.label"
       >
         <option value="">{{ f.label }}</option>

@@ -3,7 +3,7 @@
     <li
       v-for="r in shown"
       :key="r"
-      class="inline-flex items-center gap-1 max-w-full min-w-0 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 text-[0.6875rem] font-semibold leading-4"
+      class="inline-flex items-center gap-1 max-w-full min-w-0 rounded-md bg-brand-soft text-brand-text px-1.5 py-0.5 text-xs font-medium leading-4"
       :title="r"
     >
       <AppIcon icon="check" class="w-3 h-3 shrink-0" />

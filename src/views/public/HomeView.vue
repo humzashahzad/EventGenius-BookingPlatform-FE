@@ -1,203 +1,257 @@
 <template>
-  <div>
-    <!-- Hero Section -->
-    <section class="hero-section">
-      <PixelCanvas variant="glow" />
-      <div class="hero-bg">
-        <div class="hero-orb hero-orb-1"></div>
-        <div class="hero-orb hero-orb-2"></div>
-        <div class="hero-orb hero-orb-3"></div>
-      </div>
-      <div class="relative text-center px-4 mx-auto z-10" style="max-width:72rem;">
-        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-4 hero-trust-badge">
-          <span class="trust-dot"></span>
-          Venue booking made simple across Pakistan
-        </div>
-        <h1 class="hero-title">
-          Find the Perfect Venue<br>
-          <span class="hero-gradient-text">for Every Event</span>
-        </h1>
-        <p class="hero-subtext mx-auto mb-8" style="max-width:38rem;">
-          Weddings, corporate events, film shoots &amp; more — discover, compare and book venues across Pakistan in minutes.
-        </p>
-        <div class="hero-search mx-auto mb-6">
-          <SmartSearchBox
-            v-model="heroQuery"
-            variant="hero"
-            aria-label="Search venues"
-            @submit="heroSearch"
-            @select="heroSelect"
-          />
-        </div>
-        <div class="flex flex-col sm:flex-row gap-3 justify-center">
-          <RouterLink to="/venues" class="hero-btn-primary">
-            <AppIcon icon="search" class="w-[1.125rem] h-[1.125rem]" />
-            Browse Venues
-          </RouterLink>
-          <RouterLink to="/customer/sign-up" class="hero-btn-secondary">
-            Get Started Free
-            <AppIcon icon="arrow-right" class="w-4 h-4" />
-          </RouterLink>
-        </div>
-      </div>
-    </section>
+  <div class="bg-canvas">
+    <!-- ── Hero ─────────────────────────────────────────────────────────── -->
+    <section class="border-b border-line bg-surface">
+      <div class="content-container grid items-center gap-10 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 lg:py-20">
+        <div class="min-w-0">
+          <p class="inline-flex items-center gap-2 rounded-md border border-line bg-surface-sunken px-2.5 py-1 text-[0.8125rem] font-medium text-ink-secondary">
+            <AppIcon icon="shield-check" class="w-4 h-4 text-brand-text" />
+            Verified venues across Pakistan
+          </p>
+          <h1 class="text-display mt-4 text-ink">Book the right venue for every occasion</h1>
+          <p class="mt-4 max-w-xl text-base sm:text-lg leading-relaxed text-ink-secondary">
+            Compare wedding halls, marquees, banquet and conference venues with real photos, guest reviews and clear per-head prices — then request your date in minutes.
+          </p>
 
-    <!-- Stats / Trust Row -->
-    <section class="stats-section">
-      <div class="flex flex-wrap justify-center gap-3 md:gap-4 mx-auto px-4" style="max-width:72rem;">
-        <div v-for="st in stats" :key="st.label" class="stat-card">
-          <div class="stat-icon-wrap" :style="{ '--accent': st.color }">
-            <AppIcon :icon="st.icon" class="w-5 h-5" />
+          <div class="mt-7 max-w-xl">
+            <SmartSearchBox
+              v-model="heroQuery"
+              variant="hero"
+              aria-label="Search venues"
+              placeholder="Try: shadi hall in Lahore for 300 guests"
+              @submit="heroSearch"
+              @select="heroSelect"
+            />
           </div>
-          <div>
-            <div class="stat-number">{{ st.value }}</div>
-            <div class="stat-label-text">{{ st.label }}</div>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- How It Works -->
-    <section class="py-16 px-4" style="background: var(--color-bg-elevated);">
-      <div class="mx-auto" style="max-width:80rem;">
-        <div class="text-center mb-12">
-          <span class="section-badge">Simple Process</span>
-          <h2 class="section-heading">How It Works</h2>
-          <p class="section-subheading mx-auto">Book your dream venue in three simple steps</p>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-          <!-- Connection line -->
-          <div class="steps-connector hidden md:block"></div>
-          <div>
-            <div class="step-card">
-              <div class="step-number">1</div>
-              <div class="step-icon">
-                <AppIcon icon="search" class="w-6 h-6 text-white" />
-              </div>
-              <h3 class="step-title">Discover</h3>
-              <p class="step-desc">Browse hundreds of venues filtered by city, event type, capacity and price range.</p>
+          <div class="mt-4 flex flex-wrap items-center gap-2 max-w-xl">
+            <span class="text-[0.8125rem] text-ink-muted">Popular:</span>
+            <RouterLink
+              v-for="q in popularSearches"
+              :key="q.label"
+              :to="q.to"
+              class="inline-flex items-center h-8 rounded-md border border-line bg-surface px-2.5 text-[0.8125rem] font-medium text-ink-secondary hover:border-line-strong hover:text-ink"
+            >{{ q.label }}</RouterLink>
+          </div>
+
+          <dl class="mt-8 grid max-w-xl grid-cols-3 gap-4 border-t border-line pt-6">
+            <div v-for="s in heroStats" :key="s.label" class="min-w-0">
+              <dt class="text-[0.8125rem] text-ink-muted">{{ s.label }}</dt>
+              <dd class="mt-0.5 font-display text-2xl font-semibold text-ink num">
+                <span v-if="loading" class="skeleton inline-block h-7 w-12 align-middle"></span>
+                <template v-else>{{ s.value }}</template>
+              </dd>
             </div>
-          </div>
-          <div>
-            <div class="step-card">
-              <div class="step-number">2</div>
-              <div class="step-icon step-icon-accent">
-                <AppIcon icon="calendar-event" class="w-6 h-6 text-white" />
-              </div>
-              <h3 class="step-title">Book</h3>
-              <p class="step-desc">Select your date and time, submit your booking request in just a few clicks.</p>
-            </div>
-          </div>
-          <div>
-            <div class="step-card">
-              <div class="step-number">3</div>
-              <div class="step-icon step-icon-emerald">
-                <AppIcon icon="sparkles" class="w-6 h-6 text-white" />
-              </div>
-              <h3 class="step-title">Celebrate</h3>
-              <p class="step-desc">Get confirmed by the venue owner and enjoy your perfectly planned event.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Featured Venues -->
-    <section class="py-16 px-4" style="background: var(--color-bg);">
-      <div class="mx-auto" style="max-width:80rem;">
-        <div class="text-center mb-12">
-          <span class="section-badge">Handpicked</span>
-          <h2 class="section-heading">Featured Venues</h2>
-          <p class="section-subheading mx-auto">Top-rated venues handpicked for your next event</p>
+          </dl>
         </div>
 
-        <div v-if="loadingVenues" class="flex justify-center py-12">
-          <div class="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-
-        <div v-else-if="featuredVenues.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <RouterLink v-for="venue in featuredVenues" :key="venue.id" :to="`/venues/${venue.id}`" class="featured-venue-card">
-            <div class="featured-venue-img">
-              <img
-                v-if="venue.thumbnail"
-                :src="getStorageUrl(venue.thumbnail)"
-                :alt="venue.name"
-                @error="(e: Event) => (e.target as HTMLImageElement).style.display = 'none'"
-              />
-              <div v-else class="featured-venue-placeholder">
-                <AppIcon icon="building" class="w-10 h-10" style="color: var(--color-text-muted);" />
-              </div>
-              <div v-if="venue.avg_rating" class="featured-venue-rating">
-                <AppIcon icon="star-filled" class="w-3 h-3" style="color: #F59E0B;" />
-                {{ venue.avg_rating.toFixed(1) }}
-              </div>
-              <div class="featured-venue-overlay">
-                <span class="featured-venue-view-btn">View Details</span>
-              </div>
-            </div>
-            <div class="featured-venue-body">
-              <h3 class="featured-venue-name">{{ venue.name }}</h3>
-              <p class="featured-venue-location">
-                <AppIcon icon="map-pin" class="w-3 h-3" />
-                {{ venue.city }}, {{ venue.country }}
-              </p>
-              <div class="featured-venue-footer">
-                <span class="featured-venue-price">PKR {{ formatPrice(venue) }}</span>
-                <span class="featured-venue-capacity">
-                  <AppIcon icon="users" class="w-3 h-3" />
-                  {{ venue.capacity_min }}-{{ venue.capacity_max }}
+        <!-- Photo mosaic of real venues -->
+        <div class="min-w-0">
+          <div v-if="loading" class="hero-mosaic" aria-hidden="true">
+            <div class="skeleton hero-mosaic-a"></div>
+            <div class="skeleton hero-mosaic-b"></div>
+            <div class="skeleton hero-mosaic-c"></div>
+          </div>
+          <div v-else-if="heroVenues.length" class="hero-mosaic">
+            <RouterLink
+              v-for="(v, i) in heroVenues"
+              :key="v.id"
+              :to="`/venues/${v.id}`"
+              class="hero-tile group"
+              :class="['hero-mosaic-a', 'hero-mosaic-b', 'hero-mosaic-c'][i]"
+            >
+              <img :src="venueImageUrl(v)" :alt="`${v.name}, ${v.city}`" class="h-full w-full object-cover" :loading="i === 0 ? 'eager' : 'lazy'" />
+              <span class="hero-tile-caption">
+                <span class="block truncate text-sm font-semibold text-ink group-hover:text-brand-text">{{ v.name }}</span>
+                <span class="flex items-center gap-1 text-xs text-ink-muted">
+                  <AppIcon icon="map-pin" class="w-3 h-3" />{{ v.city }}
+                  <template v-if="ratingText(v)">
+                    <span aria-hidden="true">·</span>
+                    <AppIcon icon="star-filled" class="fill-current w-3 h-3 text-[#B45309]" />{{ ratingText(v) }}
+                  </template>
                 </span>
-              </div>
-            </div>
-          </RouterLink>
-        </div>
-
-        <div class="text-center mt-10">
-          <RouterLink to="/venues" class="view-all-btn">
-            View All Venues
-            <AppIcon icon="arrow-right" class="w-4 h-4" />
-          </RouterLink>
+              </span>
+            </RouterLink>
+          </div>
+          <img v-else src="/images/venue-hall.jpg" alt="A decorated event hall" class="aspect-[4/3] w-full rounded-2xl object-cover" />
         </div>
       </div>
     </section>
 
-    <!-- Why EventGenius -->
-    <section class="py-16 px-4" style="background: var(--color-bg-elevated);">
-      <div class="mx-auto" style="max-width:80rem;">
-        <div class="text-center mb-12">
-          <span class="section-badge">Why EventGenius</span>
-          <h2 class="section-heading">Everything you need to book with confidence</h2>
-          <p class="section-subheading mx-auto">Built for customers planning an event and for the venues hosting them</p>
+    <!-- ── Browse by event type ─────────────────────────────────────────── -->
+    <section class="py-14 lg:py-20" aria-labelledby="browse-type">
+      <div class="content-container">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Browse</p>
+            <h2 id="browse-type" class="heading-1 mt-1">Find a venue by occasion</h2>
+          </div>
+          <RouterLink to="/venues" class="btn-ghost btn-sm">All venues <AppIcon icon="arrow-right" class="w-4 h-4" /></RouterLink>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div v-for="f in features" :key="f.title" class="testimonial-card">
-            <div class="w-11 h-11 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center mb-4">
-              <AppIcon :icon="f.icon" class="w-5 h-5" />
-            </div>
-            <h3 class="font-semibold text-warm-900 dark:text-white mb-1.5">{{ f.title }}</h3>
-            <p class="text-sm text-warm-500 dark:text-warm-400 leading-relaxed">{{ f.text }}</p>
+
+        <div v-if="loading" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div v-for="i in 6" :key="i" class="skeleton h-[5.5rem] !rounded-xl"></div>
+        </div>
+        <ul v-else-if="eventTypes.length" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <li v-for="(t, i) in eventTypes" :key="t.slug" :class="{ 'hidden sm:block': i >= 8 }">
+            <RouterLink :to="{ path: '/venues', query: { event_type: t.slug } }" class="type-tile">
+              <span class="icon-chip icon-chip-sm tone-brand"><AppIcon :icon="eventTypeIcon(t.slug)" class="w-4 h-4" /></span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-sm font-semibold leading-snug text-ink break-words">{{ t.name }}</span>
+                <span class="block text-xs text-ink-muted num">{{ plural(t.count, 'venue') }}</span>
+              </span>
+            </RouterLink>
+          </li>
+        </ul>
+        <p v-else class="text-sm text-ink-muted">Event types will appear here once venues are listed.</p>
+      </div>
+    </section>
+
+    <!-- ── Featured venues ──────────────────────────────────────────────── -->
+    <section class="border-y border-line bg-surface py-14 lg:py-20" aria-labelledby="featured-title">
+      <div class="content-container">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Featured</p>
+            <h2 id="featured-title" class="heading-1 mt-1">Popular venues right now</h2>
+            <p class="mt-1 text-ink-muted">Highly rated, frequently booked and ready for your date.</p>
+          </div>
+          <RouterLink to="/venues?sort=avg_rating" class="btn-secondary btn-sm">See top rated <AppIcon icon="arrow-right" class="w-4 h-4" /></RouterLink>
+        </div>
+
+        <div v-if="loading" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <VenueCardSkeleton v-for="i in 6" :key="i" />
+        </div>
+        <div v-else-if="loadError" class="alert-danger" role="alert">
+          <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
+          <div class="flex-1">
+            <p class="alert-title">We couldn't load venues</p>
+            <p>Check your connection and try again.</p>
+          </div>
+          <button type="button" class="btn-secondary btn-sm" @click="load">Try again</button>
+        </div>
+        <div v-else-if="featuredVenues.length" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <VenueCard v-for="v in featuredVenues" :key="v.id" :venue="v" :categories="categories" />
+        </div>
+        <div v-else class="empty-state">
+          <div class="empty-state-icon"><AppIcon icon="building" class="w-5 h-5" /></div>
+          <p class="empty-state-title">No venues listed yet</p>
+          <p class="empty-state-desc">Own a venue? List it and be the first one customers see.</p>
+          <div class="empty-state-actions"><RouterLink to="/shop/sign-up" class="btn-primary">List your venue</RouterLink></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Browse by city ───────────────────────────────────────────────── -->
+    <section v-if="loading || cities.length" class="py-14 lg:py-20" aria-labelledby="city-title">
+      <div class="content-container">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Cities</p>
+            <h2 id="city-title" class="heading-1 mt-1">Venues near you</h2>
+            <p class="mt-1 text-ink-muted">Listed in {{ cities.length || '…' }} cities and growing.</p>
           </div>
         </div>
+        <div v-if="loading" class="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div v-for="i in 4" :key="i" class="skeleton aspect-[4/3] !rounded-xl"></div>
+        </div>
+        <ul v-else class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <li v-for="c in cities.slice(0, 8)" :key="c.name">
+            <RouterLink :to="{ path: '/venues', query: { city: c.name } }" class="city-tile group">
+              <img v-if="c.image" :src="c.image" :alt="`Venue in ${c.name}`" loading="lazy" class="aspect-[4/3] w-full object-cover" />
+              <div v-else class="aspect-[4/3] w-full bg-surface-sunken"></div>
+              <span class="flex items-center justify-between gap-2 px-3.5 py-3">
+                <span class="min-w-0">
+                  <span class="block truncate font-semibold text-ink group-hover:text-brand-text">{{ c.name }}</span>
+                  <span class="block text-xs text-ink-muted num">{{ plural(c.count, 'venue') }}<template v-if="c.from"> · from PKR {{ formatNumber(c.from) }}/head</template></span>
+                </span>
+                <AppIcon icon="chevron-right" class="w-4 h-4 shrink-0 text-ink-muted" />
+              </span>
+            </RouterLink>
+          </li>
+        </ul>
       </div>
     </section>
 
-    <!-- For Store Owners CTA -->
-    <section class="cta-section">
-      <div class="cta-pattern"></div>
-      <div class="mx-auto text-center px-4 relative z-10" style="max-width:56rem;">
-        <span class="cta-badge">For Venue Owners</span>
-        <h2 class="cta-heading">Grow Your Venue Business</h2>
-        <p class="cta-subtext mx-auto" style="max-width:40rem;">
-          List your venue on EventGenius and reach thousands of event planners across Pakistan. Manage bookings, chat with customers, and grow your business — all in one place.
-        </p>
-        <div class="flex flex-col sm:flex-row gap-3 justify-center">
-          <RouterLink to="/shop/sign-up" class="cta-btn-primary">
-            Register as Shop Owner
-            <AppIcon icon="arrow-right" class="w-4 h-4" />
-          </RouterLink>
-          <RouterLink to="/shop/sign-in" class="cta-btn-secondary">
-            Already Registered? Sign In
-          </RouterLink>
+    <!-- ── How booking works ────────────────────────────────────────────── -->
+    <section class="border-y border-line bg-surface py-14 lg:py-20" aria-labelledby="how-title">
+      <div class="content-container">
+        <div class="max-w-2xl">
+          <p class="eyebrow">How it works</p>
+          <h2 id="how-title" class="heading-1 mt-1">From search to confirmed booking</h2>
+          <p class="mt-1 text-ink-muted">No phone tag with venue managers. Everything happens in one place.</p>
+        </div>
+        <ol class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <li v-for="(s, i) in steps" :key="s.title" class="relative">
+            <div class="flex items-center gap-3">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-strong/50 bg-surface font-semibold text-ink num">{{ i + 1 }}</span>
+              <span class="hidden h-px flex-1 bg-line lg:block" :class="{ 'lg:invisible': i === steps.length - 1 }"></span>
+            </div>
+            <h3 class="heading-3 mt-4 flex items-center gap-2">
+              <AppIcon :icon="s.icon" class="w-4 h-4 text-brand-text" />{{ s.title }}
+            </h3>
+            <p class="mt-1.5 text-sm leading-relaxed text-ink-secondary">{{ s.text }}</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ── Trust / proof ────────────────────────────────────────────────── -->
+    <section class="py-14 lg:py-20" aria-labelledby="trust-title">
+      <div class="content-container grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14">
+        <div>
+          <p class="eyebrow">Why EventGenius</p>
+          <h2 id="trust-title" class="heading-1 mt-1">Book with confidence</h2>
+          <p class="mt-2 text-ink-secondary leading-relaxed">
+            Every listing comes from a venue owner our team has approved. Prices are shown up front and reviews come only from customers who actually held their event there.
+          </p>
+          <dl class="mt-8 grid grid-cols-2 gap-4">
+            <div v-for="s in proofStats" :key="s.label" class="stat-card !items-start">
+              <span class="icon-chip tone-brand"><AppIcon :icon="s.icon" class="w-5 h-5" /></span>
+              <div class="min-w-0">
+                <dt class="stat-label">{{ s.label }}</dt>
+                <dd class="stat-value num">
+                  <span v-if="loading" class="skeleton inline-block h-7 w-14 align-middle"></span>
+                  <template v-else>{{ s.value }}</template>
+                </dd>
+              </div>
+            </div>
+          </dl>
+        </div>
+        <ul class="grid gap-4 sm:grid-cols-2">
+          <li v-for="f in features" :key="f.title" class="card card-body">
+            <span class="icon-chip tone-neutral"><AppIcon :icon="f.icon" class="w-5 h-5" /></span>
+            <h3 class="heading-3 mt-4">{{ f.title }}</h3>
+            <p class="mt-1.5 text-sm leading-relaxed text-ink-secondary">{{ f.text }}</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── Owner CTA ────────────────────────────────────────────────────── -->
+    <section class="pb-16 lg:pb-20" aria-labelledby="owner-title">
+      <div class="content-container">
+        <div class="owner-cta">
+          <div class="min-w-0 p-6 sm:p-10 lg:p-12">
+            <p class="text-xs font-semibold uppercase tracking-[0.08em] text-[#A7F3D0]">For venue owners</p>
+            <h2 id="owner-title" class="mt-2 font-display text-[1.75rem] sm:text-[2rem] font-bold leading-tight text-white">Fill more dates at your venue</h2>
+            <p class="mt-3 max-w-lg text-[0.9375rem] leading-relaxed text-[#D6D3D1]">
+              List your hall, marquee or banquet for free. Get booking requests with dates, guest counts and event details, chat with customers and get paid online.
+            </p>
+            <ul class="mt-5 grid gap-2 text-sm text-[#E7E5E4] sm:grid-cols-2">
+              <li v-for="p in ownerPoints" :key="p" class="flex items-center gap-2"><AppIcon icon="circle-check" class="w-4 h-4 shrink-0 text-[#6EE7B7]" />{{ p }}</li>
+            </ul>
+            <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+              <RouterLink to="/shop/sign-up" class="btn-primary btn-lg">List your venue <AppIcon icon="arrow-right" class="w-4 h-4" /></RouterLink>
+              <RouterLink to="/shop/sign-in" class="owner-cta-secondary">Owner sign in</RouterLink>
+            </div>
+          </div>
+          <img
+            :src="ownerImage"
+            alt="Event hall set up for a function"
+            loading="lazy"
+            class="hidden h-full w-full object-cover md:block"
+          />
         </div>
       </div>
     </section>
@@ -208,11 +262,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import api from '@/lib/axios'
-import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import PixelCanvas from '@/components/ui/PixelCanvas.vue'
 import SmartSearchBox from '@/components/search/SmartSearchBox.vue'
+import VenueCard from '@/components/venue/VenueCard.vue'
+import VenueCardSkeleton from '@/components/venue/VenueCardSkeleton.vue'
 import type { Suggestion } from '@/components/search/types'
+import {
+  venueImageUrl, ratingText, eventTypeIcon, formatNumber, plural, type CategoryLike,
+} from '@/components/venue/venueUtils'
 
 // ─── Hero smart search → /venues?q=… ─────────────────────────────────────────
 const router = useRouter()
@@ -228,737 +285,218 @@ function heroSelect(s: Suggestion) {
   else heroSearch(s.value)
 }
 
-const featuredVenues = ref<any[]>([])
-const loadingVenues = ref(false)
+// ─── Data (all real, from the public API) ────────────────────────────────────
+const venues = ref<any[]>([])
+const totalVenues = ref(0)
+const categories = ref<CategoryLike[]>([])
+const loading = ref(true)
+const loadError = ref(false)
 
-const totalVenues = ref<number | null>(null)
-const totalCategories = ref<number | null>(null)
-
-// Real numbers only — no invented marketing figures.
-const stats = computed(() => [
-  { icon: 'building', label: 'Venues listed', value: totalVenues.value ?? '—', color: 'var(--color-primary)' },
-  { icon: 'tags', label: 'Event types', value: totalCategories.value ?? '—', color: 'var(--color-accent)' },
-  { icon: 'credit-card', label: 'Secure payments', value: 'PayFast', color: '#10B981' },
-  { icon: 'message', label: 'Chat with owners', value: 'Live', color: '#F59E0B' },
-])
-
-const features = [
-  { icon: 'calendar-check', title: 'Real-time availability', text: 'See booked slots on the calendar and pick a time that is actually free — no double bookings.' },
-  { icon: 'shield', title: 'Verified venues', text: 'Every shop is reviewed and approved by our team before its venues appear here.' },
-  { icon: 'credit-card', title: 'Secure checkout', text: 'Pay online through PayFast once the venue confirms your request.' },
-  { icon: 'star', title: 'Genuine reviews', text: 'Only customers who held an event at a venue can review it.' },
-]
-
-function formatPrice(v: any) {
-  const price = v.price_per_head
-  return price ? Number(price).toLocaleString() : 'Contact'
-}
-
-async function fetchFeaturedVenues() {
-  loadingVenues.value = true
+async function load() {
+  loading.value = true
+  loadError.value = false
   try {
-    // Prefer featured venues; fall back to the best-rated / newest ones.
-    const featured = await api.get('/venues', { params: { featured: 1, per_page: 6 } })
-    let list: any[] = featured.data?.data?.data ?? []
-    if (list.length < 3) {
-      const latest = await api.get('/venues', { params: { per_page: 6, sort_by: 'avg_rating', sort_dir: 'desc' } })
-      const extra: any[] = latest.data?.data?.data ?? []
-      list = [...list, ...extra.filter(v => !list.some(l => l.id === v.id))].slice(0, 6)
-      totalVenues.value = latest.data?.data?.total ?? null
-    } else {
-      totalVenues.value = featured.data?.data?.total ?? null
+    const [vRes, cRes] = await Promise.allSettled([
+      api.get('/venues', { params: { per_page: 100, sort_by: 'avg_rating', sort_dir: 'desc' } }),
+      api.get('/categories'),
+    ])
+    if (vRes.status !== 'fulfilled') throw vRes.reason
+    const page = vRes.value.data?.data ?? {}
+    venues.value = Array.isArray(page.data) ? page.data : []
+    totalVenues.value = Number(page.total) || venues.value.length
+    if (cRes.status === 'fulfilled') {
+      categories.value = (cRes.value.data?.data ?? []).filter((c: any) => c && c.is_active !== false)
     }
-    featuredVenues.value = list
-    api.get('/categories').then(r => { totalCategories.value = (r.data?.data ?? []).length }).catch(() => {})
   } catch {
-    featuredVenues.value = []
+    loadError.value = true
+    venues.value = []
   } finally {
-    loadingVenues.value = false
+    loading.value = false
   }
 }
 
-onMounted(fetchFeaturedVenues)
+onMounted(load)
+
+const withPhoto = computed(() => venues.value.filter(v => venueImageUrl(v)))
+
+const featuredVenues = computed(() => {
+  const featured = venues.value.filter(v => v.is_featured)
+  const rest = venues.value.filter(v => !v.is_featured)
+  return [...featured, ...rest].slice(0, 6)
+})
+
+const heroVenues = computed(() => {
+  const picks = [...withPhoto.value.filter(v => v.is_featured), ...withPhoto.value.filter(v => !v.is_featured)]
+  return picks.slice(0, 3)
+})
+
+const cities = computed(() => {
+  const map = new Map<string, { name: string; count: number; image: string; from: number }>()
+  for (const v of venues.value) {
+    const name = String(v.city || '').trim()
+    if (!name) continue
+    const entry = map.get(name) ?? { name, count: 0, image: '', from: 0 }
+    entry.count++
+    if (!entry.image) entry.image = venueImageUrl(v)
+    const price = Number(v.price_per_head) || 0
+    if (price > 0 && (!entry.from || price < entry.from)) entry.from = price
+    map.set(name, entry)
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+})
+
+const eventTypes = computed(() => {
+  const counts = new Map<string, number>()
+  for (const v of venues.value) for (const t of (v.event_types || [])) counts.set(t, (counts.get(t) ?? 0) + 1)
+  return categories.value
+    .map(c => ({ slug: c.slug, name: c.name, count: counts.get(c.slug) ?? 0 }))
+    .filter(c => c.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12)
+})
+
+const totalReviews = computed(() => venues.value.reduce((sum, v) => sum + (Number(v.total_reviews) || 0), 0))
+const avgRating = computed(() => {
+  let weighted = 0
+  for (const v of venues.value) weighted += (Number(v.avg_rating) || 0) * (Number(v.total_reviews) || 0)
+  return totalReviews.value ? (weighted / totalReviews.value).toFixed(1) : '—'
+})
+
+const heroStats = computed(() => [
+  { label: 'Venues listed', value: formatNumber(totalVenues.value) },
+  { label: 'Cities', value: formatNumber(cities.value.length) },
+  { label: 'Guest reviews', value: formatNumber(totalReviews.value) },
+])
+
+const proofStats = computed(() => [
+  { icon: 'building', label: 'Approved venues', value: formatNumber(totalVenues.value) },
+  { icon: 'map-pin', label: 'Cities covered', value: formatNumber(cities.value.length) },
+  { icon: 'message-star', label: 'Verified reviews', value: formatNumber(totalReviews.value) },
+  { icon: 'star', label: 'Average rating', value: avgRating.value },
+])
+
+const popularSearches = computed(() => {
+  const out: { label: string; to: any }[] = []
+  const wedding = categories.value.find(c => c.slug === 'weddings')
+  if (wedding) out.push({ label: 'Wedding halls', to: { path: '/venues', query: { event_type: 'weddings' } } })
+  for (const c of cities.value.slice(0, 3)) out.push({ label: c.name, to: { path: '/venues', query: { city: c.name } } })
+  out.push({ label: 'Under PKR 3,000/head', to: { path: '/venues', query: { q: 'under 3000' } } })
+  return out
+})
+
+const ownerImage = computed(() => (withPhoto.value[3] ? venueImageUrl(withPhoto.value[3]) : '/images/venue-hall.jpg'))
+
+const steps = [
+  { icon: 'search', title: 'Search and compare', text: 'Describe your event in plain words or filter by city, occasion, guests and budget.' },
+  { icon: 'calendar-event', title: 'Pick a date', text: 'See which days and time slots are free on the venue calendar before you ask.' },
+  { icon: 'calendar-check', title: 'Request and confirm', text: 'Send your request with guest count and add-ons. The owner confirms or replies in chat.' },
+  { icon: 'credit-card', title: 'Pay securely', text: 'Pay online through PayFast once confirmed, and track everything from your dashboard.' },
+]
+
+const features = [
+  { icon: 'calendar-check', title: 'Live availability', text: 'Booked slots are blocked on the calendar, so you never request a date that is already taken.' },
+  { icon: 'receipt', title: 'Clear pricing', text: 'Per-head price, paid add-ons and tax are shown before you send a request. No surprises.' },
+  { icon: 'message', title: 'Chat with the owner', text: 'Ask about menus, decor or timings directly and keep the conversation with your booking.' },
+  { icon: 'star', title: 'Genuine reviews', text: 'Only customers who completed an event at a venue can review it.' },
+]
+
+const ownerPoints = ['Free listing', 'Booking calendar', 'Online payments', 'Customer chat']
 </script>
 
 <style scoped>
-/* ─── Hero ─────────────────────────────────────────────────────────────────── */
-.hero-search {
-  max-width: 40rem;
-  position: relative;
-  z-index: 2;
-}
-
-.hero-section {
-  position: relative;
-  padding: 7rem 1rem 6rem;
-  background: linear-gradient(145deg, #064E3B 0%, #065F46 35%, #047857 65%, #064E3B 100%);
-  overflow: hidden;
-}
-
-.hero-bg {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.hero-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 80%);
-}
-
-.hero-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-}
-
-.hero-orb-1 {
-  width: 500px; height: 500px;
-  background: rgba(16, 185, 129, 0.3);
-  top: -150px; right: -100px;
-  animation: orbFloat 16s ease-in-out infinite alternate;
-}
-
-.hero-orb-2 {
-  width: 400px; height: 400px;
-  background: rgba(245, 158, 11, 0.15);
-  bottom: -100px; left: -80px;
-  animation: orbFloat 20s ease-in-out infinite alternate-reverse;
-}
-
-.hero-orb-3 {
-  width: 250px; height: 250px;
-  background: rgba(110, 231, 183, 0.2);
-  top: 40%; left: 45%;
-  animation: orbPulse 10s ease-in-out infinite;
-}
-
-.hero-trust-badge {
-  color: rgba(255,255,255,0.85);
-  border: 1px solid rgba(110, 231, 183, 0.3);
-  background: rgba(16, 185, 129, 0.15);
-  backdrop-filter: blur(20px);
-  font-size: 0.8125rem;
-}
-
-.trust-dot {
-  display: inline-block;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: #34D399;
-  animation: pulse 2s infinite;
-}
-
-.hero-title {
-  font-size: 3.5rem;
-  font-weight: 900;
-  color: white;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  margin-bottom: 1.25rem;
-}
-
-.hero-gradient-text {
-  background: linear-gradient(135deg, #34D399, #F59E0B, #38BDF8);
-  background-size: 200% 200%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: gradientShift 6s ease infinite;
-}
-
-.hero-subtext {
-  color: rgba(255,255,255,0.65);
-  font-size: 1.125rem;
-  line-height: 1.7;
-}
-
-.hero-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 1rem 2rem;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  color: white;
-  font-weight: 700;
-  font-size: 1rem;
-  border-radius: var(--radius-xl);
-  text-decoration: none;
-  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.35);
-  transition: all 0.25s ease;
-}
-
-.hero-btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.45);
-  color: white;
-}
-
-.hero-btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1rem 2rem;
-  background: rgba(255,255,255,0.08);
-  color: white;
-  font-weight: 600;
-  font-size: 1rem;
-  border: 1px solid rgba(255,255,255,0.15);
-  backdrop-filter: blur(12px);
-  border-radius: var(--radius-xl);
-  text-decoration: none;
-  transition: all 0.25s ease;
-}
-
-.hero-btn-secondary:hover {
-  background: rgba(255,255,255,0.14);
-  border-color: rgba(255,255,255,0.3);
-  transform: translateY(-2px);
-  color: white;
-}
-
-/* ─── Stats ────────────────────────────────────────────────────────────────── */
-.stats-section {
-  padding: 0 1rem;
-  margin-top: -2rem;
-  position: relative;
-  z-index: 20;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
+.section-head {
   display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  padding: 1.25rem 1.5rem;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  min-width: 140px;
-  transition: all 0.25s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-xl);
-}
-
-.stat-icon-wrap {
-  width: 44px; height: 44px;
-  border-radius: var(--radius-lg);
-  display: flex; align-items: center; justify-content: center;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
-.stat-number {
-  font-size: 1.375rem;
-  font-weight: 800;
-  color: var(--color-text);
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.stat-label-text {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-/* ─── Section Headers ──────────────────────────────────────────────────────── */
-.section-badge {
-  display: inline-block;
-  padding: 0.375rem 1rem;
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--color-primary);
-  background: var(--color-primary-100);
-  border: 1px solid var(--color-primary-200);
-  margin-bottom: 0.75rem;
-}
-
-.section-heading {
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--color-text);
-  letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
-}
-
-.section-subheading {
-  color: var(--color-text-secondary);
-  font-size: 1rem;
-  max-width: 30rem;
-}
-
-/* ─── Steps ────────────────────────────────────────────────────────────────── */
-.steps-connector {
-  position: absolute;
-  top: 80px;
-  left: calc(16.67% + 24px);
-  right: calc(16.67% + 24px);
-  height: 2px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-accent), #10B981);
-  border-radius: var(--radius-full);
-  z-index: 0;
-  opacity: 0.3;
-}
-
-.step-card {
-  text-align: center;
-  padding: 2rem 1.5rem;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-2xl);
-  position: relative;
-  z-index: 1;
-  transition: all 0.3s ease;
-  height: 100%;
-}
-
-.step-card:hover {
-  border-color: var(--color-primary-200);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-6px);
-}
-
-.step-number {
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 28px; height: 28px;
-  border-radius: var(--radius-full);
-  background: var(--color-bg-card);
-  border: 2px solid var(--color-primary-200);
-  color: var(--color-primary);
-  font-size: 0.75rem;
-  font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-}
-
-.step-icon {
-  width: 64px; height: 64px;
-  border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  display: flex; align-items: center; justify-content: center;
-  margin: 0.5rem auto 1.25rem;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
-}
-
-.step-icon-accent {
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
-  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25);
-}
-
-.step-icon-emerald {
-  background: linear-gradient(135deg, #10B981, #6EE7B7);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
-}
-
-.step-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 0.5rem;
-}
-
-.step-desc {
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-  line-height: 1.6;
-  margin-bottom: 0;
-}
-
-/* ─── Featured Venue Cards ─────────────────────────────────────────────────── */
-.featured-venue-card {
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-2xl);
-  overflow: hidden;
-  text-decoration: none;
-  transition: all 0.35s ease;
-  height: 100%;
-  box-shadow: var(--shadow-sm);
-}
-
-.featured-venue-card:hover {
-  border-color: var(--color-primary-200);
-  box-shadow: var(--shadow-xl);
-  transform: translateY(-6px);
-}
-
-.featured-venue-img {
-  position: relative;
-  aspect-ratio: 16/10;
-  background: var(--color-bg-hover);
-  overflow: hidden;
-}
-
-.featured-venue-img img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.featured-venue-card:hover .featured-venue-img img {
-  transform: scale(1.08);
-}
-
-.featured-venue-placeholder {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--color-bg-hover);
-}
-
-.featured-venue-rating {
-  position: absolute;
-  top: 12px; right: 12px;
-  display: flex; align-items: center; gap: 4px;
-  padding: 5px 10px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  border-radius: var(--radius-sm);
-  color: white;
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
-.featured-venue-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.6) 100%);
-  display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 1.5rem;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.featured-venue-card:hover .featured-venue-overlay {
-  opacity: 1;
-}
-
-.featured-venue-view-btn {
-  padding: 0.5rem 1.25rem;
-  background: rgba(255,255,255,0.95);
-  color: var(--color-text);
-  border-radius: var(--radius-full);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  transform: translateY(10px);
-  transition: transform 0.3s ease;
-}
-
-.featured-venue-card:hover .featured-venue-view-btn {
-  transform: translateY(0);
-}
-
-.featured-venue-body {
-  padding: 1.125rem 1.375rem 1.375rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.featured-venue-name {
-  font-size: 1.0625rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 0.25rem;
-  letter-spacing: -0.01em;
-}
-
-.featured-venue-location {
-  display: flex; align-items: center; gap: 0.375rem;
-  font-size: 0.8125rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 0.875rem;
-}
-
-.featured-venue-footer {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-top: auto;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
 }
 
-.featured-venue-price {
-  font-weight: 800;
-  color: var(--color-primary);
-  font-size: 1rem;
-  letter-spacing: -0.02em;
+/* Hero mosaic: one large photo and two stacked on the right. */
+.hero-mosaic {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.75rem;
+  aspect-ratio: 5 / 4;
 }
-
-.featured-venue-capacity {
-  display: flex; align-items: center; gap: 0.25rem;
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
+.hero-mosaic-a { grid-row: 1 / span 2; }
+.hero-mosaic > .skeleton { border-radius: var(--radius-xl); }
+@media (max-width: 639.98px) {
+  .hero-mosaic { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; aspect-ratio: auto; }
+  .hero-mosaic-a { grid-column: 1 / span 2; grid-row: auto; aspect-ratio: 16 / 10; }
+  .hero-mosaic-b, .hero-mosaic-c { aspect-ratio: 1 / 1; }
+  .hero-mosaic-b .hero-tile-caption, .hero-mosaic-c .hero-tile-caption { display: none; }
 }
-
-.view-all-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.875rem 2rem;
-  background: var(--color-bg-card);
-  color: var(--color-primary);
-  font-weight: 700;
-  font-size: 1rem;
-  border: 2px solid var(--color-primary-200);
-  border-radius: var(--radius-xl);
-  text-decoration: none;
-  transition: all 0.25s ease;
-}
-
-.view-all-btn:hover {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
-  transform: translateY(-2px);
-}
-
-/* ─── Testimonials ─────────────────────────────────────────────────────────── */
-.testimonial-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-2xl);
-  padding: 2rem;
-  transition: all 0.3s ease;
-  height: 100%;
+.hero-tile {
   position: relative;
+  display: block;
+  min-height: 0;
   overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
 }
-
-.testimonial-card:hover {
-  border-color: var(--color-primary-200);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
-}
-
-.testimonial-quote-mark {
+.hero-tile img { transition: transform .4s ease; }
+.hero-tile:hover img { transform: scale(1.03); }
+.hero-tile-caption {
   position: absolute;
-  top: -10px; left: 16px;
-  font-size: 5rem;
-  font-weight: 900;
-  color: var(--color-primary-100);
-  line-height: 1;
-  pointer-events: none;
-  font-family: Georgia, serif;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  max-width: 18rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
 }
 
-.testimonial-stars {
-  display: flex;
-  gap: 2px;
-  margin-bottom: 1rem;
-  position: relative;
-  z-index: 1;
-}
-
-.testimonial-text {
-  color: var(--color-text-secondary);
-  font-size: 0.9375rem;
-  line-height: 1.7;
-  margin-bottom: 1.5rem;
-  position: relative;
-  z-index: 1;
-}
-
-.testimonial-author {
+.type-tile {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  position: relative;
-  z-index: 1;
+  min-height: 5.5rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
+.type-tile:hover { border-color: rgb(var(--c-line-strong) / 0.6); box-shadow: var(--shadow-md); }
 
-.testimonial-avatar {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  color: white;
-  font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.125rem;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
-}
-
-.testimonial-name {
-  font-weight: 700;
-  color: var(--color-text);
-  font-size: 0.9375rem;
-}
-
-.testimonial-role {
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-/* ─── CTA Section ──────────────────────────────────────────────────────────── */
-.cta-section {
-  position: relative;
-  padding: 5rem 1rem;
-  background: linear-gradient(145deg, #064E3B, #065F46, #047857);
+.city-tile {
+  display: block;
   overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
+.city-tile:hover { border-color: rgb(var(--c-line-strong) / 0.6); box-shadow: var(--shadow-md); }
 
-.cta-pattern {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0);
-  background-size: 32px 32px;
-}
-
-.cta-badge {
-  display: inline-block;
-  padding: 0.375rem 1rem;
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #FCD34D;
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  margin-bottom: 1.25rem;
-}
-
-.cta-heading {
-  font-size: 2.25rem;
-  font-weight: 800;
-  color: white;
-  letter-spacing: -0.02em;
-  margin-bottom: 0.75rem;
-}
-
-.cta-subtext {
-  color: rgba(255,255,255,0.6);
-  font-size: 1rem;
-  line-height: 1.7;
-  margin-bottom: 2.5rem;
-}
-
-.cta-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1rem 2rem;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
-  color: white;
-  font-weight: 700;
-  font-size: 1rem;
+.owner-cta {
+  display: grid;
+  overflow: hidden;
   border-radius: var(--radius-xl);
-  text-decoration: none;
-  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.35);
-  transition: all 0.25s ease;
+  background: #1C1917;
 }
-
-.cta-btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(245, 158, 11, 0.45);
-  color: white;
+@media (min-width: 768px) {
+  .owner-cta { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
 }
-
-.cta-btn-secondary {
+.owner-cta-secondary {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem 2rem;
-  background: rgba(255,255,255,0.08);
-  color: white;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 1.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
   font-weight: 600;
-  font-size: 1rem;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: var(--radius-xl);
-  text-decoration: none;
-  transition: all 0.25s ease;
+  transition: background-color .15s ease, border-color .15s ease;
 }
-
-.cta-btn-secondary:hover {
-  background: rgba(255,255,255,0.14);
-  border-color: rgba(255,255,255,0.3);
-  color: white;
-}
-
-/* ─── Animations ───────────────────────────────────────────────────────────── */
-@keyframes orbFloat {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  100% { transform: translate3d(0, 25px, 0) scale(1.08); }
-}
-
-@keyframes orbPulse {
-  0%, 100% { opacity: 0.15; transform: translate(-50%, -50%) scale(1); }
-  50%      { opacity: 0.3;  transform: translate(-50%, -50%) scale(1.15); }
-}
-
-/* ─── Responsive ───────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
-  .hero-title {
-    font-size: 1.75rem;
-  }
-
-  .hero-section {
-    padding: 4rem 1rem 3rem;
-  }
-
-  .hero-subtext {
-    font-size: 1rem;
-  }
-
-  .section-heading {
-    font-size: 1.5rem;
-  }
-
-  .cta-heading {
-    font-size: 1.5rem;
-  }
-
-  .cta-section {
-    padding: 3rem 1rem;
-  }
-
-  .stat-card {
-    min-width: 130px;
-    padding: 1rem 1.125rem;
-  }
-}
-
-@media (min-width: 641px) and (max-width: 1023px) {
-  .hero-title {
-    font-size: 2.5rem;
-  }
-
-  .hero-section {
-    padding: 5rem 1rem 4rem;
-  }
-
-  .section-heading {
-    font-size: 1.75rem;
-  }
-
-  .cta-heading {
-    font-size: 1.875rem;
-  }
-
-  .stat-card {
-    min-width: 150px;
-    padding: 1rem 1.25rem;
-  }
-}
+.owner-cta-secondary:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.6); }
 </style>

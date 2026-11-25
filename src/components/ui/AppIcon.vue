@@ -102,6 +102,18 @@ import {
   Zap,
   Ban,
   Map,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Inbox,
+  Wallet,
+  Receipt,
+  Banknote,
+  ArrowUpRight,
+  ArrowDownRight,
+  CalendarClock,
+  ChartColumn,
+  ListFilter,
 } from 'lucide-vue-next'
 
 const iconMap: Record<string, Component> = {
@@ -248,6 +260,19 @@ const iconMap: Record<string, Component> = {
   'camera': Camera,
   'bolt': Zap,
   'ban': Ban,
+  'trending-up': TrendingUp,
+  'trending-down': TrendingDown,
+  'minus': Minus,
+  'inbox': Inbox,
+  'wallet': Wallet,
+  'receipt': Receipt,
+  'banknote': Banknote,
+  'arrow-up-right': ArrowUpRight,
+  'arrow-down-right': ArrowDownRight,
+  'calendar-clock': CalendarClock,
+  'chart-bar': ChartColumn,
+  'list-filter': ListFilter,
+  'shield-check': ShieldCheck,
 }
 
 const props = withDefaults(

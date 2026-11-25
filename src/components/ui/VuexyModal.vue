@@ -4,28 +4,31 @@
       <div
         v-if="visible"
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="title"
         @click.self="$emit('update:visible', false)"
       >
         <div
-          class="relative w-full bg-white dark:bg-warm-800 rounded-2xl shadow-float border border-warm-200 dark:border-warm-700 overflow-hidden"
+          class="relative w-full max-h-[calc(100vh-2rem)] flex flex-col bg-surface rounded-xl shadow-float border border-line overflow-hidden"
           :class="sizeClass"
           :style="width ? { maxWidth: width } : {}"
         >
-          <div class="flex items-center justify-between px-5 py-4 border-b border-warm-200 dark:border-warm-700">
-            <h5 class="text-lg font-semibold text-warm-800 dark:text-white">{{ title }}</h5>
+          <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-line shrink-0">
+            <h2 class="font-sans text-base font-semibold tracking-normal text-ink">{{ title }}</h2>
             <button
               type="button"
-              class="p-1.5 rounded-xl hover:bg-warm-100 dark:hover:bg-warm-700 text-warm-400 hover:text-warm-600 dark:hover:text-warm-300 transition-colors"
+              class="btn-icon btn-icon-sm -mr-1.5"
               @click="$emit('update:visible', false)"
               aria-label="Close"
             >
               <AppIcon icon="x" class="w-5 h-5" />
             </button>
           </div>
-          <div class="px-5 py-4">
+          <div class="px-5 py-5 overflow-y-auto">
             <slot />
           </div>
-          <div v-if="$slots.footer" class="px-5 py-4 border-t border-warm-200 dark:border-warm-700 bg-warm-50 dark:bg-warm-800/50">
+          <div v-if="$slots.footer" class="px-5 py-3.5 border-t border-line bg-surface-sunken shrink-0">
             <slot name="footer" />
           </div>
         </div>
@@ -34,7 +37,7 @@
     <Transition name="backdrop">
       <div
         v-if="visible"
-        class="fixed inset-0 z-40 bg-warm-900/50 backdrop-blur-sm"
+        class="fixed inset-0 z-40 bg-warm-900/50"
       />
     </Transition>
   </Teleport>
@@ -69,7 +72,7 @@ const sizeClass = computed(() => {
 }
 .modal-enter-from, .modal-leave-to {
   opacity: 0;
-  transform: scale(0.95);
+  transform: translateY(8px);
 }
 .backdrop-enter-active, .backdrop-leave-active {
   transition: opacity 0.15s ease;

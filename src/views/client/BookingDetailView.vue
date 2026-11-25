@@ -1,302 +1,382 @@
 <template>
-  <div class="content-container">
-    <!-- Back -->
-    <div class="mb-6">
-      <RouterLink to="/customer/bookings" class="inline-flex items-center gap-1.5 text-sm font-medium text-warm-500 dark:text-warm-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-        <AppIcon icon="chevron-left" class="w-4 h-4" />
-        Back to Bookings
-      </RouterLink>
-    </div>
+  <div class="space-y-6">
+    <RouterLink to="/customer/bookings" class="btn-ghost btn-sm -ml-2">
+      <AppIcon icon="chevron-left" class="w-4 h-4" />
+      All bookings
+    </RouterLink>
 
     <!-- Loading -->
-    <div v-if="loading" class="space-y-6">
-      <div class="h-20 rounded-2xl bg-warm-200 dark:bg-warm-800 animate-pulse"></div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div v-for="i in 4" :key="i" class="h-44 rounded-2xl bg-warm-200 dark:bg-warm-800 animate-pulse"></div>
+    <div v-if="loading" class="space-y-6" aria-busy="true" aria-label="Loading booking">
+      <div class="space-y-2"><div class="skeleton h-4 w-32"></div><div class="skeleton h-8 w-2/3"></div><div class="skeleton h-4 w-1/2"></div></div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6"><div class="card h-40 skeleton"></div><div class="card h-56 skeleton"></div></div>
+        <div class="space-y-6"><div class="card h-72 skeleton"></div><div class="card h-48 skeleton"></div></div>
       </div>
     </div>
 
-    <div v-else-if="booking" class="animate-fade-in">
-      <!-- Header Card -->
-      <div class="card mb-8">
-        <div class="p-5 sm:p-6">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-                <AppIcon icon="file-text" class="w-6 h-6 text-primary-600 dark:text-primary-400" />
-              </div>
-              <div>
-                <h1 class="text-xl font-bold text-warm-900 dark:text-warm-50 tracking-tight">Booking Details</h1>
-                <p class="font-mono text-xs text-warm-400 dark:text-warm-500 tracking-wide mt-0.5">{{ booking.booking_number }}</p>
-              </div>
-            </div>
-            <div class="flex flex-wrap items-center gap-1.5 self-start sm:self-center">
-              <span :class="statusClass(booking.status)" class="capitalize text-sm">{{ booking.status }}</span>
-              <span v-if="booking.payment_status === 'paid'" class="badge-primary inline-flex items-center gap-1 text-sm"><AppIcon icon="circle-check" class="w-3 h-3" />Paid</span>
-              <span v-else-if="booking.payment_status === 'refunded'" class="badge-warm text-sm">Refunded</span>
-              <span v-else-if="booking.status === 'confirmed'" class="badge-accent text-sm">Unpaid</span>
-            </div>
-          </div>
+    <!-- Error / not found -->
+    <div v-else-if="!booking" class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
+        <p class="empty-state-title">{{ notFound ? 'Booking not found' : "We couldn't load this booking" }}</p>
+        <p class="empty-state-desc">{{ notFound ? "This booking may have been removed or doesn't belong to your account." : loadError }}</p>
+        <div class="empty-state-actions">
+          <button v-if="!notFound" type="button" class="btn-secondary" @click="load"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button>
+          <RouterLink to="/customer/bookings" class="btn-primary">Back to bookings</RouterLink>
         </div>
       </div>
+    </div>
 
-      <!-- Payment Completed Banner -->
-      <div v-if="booking.payment_status === 'paid'" class="flex items-center gap-3 px-5 py-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/30 mb-6">
-        <div class="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
-          <AppIcon icon="circle-check" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
-        </div>
-        <div>
-          <span class="font-semibold text-sm text-primary-700 dark:text-primary-400">Payment Completed</span>
-          <p class="text-xs text-primary-600/80 dark:text-primary-400/70 mt-0.5">
-            {{ formatPKR(booking.payment?.amount ?? booking.total_amount) }}<template v-if="booking.payment?.gateway_amount"> &mdash; charged as R{{ Number(booking.payment.gateway_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }} via PayFast</template><template v-if="booking.paid_at"> &middot; {{ formatDate(booking.paid_at) }}</template>
+    <template v-else>
+      <!-- Header -->
+      <header class="page-header !mb-0">
+        <div class="min-w-0">
+          <p class="ref text-ink-muted mb-1">{{ booking.booking_number }}</p>
+          <h1 class="page-title break-words">{{ booking.event_name }}</h1>
+          <p class="page-subtitle">
+            {{ booking.venue?.name }} · {{ formatEventDate(booking.event_date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}
           </p>
-          <p v-if="booking.payment?.transaction_id" class="font-mono text-xs text-primary-600/70 dark:text-primary-400/60 mt-0.5">
-            Txn: {{ booking.payment.transaction_id }}
-          </p>
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <span :class="statusBadgeClass(booking.status)">{{ statusLabel(booking.status) }}</span>
+            <span v-if="paymentBadge(booking)" :class="paymentBadge(booking)!.cls">{{ paymentBadge(booking)!.label }}</span>
+            <span v-if="isUpcomingBooking(booking)" class="badge-dot">{{ countdownLabel(booking.event_date) }}</span>
+          </div>
+        </div>
+        <div class="page-header-actions">
+          <RouterLink v-if="ownerUserId" :to="{ path: '/customer/messages', query: { with: ownerUserId } }" class="btn-secondary">
+            <AppIcon icon="message" class="w-4 h-4" /> Message venue
+          </RouterLink>
+          <RouterLink v-if="canPay" :to="`/customer/bookings/${booking.id}/pay`" class="btn-primary">
+            <AppIcon icon="credit-card" class="w-4 h-4" /> Pay {{ formatPKR(booking.total_amount) }}
+          </RouterLink>
+        </div>
+      </header>
+
+      <!-- Status message -->
+      <div v-if="banner" :class="banner.cls" role="status">
+        <AppIcon :icon="banner.icon" class="w-5 h-5 shrink-0" />
+        <div class="min-w-0">
+          <p class="alert-title">{{ banner.title }}</p>
+          <p class="text-sm break-words">{{ banner.text }}</p>
         </div>
       </div>
 
-      <!-- Cancellation Reason Banner -->
-      <div v-if="booking.cancellation_reason" class="flex items-center gap-3 px-5 py-4 rounded-2xl bg-coral/5 dark:bg-red-900/20 border border-coral/20 dark:border-red-800/30 mb-6">
-        <div class="w-9 h-9 rounded-xl bg-coral/10 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
-          <AppIcon icon="x" class="w-5 h-5 text-coral dark:text-red-400" />
-        </div>
-        <div>
-          <span class="font-semibold text-sm text-coral dark:text-red-400">Cancelled</span>
-          <p class="text-xs text-warm-600 dark:text-warm-400 mt-0.5">{{ booking.cancellation_reason }}</p>
-        </div>
-      </div>
-
-      <!-- Detail Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <!-- Venue -->
-        <div class="card overflow-hidden">
-          <div class="flex items-center gap-3 px-5 py-3.5 border-b border-warm-100 dark:border-warm-800">
-            <div class="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-              <AppIcon icon="map-pin" class="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-200">Venue</h2>
-          </div>
-          <div class="p-5">
-            <h3 class="font-semibold text-warm-900 dark:text-warm-50 mb-1">{{ booking.venue?.name }}</h3>
-            <p class="text-sm text-warm-500 dark:text-warm-400 flex items-center gap-1.5">
-              <AppIcon icon="map-pin" class="w-3.5 h-3.5 flex-shrink-0" />
-              {{ booking.venue?.city || 'N/A' }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Event Details -->
-        <div class="card overflow-hidden">
-          <div class="flex items-center gap-3 px-5 py-3.5 border-b border-warm-100 dark:border-warm-800">
-            <div class="w-7 h-7 rounded-lg bg-accent/10 dark:bg-accent/20 flex items-center justify-center">
-              <AppIcon icon="star" class="w-3.5 h-3.5 text-accent dark:text-amber-400" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-200">Event Details</h2>
-          </div>
-          <div class="p-5">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-warm-500 dark:text-warm-400">Event Name</span>
-                <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ booking.event_name }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-warm-500 dark:text-warm-400">Type</span>
-                <span class="text-sm font-medium text-warm-800 dark:text-warm-200 capitalize">{{ booking.event_type?.replace('_', ' ') }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-warm-500 dark:text-warm-400">Expected Guests</span>
-                <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ booking.expected_guests }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Date & Time -->
-        <div class="card overflow-hidden">
-          <div class="flex items-center gap-3 px-5 py-3.5 border-b border-warm-100 dark:border-warm-800">
-            <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
-              <AppIcon icon="calendar-event" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-200">Date & Time</h2>
-          </div>
-          <div class="p-5">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-warm-500 dark:text-warm-400">Date</span>
-                <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ formatDate(booking.event_date) }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-warm-500 dark:text-warm-400">Time</span>
-                <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ formatTimeRange(booking.start_time, booking.end_time) }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-warm-500 dark:text-warm-400">Duration</span>
-                <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ booking.duration_hours }} hours</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pricing -->
-        <div class="card overflow-hidden">
-          <div class="flex items-center gap-3 px-5 py-3.5 border-b border-warm-100 dark:border-warm-800">
-            <div class="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-              <AppIcon icon="dollar-sign" class="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
-            </div>
-            <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-200">Pricing</h2>
-          </div>
-          <div class="p-5">
-            <div class="space-y-2.5">
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-warm-500 dark:text-warm-400">Base Price</span>
-                <span class="text-warm-700 dark:text-warm-300">{{ formatPKR(booking.base_price) }}</span>
-              </div>
-              <div v-if="Number(booking.amenities_price) > 0" class="flex items-center justify-between text-sm">
-                <span class="text-warm-500 dark:text-warm-400">Amenities</span>
-                <span class="text-warm-700 dark:text-warm-300">{{ formatPKR(booking.amenities_price) }}</span>
-              </div>
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-warm-500 dark:text-warm-400">Tax (5%)</span>
-                <span class="text-warm-700 dark:text-warm-300">{{ formatPKR(booking.tax_amount) }}</span>
-              </div>
-              <div class="border-t border-warm-100 dark:border-warm-700 pt-2.5 mt-1">
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-bold text-warm-900 dark:text-warm-50">Total</span>
-                  <span class="text-base font-bold text-primary-600 dark:text-primary-400">{{ formatPKR(booking.total_amount) }}</span>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <!-- Main column -->
+        <div class="lg:col-span-2 space-y-6 min-w-0">
+          <!-- Timeline -->
+          <section class="card" aria-labelledby="timeline-title">
+            <div class="card-header"><h2 id="timeline-title" class="card-title">Booking progress</h2></div>
+            <ol class="card-body">
+              <li v-for="(step, i) in timeline" :key="step.key" class="relative flex gap-3 pb-5 last:pb-0">
+                <span
+                  v-if="i < timeline.length - 1"
+                  class="absolute left-[15px] top-8 bottom-0 w-px"
+                  :class="step.state === 'done' ? 'bg-brand' : 'bg-line'"
+                  aria-hidden="true"
+                ></span>
+                <span
+                  class="relative z-[1] flex h-8 w-8 shrink-0 items-center justify-center rounded-full border"
+                  :class="stepClass(step.state)"
+                >
+                  <AppIcon :icon="stepIcon(step)" class="w-4 h-4" />
+                </span>
+                <div class="min-w-0 pt-1">
+                  <p class="text-sm font-semibold" :class="step.state === 'todo' ? 'text-ink-muted' : 'text-ink'">
+                    {{ step.label }}
+                    <span class="sr-only">({{ stepStateText[step.state] }})</span>
+                  </p>
+                  <p v-if="step.when" class="text-xs text-ink-muted">{{ step.when }}</p>
+                  <p v-if="step.note" class="mt-1 text-sm text-ink-secondary break-words">{{ step.note }}</p>
                 </div>
+              </li>
+            </ol>
+          </section>
+
+          <!-- Event details -->
+          <section class="card" aria-labelledby="event-title">
+            <div class="card-header"><h2 id="event-title" class="card-title">Event details</h2></div>
+            <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+              <dl>
+                <div class="dl-row"><dt>Event</dt><dd class="break-words min-w-0">{{ booking.event_name }}</dd></div>
+                <div class="dl-row"><dt>Type</dt><dd>{{ eventTypeLabel(booking.event_type) || '—' }}</dd></div>
+                <div class="dl-row"><dt>Guests</dt><dd>{{ guestsOf(booking) ?? '—' }}</dd></div>
+              </dl>
+              <dl>
+                <div class="dl-row"><dt>Date</dt><dd>{{ formatEventDate(booking.event_date) }}</dd></div>
+                <div class="dl-row"><dt>Time</dt><dd>{{ formatTimeRange(booking.start_time, booking.end_time) || '—' }}</dd></div>
+                <div class="dl-row"><dt>Duration</dt><dd>{{ booking.duration_hours ? `${booking.duration_hours} hours` : '—' }}</dd></div>
+              </dl>
+            </div>
+            <div v-if="booking.special_requirements" class="card-footer !block">
+              <p class="text-xs font-semibold text-ink-muted mb-1">Special requirements</p>
+              <p class="text-sm text-ink-secondary whitespace-pre-line break-words">{{ booking.special_requirements }}</p>
+            </div>
+          </section>
+
+          <!-- Review -->
+          <ReviewForm :booking-id="booking.id" :venue-name="booking.venue?.name" @loaded="onReviewLoaded" />
+
+          <!-- Cancel -->
+          <section v-if="canCancel" class="card" aria-labelledby="cancel-title">
+            <div class="card-body">
+              <template v-if="!showCancel">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div class="flex-1">
+                    <h2 id="cancel-title" class="text-sm font-semibold text-ink">Need to cancel?</h2>
+                    <p class="text-sm text-ink-muted">You can cancel while the booking is unpaid. The venue will be notified.</p>
+                  </div>
+                  <button type="button" class="btn-danger-ghost border border-danger-line" @click="openCancel">
+                    <AppIcon icon="x" class="w-4 h-4" /> Cancel booking
+                  </button>
+                </div>
+              </template>
+              <form v-else class="space-y-4" @submit.prevent="cancelBooking">
+                <div>
+                  <h2 id="cancel-title" class="text-base font-semibold text-ink">Cancel this booking?</h2>
+                  <p class="text-sm text-ink-muted">This can't be undone. The date will be released for other customers.</p>
+                </div>
+                <div>
+                  <label for="cancel-reason" class="form-label">Reason <span class="text-ink-muted font-normal">(optional)</span></label>
+                  <textarea id="cancel-reason" ref="cancelReasonRef" v-model="cancelReason" class="form-textarea" rows="2" maxlength="500" placeholder="For example: we changed the date"></textarea>
+                </div>
+                <p v-if="cancelError" class="form-error" role="alert">{{ cancelError }}</p>
+                <div class="flex flex-wrap gap-2">
+                  <button type="submit" :disabled="cancelling" class="btn-danger">
+                    <AppIcon v-if="cancelling" icon="loader" class="w-4 h-4 animate-spin" />
+                    {{ cancelling ? 'Cancelling…' : 'Yes, cancel booking' }}
+                  </button>
+                  <button type="button" class="btn-ghost" @click="showCancel = false">Keep booking</button>
+                </div>
+              </form>
+            </div>
+          </section>
+        </div>
+
+        <!-- Side column -->
+        <aside class="space-y-6 min-w-0">
+          <!-- Venue -->
+          <section class="card overflow-hidden" aria-labelledby="venue-title">
+            <img :src="venueImage(booking)" :alt="booking.venue?.name || 'Venue photo'" class="w-full aspect-[16/9] object-cover bg-surface-sunken" @error="onImageError" />
+            <div class="card-body space-y-3">
+              <div>
+                <h2 id="venue-title" class="text-base font-semibold text-ink break-words">{{ booking.venue?.name }}</h2>
+                <p v-if="venueAddress" class="mt-0.5 text-sm text-ink-muted flex items-start gap-1.5">
+                  <AppIcon icon="map-pin" class="w-4 h-4 mt-0.5 shrink-0" />{{ venueAddress }}
+                </p>
+              </div>
+              <dl v-if="booking.store" class="text-sm">
+                <div class="dl-row"><dt>Hosted by</dt><dd class="break-words min-w-0">{{ booking.store.name }}</dd></div>
+                <div v-if="booking.store.phone" class="dl-row"><dt>Phone</dt><dd><a :href="`tel:${booking.store.phone}`" class="link">{{ booking.store.phone }}</a></dd></div>
+                <div v-if="booking.store.email" class="dl-row"><dt>Email</dt><dd class="min-w-0 break-all"><a :href="`mailto:${booking.store.email}`" class="link">{{ booking.store.email }}</a></dd></div>
+              </dl>
+              <div class="flex flex-wrap gap-2 pt-1">
+                <RouterLink v-if="ownerUserId" :to="{ path: '/customer/messages', query: { with: ownerUserId } }" class="btn-secondary btn-sm flex-1">
+                  <AppIcon icon="message" class="w-4 h-4" /> Message
+                </RouterLink>
+                <RouterLink v-if="booking.venue?.id" :to="`/venues/${booking.venue.id}`" class="btn-ghost btn-sm flex-1">
+                  View venue <AppIcon icon="external-link" class="w-4 h-4" />
+                </RouterLink>
               </div>
             </div>
-          </div>
-        </div>
+          </section>
+
+          <!-- Price -->
+          <section class="card" aria-labelledby="price-title">
+            <div class="card-header"><h2 id="price-title" class="card-title">Price breakdown</h2></div>
+            <div class="card-body">
+              <dl>
+                <div class="dl-row"><dt>Venue</dt><dd>{{ formatPKR(booking.base_price) }}</dd></div>
+                <div v-if="Number(booking.amenities_price) > 0" class="dl-row"><dt>Amenities</dt><dd>{{ formatPKR(booking.amenities_price) }}</dd></div>
+                <div v-if="Number(booking.discount_amount) > 0" class="dl-row"><dt>Discount</dt><dd class="!text-success-text">− {{ formatPKR(booking.discount_amount) }}</dd></div>
+                <div class="dl-row"><dt>Tax (5%)</dt><dd>{{ formatPKR(booking.tax_amount) }}</dd></div>
+                <div class="dl-row !border-t !border-line pt-3 mt-1">
+                  <dt class="!text-ink font-semibold">Total</dt>
+                  <dd class="text-base !font-bold">{{ formatPKR(booking.total_amount) }}</dd>
+                </div>
+              </dl>
+            </div>
+          </section>
+
+          <!-- Payment -->
+          <section class="card" aria-labelledby="payment-title">
+            <div class="card-header">
+              <h2 id="payment-title" class="card-title">Payment</h2>
+              <span v-if="paymentBadge(booking)" :class="paymentBadge(booking)!.cls">{{ paymentBadge(booking)!.label }}</span>
+            </div>
+            <div class="card-body">
+              <template v-if="booking.payment_status === 'paid' || booking.payment_status === 'refunded'">
+                <dl class="text-sm">
+                  <div class="dl-row"><dt>Amount</dt><dd>{{ formatPKR(booking.payment?.amount ?? booking.total_amount) }}</dd></div>
+                  <div v-if="booking.payment?.gateway_amount" class="dl-row"><dt>Charged</dt><dd>R{{ formatZar(booking.payment.gateway_amount) }} via PayFast</dd></div>
+                  <div v-if="booking.paid_at" class="dl-row"><dt>Paid on</dt><dd>{{ formatDateTime(booking.paid_at) }}</dd></div>
+                  <div v-if="booking.payment?.refunded_at" class="dl-row"><dt>Refunded</dt><dd>{{ formatDateTime(booking.payment.refunded_at) }}</dd></div>
+                  <div v-if="booking.payment?.transaction_id" class="dl-row"><dt>Transaction</dt><dd class="ref min-w-0 break-all">{{ booking.payment.transaction_id }}</dd></div>
+                </dl>
+              </template>
+              <template v-else-if="canPay">
+                <p class="text-sm text-ink-secondary">The venue confirmed your booking. Pay securely with PayFast to lock in the date.</p>
+                <RouterLink :to="`/customer/bookings/${booking.id}/pay`" class="btn-primary btn-block mt-4">
+                  <AppIcon icon="credit-card" class="w-4 h-4" /> Pay {{ formatPKR(booking.total_amount) }}
+                </RouterLink>
+                <p class="mt-2 text-xs text-ink-muted flex items-center gap-1.5"><AppIcon icon="shield-check" class="w-3.5 h-3.5" />Card details are entered on PayFast, not here.</p>
+              </template>
+              <p v-else-if="booking.status === 'pending'" class="text-sm text-ink-secondary">You can pay once the venue confirms your request. We'll notify you.</p>
+              <p v-else class="text-sm text-ink-muted">No payment is due for this booking.</p>
+            </div>
+          </section>
+        </aside>
       </div>
-
-      <!-- Special Requirements -->
-      <div v-if="booking.special_requirements" class="card mb-6 overflow-hidden">
-        <div class="flex items-center gap-3 px-5 py-3.5 border-b border-warm-100 dark:border-warm-800">
-          <div class="w-7 h-7 rounded-lg bg-warm-100 dark:bg-warm-700 flex items-center justify-center">
-            <AppIcon icon="file-text" class="w-3.5 h-3.5 text-warm-500 dark:text-warm-400" />
-          </div>
-          <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-200">Special Requirements</h2>
-        </div>
-        <div class="p-5">
-          <p class="text-sm text-warm-600 dark:text-warm-300 leading-relaxed">{{ booking.special_requirements }}</p>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="flex flex-wrap items-center gap-3">
-        <!-- Pay Now -->
-        <RouterLink
-          v-if="booking.status === 'confirmed' && booking.payment_status === 'unpaid'"
-          :to="`/customer/bookings/${booking.id}/pay`"
-          class="btn-primary inline-flex items-center gap-2"
-        >
-          <AppIcon icon="credit-card" class="w-4 h-4" />
-          Pay Now &mdash; {{ formatPKR(booking.total_amount) }}
-        </RouterLink>
-
-        <!-- Cancel -->
-        <button
-          v-if="['pending', 'confirmed'].includes(booking.status) && booking.payment_status !== 'paid'"
-          @click="showCancel = true"
-          class="btn-outline inline-flex items-center gap-2 border-coral/40 text-coral hover:bg-coral/5 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-        >
-          <AppIcon icon="x" class="w-4 h-4" />
-          Cancel Booking
-        </button>
-      </div>
-
-      <!-- Cancel Confirmation Panel -->
-      <div v-if="showCancel" class="card border-coral/20 dark:border-red-800/30 mt-4">
-        <div class="p-5">
-          <h3 class="font-semibold text-warm-900 dark:text-warm-50 mb-1">Cancel this booking?</h3>
-          <p class="text-xs text-warm-500 dark:text-warm-400 mb-4">This action cannot be undone. Optionally provide a reason below.</p>
-          <textarea v-model="cancelReason" class="form-input w-full mb-4" rows="2" placeholder="Reason for cancellation (optional)"></textarea>
-          <div class="flex gap-3">
-            <button @click="cancelBooking" :disabled="cancelling" class="btn-danger inline-flex items-center gap-2">
-              <AppIcon v-if="cancelling" icon="loader" class="w-4 h-4 animate-spin" />
-              {{ cancelling ? 'Cancelling...' : 'Confirm Cancel' }}
-            </button>
-            <button @click="showCancel = false" class="btn-ghost">Never mind</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Review (fix/features): self-contained, shows only when eligible or already reviewed -->
-      <ReviewForm :booking-id="booking.id" />
-    </div>
-
-    <!-- Not Found -->
-    <div v-else class="flex flex-col items-center justify-center py-20 text-center">
-      <div class="w-16 h-16 rounded-2xl bg-warm-100 dark:bg-warm-800 flex items-center justify-center mb-4">
-        <AppIcon icon="alert-circle" class="w-8 h-8 text-warm-400 dark:text-warm-500" />
-      </div>
-      <h3 class="text-lg font-semibold text-warm-700 dark:text-warm-300">Booking not found</h3>
-      <p class="text-sm text-warm-500 dark:text-warm-400 mt-1 mb-4">This booking may have been removed or doesn't exist.</p>
-      <RouterLink to="/customer/bookings" class="btn-primary text-sm">Back to Bookings</RouterLink>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { formatTime, formatTimeRange, formatPKR } from '@/lib/format'
-import { ref, onMounted } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { ref, computed, nextTick, onMounted } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import ReviewForm from '@/components/reviews/ReviewForm.vue'
+import { formatTimeRange, formatPKR, formatAddress } from '@/lib/format'
+import { statusBadgeClass, statusLabel } from '@/lib/status'
+import {
+  venueImage, onImageError, formatEventDate, countdownLabel, isUpcomingBooking,
+  paymentBadge, guestsOf, eventTypeLabel,
+} from '@/components/client/bookingUtils'
 
 const route = useRoute()
-const router = useRouter()
 const booking = ref<any>(null)
 const loading = ref(true)
+const loadError = ref('')
+const notFound = ref(false)
 const showCancel = ref(false)
 const cancelReason = ref('')
+const cancelError = ref('')
 const cancelling = ref(false)
+const cancelReasonRef = ref<HTMLTextAreaElement | null>(null)
+
+// Same rules as before: pay when confirmed + unpaid; cancel while pending/confirmed and not paid.
+const canPay = computed(() => booking.value?.status === 'confirmed' && booking.value?.payment_status === 'unpaid')
+const canCancel = computed(() => ['pending', 'confirmed'].includes(booking.value?.status) && booking.value?.payment_status !== 'paid')
+const ownerUserId = computed(() => booking.value?.store?.user_id ?? null)
+const venueAddress = computed(() => formatAddress(booking.value?.venue))
+
+type StepState = 'done' | 'current' | 'todo' | 'failed'
+interface Step { key: string; label: string; state: StepState; when?: string; note?: string }
+const stepStateText: Record<StepState, string> = { done: 'done', current: 'in progress', todo: 'not yet', failed: 'stopped' }
+
+const timeline = computed<Step[]>(() => {
+  const b = booking.value
+  if (!b) return []
+  const steps: Step[] = [{ key: 'requested', label: 'Booking requested', state: 'done', when: formatDateTime(b.created_at) }]
+
+  if (b.status === 'rejected') {
+    steps.push({ key: 'rejected', label: 'Declined by the venue', state: 'failed', when: formatDateTime(b.updated_at), note: b.rejection_reason || 'No reason was given.' })
+    return steps
+  }
+
+  const confirmed = !!b.confirmed_at || ['confirmed', 'completed'].includes(b.status)
+  const paid = ['paid', 'refunded'].includes(b.payment_status)
+
+  if (b.status === 'cancelled') {
+    if (confirmed) steps.push({ key: 'confirmed', label: 'Confirmed by the venue', state: 'done', when: formatDateTime(b.confirmed_at) })
+    if (paid) steps.push({ key: 'paid', label: 'Payment received', state: 'done', when: formatDateTime(b.paid_at) })
+    steps.push({ key: 'cancelled', label: 'Booking cancelled', state: 'failed', when: formatDateTime(b.cancelled_at || b.updated_at), note: b.cancellation_reason || undefined })
+    if (b.payment_status === 'refunded') steps.push({ key: 'refunded', label: 'Payment refunded', state: 'done', when: formatDateTime(b.payment?.refunded_at) })
+    return steps
+  }
+
+  steps.push({
+    key: 'confirmed', label: confirmed ? 'Confirmed by the venue' : 'Waiting for the venue to confirm',
+    state: confirmed ? 'done' : 'current', when: confirmed ? formatDateTime(b.confirmed_at) : 'Venues usually reply within a day',
+  })
+  steps.push({
+    key: 'paid', label: paid ? 'Payment received' : 'Payment',
+    state: paid ? 'done' : confirmed ? 'current' : 'todo',
+    when: paid ? formatDateTime(b.paid_at) : confirmed ? `${formatPKR(b.total_amount)} due` : 'After the venue confirms',
+  })
+  const completed = b.status === 'completed'
+  steps.push({
+    key: 'event', label: completed ? 'Event completed' : 'Event day',
+    state: completed ? 'done' : paid ? 'current' : 'todo',
+    when: `${formatEventDate(b.event_date)}${!completed && isUpcomingBooking(b) ? ` · ${countdownLabel(b.event_date)}` : ''}`,
+  })
+  return steps
+})
+
+function stepClass(s: StepState) {
+  return {
+    done: 'bg-brand-strong border-brand-strong text-white',
+    current: 'bg-brand-soft border-brand text-brand-text',
+    todo: 'bg-surface border-line text-ink-muted',
+    failed: 'bg-danger-soft border-danger-line text-danger-text',
+  }[s]
+}
+function stepIcon(step: Step) {
+  if (step.state === 'done') return step.key === 'refunded' ? 'arrow-back-up' : 'check'
+  if (step.state === 'failed') return step.key === 'rejected' ? 'x' : 'ban'
+  if (step.key === 'paid') return 'credit-card'
+  if (step.key === 'event') return 'calendar-event'
+  return 'clock'
+}
+
+const banner = computed(() => {
+  const b = booking.value
+  if (!b) return null
+  if (b.status === 'rejected') return { cls: 'alert-danger', icon: 'x', title: 'The venue declined this request', text: b.rejection_reason || 'No reason was given. You can look for another date or venue.' }
+  if (b.status === 'cancelled') return { cls: 'alert-info', icon: 'ban', title: b.payment_status === 'refunded' ? 'Cancelled and refunded' : 'This booking was cancelled', text: b.cancellation_reason ? `Reason: ${b.cancellation_reason}` : 'The date has been released.' }
+  if (b.status === 'pending') return { cls: 'alert-warning', icon: 'clock', title: 'Waiting for the venue to confirm', text: "We'll notify you as soon as the venue replies. You can pay after it confirms." }
+  if (canPay.value) return { cls: 'alert-warning', icon: 'credit-card', title: 'Payment due', text: `The venue confirmed your booking. Pay ${formatPKR(b.total_amount)} to secure your date.` }
+  return null
+})
+
+function formatDateTime(d?: string | null) {
+  if (!d) return ''
+  return new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+}
+function formatZar(n: number | string) {
+  return Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 async function load() {
   loading.value = true
+  loadError.value = ''
+  notFound.value = false
   try {
     const { data } = await api.get(`/client/bookings/${route.params.id}`)
     booking.value = data.data
+  } catch (e: any) {
+    booking.value = null
+    notFound.value = e?.response?.status === 404 || e?.response?.status === 403
+    loadError.value = e?.response?.data?.message || 'Please check your connection and try again.'
   } finally { loading.value = false }
+}
+
+function onReviewLoaded(s: { eligible: boolean; review: any }) {
+  if (route.hash === '#review' && (s.eligible || s.review)) {
+    nextTick(() => document.getElementById('review')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+}
+
+function openCancel() {
+  showCancel.value = true
+  cancelError.value = ''
+  nextTick(() => cancelReasonRef.value?.focus())
 }
 
 async function cancelBooking() {
   cancelling.value = true
+  cancelError.value = ''
   try {
     await api.patch(`/client/bookings/${route.params.id}/cancel`, { reason: cancelReason.value })
     await load()
     showCancel.value = false
+    toast.success('Booking cancelled.')
+  } catch (e: any) {
+    cancelError.value = e?.response?.data?.message || 'Could not cancel this booking. Please try again.'
   } finally { cancelling.value = false }
-}
-
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-PK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function statusClass(s: string) {
-  const m: Record<string, string> = {
-    pending: 'badge-accent',
-    confirmed: 'badge-primary',
-    completed: 'badge-primary',
-    cancelled: 'badge-coral',
-    rejected: 'badge-coral',
-  }
-  return m[s] || 'badge-warm'
 }
 
 onMounted(load)
 </script>
-
-<style scoped>
-.animate-fade-in {
-  animation: fadeInUp 0.4s ease both;
-}
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-</style>

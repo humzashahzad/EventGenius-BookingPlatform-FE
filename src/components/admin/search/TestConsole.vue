@@ -2,8 +2,8 @@
   <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
     <!-- Query form -->
     <form class="card p-5 sm:p-6 xl:col-span-1 self-start" @submit.prevent="run">
-      <h2 class="text-lg font-semibold text-warm-900 dark:text-warm-50">Try a search</h2>
-      <p class="text-sm text-warm-500 dark:text-warm-400 mt-0.5 mb-4">
+      <h2 class="text-lg font-semibold text-ink">Try a search</h2>
+      <p class="text-sm text-ink-muted mt-0.5 mb-4">
         See how customers’ results would rank. Nothing is logged.
       </p>
 
@@ -20,16 +20,16 @@
 
       <label for="tc-q" class="form-label">What would a customer type?</label>
       <div class="relative">
-        <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-warm-400" />
+        <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
         <input id="tc-q" v-model="form.q" class="form-input !pl-9" placeholder="e.g. shadi hall in lahore for 300 guests under 3000" />
       </div>
       <div class="flex flex-wrap gap-1.5 mt-2">
         <button v-for="ex in examples" :key="ex" type="button"
-          class="text-[11px] px-2 py-0.5 rounded-full bg-warm-100 text-warm-600 hover:bg-primary-50 hover:text-primary-700 dark:bg-warm-700 dark:text-warm-300 dark:hover:bg-primary-900/30 dark:hover:text-primary-300"
+          class="text-[11px] px-2 py-0.5 rounded-full bg-warm-100 text-ink-secondary hover:bg-primary-50 hover:text-primary-700 dark:bg-warm-700 dark:text-warm-300 dark:hover:bg-primary-900/30 dark:hover:text-primary-300"
           @click="form.q = ex; run()">{{ ex }}</button>
       </div>
 
-      <button type="button" class="mt-4 text-sm font-medium text-primary-600 dark:text-primary-400 inline-flex items-center gap-1" @click="showMore = !showMore" :aria-expanded="showMore">
+      <button type="button" class="mt-4 text-sm font-medium text-brand-text inline-flex items-center gap-1" @click="showMore = !showMore" :aria-expanded="showMore">
         <AppIcon :icon="showMore ? 'chevron-up' : 'chevron-down'" class="w-4 h-4" /> Filters &amp; customer
       </button>
       <div v-show="showMore" class="grid grid-cols-2 gap-3 mt-3">
@@ -56,7 +56,7 @@
         <div class="col-span-2">
           <label for="tc-user" class="form-label">View as customer (user ID)</label>
           <input id="tc-user" v-model="form.as_user_id" type="number" min="1" class="form-input" placeholder="Signed-out visitor" />
-          <p class="text-[11px] text-warm-400 mt-1">Shows personalisation for that customer’s booking history.</p>
+          <p class="text-[11px] text-ink-muted mt-1">Shows personalisation for that customer’s booking history.</p>
         </div>
       </div>
 
@@ -74,35 +74,35 @@
       <div v-if="error" class="card p-5 flex items-start gap-3 border-red-200 dark:border-red-900">
         <AppIcon icon="alert-circle" class="w-5 h-5 text-red-500 shrink-0" />
         <div class="flex-1">
-          <p class="text-sm font-medium text-warm-900 dark:text-warm-50">Preview failed</p>
-          <p class="text-sm text-warm-500 dark:text-warm-400">{{ error }}</p>
+          <p class="text-sm font-medium text-ink">Preview failed</p>
+          <p class="text-sm text-ink-muted">{{ error }}</p>
         </div>
         <button class="btn-outline btn-sm" @click="run">Retry</button>
       </div>
 
       <div v-if="understood && !loading" class="card p-4">
-        <p class="text-xs font-semibold uppercase tracking-wider text-warm-500 dark:text-warm-400 mb-2">Understood</p>
+        <p class="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">Understood</p>
         <div v-if="chips.length" class="flex flex-wrap gap-1.5" data-testid="understood-chips">
           <span v-for="(c, i) in chips" :key="i" :class="chipClass(c.type)">
             <span class="opacity-70">{{ chipType(c.type) }}:</span> {{ c.label }}
           </span>
         </div>
-        <p v-else class="text-sm text-warm-500 dark:text-warm-400">No specific city, event type, guests or budget detected — ranking by overall quality.</p>
+        <p v-else class="text-sm text-ink-muted">No specific city, event type, guests or budget detected — ranking by overall quality.</p>
       </div>
 
       <div class="card overflow-hidden">
-        <div class="px-5 py-3 border-b border-warm-100 dark:border-warm-700 flex flex-wrap items-center justify-between gap-2">
-          <h3 class="text-sm font-semibold text-warm-900 dark:text-warm-50">
-            Ranked results <span v-if="results.length" class="text-warm-400 font-normal">· top {{ results.length }}</span>
+        <div class="px-5 py-3 border-b border-line flex flex-wrap items-center justify-between gap-2">
+          <h3 class="text-sm font-semibold text-ink">
+            Ranked results <span v-if="results.length" class="text-ink-muted font-normal">· top {{ results.length }}</span>
           </h3>
           <div class="flex flex-wrap gap-x-3 gap-y-1">
-            <span v-for="s in SIGNALS" :key="s.key" class="inline-flex items-center gap-1 text-[11px] text-warm-500 dark:text-warm-400">
+            <span v-for="s in shownSignals" :key="s.key" class="inline-flex items-center gap-1 text-[11px] text-ink-muted">
               <span class="w-2 h-2 rounded-sm" :style="{ background: s.color }"></span>{{ s.label.replace(/ \(.*\)/, '') }}
             </span>
           </div>
         </div>
 
-        <div v-if="loading" class="divide-y divide-warm-100 dark:divide-warm-700">
+        <div v-if="loading" class="divide-y divide-line">
           <div v-for="i in 5" :key="i" class="flex items-center gap-4 p-4">
             <div class="skeleton w-6 h-6"></div>
             <div class="skeleton w-16 h-12 rounded-xl"></div>
@@ -110,7 +110,7 @@
           </div>
         </div>
         <div v-else-if="!ran" class="empty-state">
-          <div class="empty-state-icon"><AppIcon icon="sparkles" class="w-6 h-6" /></div>
+          <div class="empty-state-icon"><AppIcon icon="search" class="w-6 h-6" /></div>
           <p class="empty-state-title">Run a search to see the ranking</p>
           <p class="empty-state-desc">Each result shows its score, why it ranked there, and how much each signal contributed.</p>
         </div>
@@ -119,48 +119,48 @@
           <p class="empty-state-title">No venues match</p>
           <p class="empty-state-desc">Customers would see zero results for this search. Try removing a filter.</p>
         </div>
-        <ol v-else class="divide-y divide-warm-100 dark:divide-warm-700" data-testid="preview-results">
+        <ol v-else class="divide-y divide-line" data-testid="preview-results">
           <li v-for="(r, i) in results" :key="r.venue.id" class="flex gap-3 sm:gap-4 p-4">
             <div class="w-7 shrink-0 text-center">
-              <span class="text-lg font-bold tabular-nums" :class="i < 3 ? 'text-primary-600 dark:text-primary-400' : 'text-warm-400'">{{ i + 1 }}</span>
-              <span v-if="moved(r.venue.id) !== 0" class="block text-[10px] font-semibold" :class="moved(r.venue.id) > 0 ? 'text-primary-600' : 'text-red-500'"
+              <span class="text-lg font-bold tabular-nums" :class="i < 3 ? 'text-brand-text' : 'text-ink-muted'">{{ i + 1 }}</span>
+              <span v-if="moved(r.venue.id) !== 0" class="block text-[10px] font-semibold" :class="moved(r.venue.id) > 0 ? 'text-success-text' : 'text-danger-text'"
                 :title="'Change vs previous run'">{{ moved(r.venue.id) > 0 ? '▲' : '▼' }}{{ Math.abs(moved(r.venue.id)) }}</span>
             </div>
-            <div class="w-16 h-12 sm:w-20 sm:h-14 shrink-0 rounded-xl overflow-hidden bg-warm-100 dark:bg-warm-700">
+            <div class="w-16 h-12 sm:w-20 sm:h-14 shrink-0 rounded-md overflow-hidden bg-surface-sunken">
               <img v-if="r.venue.thumbnail" :src="getStorageUrl(r.venue.thumbnail)" :alt="r.venue.name" class="w-full h-full object-cover" loading="lazy" />
-              <div v-else class="w-full h-full flex items-center justify-center text-warm-400"><AppIcon icon="photo" class="w-5 h-5" /></div>
+              <div v-else class="w-full h-full flex items-center justify-center text-ink-muted"><AppIcon icon="photo" class="w-5 h-5" /></div>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
-                  <p class="font-medium text-warm-900 dark:text-warm-50 truncate">
+                  <p class="font-medium text-ink truncate">
                     {{ r.venue.name }}
                     <span v-if="r.venue.is_featured" class="badge-warning !text-[10px] !py-0 ml-1 align-middle">Featured</span>
                     <span v-if="r.venue.search_boost" class="!text-[10px] !py-0 ml-1 align-middle" :class="r.venue.search_boost > 0 ? 'badge-primary' : 'badge-danger'">
                       Boost {{ r.venue.search_boost > 0 ? '+' : '' }}{{ r.venue.search_boost }}
                     </span>
                   </p>
-                  <p class="text-xs text-warm-500 dark:text-warm-400 truncate">
+                  <p class="text-xs text-ink-muted truncate">
                     {{ r.venue.city || '—' }}
                     <template v-if="r.venue.price_per_head"> · Rs {{ num(r.venue.price_per_head) }}/head</template>
                     <template v-if="r.venue.avg_rating"> · ★ {{ Number(r.venue.avg_rating).toFixed(1) }} ({{ r.venue.total_reviews || 0 }})</template>
                   </p>
                 </div>
                 <div class="text-right shrink-0">
-                  <span class="text-lg font-bold tabular-nums text-warm-900 dark:text-warm-50">{{ Number(r.score).toFixed(1) }}</span>
-                  <span class="block text-[10px] uppercase tracking-wider text-warm-400">score</span>
+                  <span class="text-lg font-bold tabular-nums text-ink">{{ Number(r.score).toFixed(1) }}</span>
+                  <span class="block text-[10px] uppercase tracking-wider text-ink-muted">score</span>
                 </div>
               </div>
               <ContributionBar class="mt-2" :contributions="r.contributions" />
               <div v-if="r.reasons?.length" class="flex flex-wrap gap-1 mt-2">
-                <span v-for="reason in r.reasons" :key="reason" class="badge-warm !text-[11px]">{{ reason }}</span>
+                <span v-for="reason in r.reasons" :key="reason" class="badge-neutral !text-[11px]">{{ reason }}</span>
               </div>
               <details class="mt-1.5">
-                <summary class="text-[11px] text-warm-400 cursor-pointer hover:text-warm-600 dark:hover:text-warm-300 select-none">Signal details</summary>
+                <summary class="text-[11px] text-ink-muted cursor-pointer hover:text-ink select-none">Signal details</summary>
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-1 mt-2">
-                  <div v-for="s in SIGNALS" :key="s.key" class="text-[11px]">
-                    <span class="text-warm-500 dark:text-warm-400">{{ s.label.replace(/ \(.*\)/, '') }}</span>
-                    <span class="block tabular-nums text-warm-800 dark:text-warm-200">
+                  <div v-for="s in shownSignals" :key="s.key" class="text-[11px]">
+                    <span class="text-ink-muted">{{ s.label.replace(/ \(.*\)/, '') }}</span>
+                    <span class="block tabular-nums text-ink">
                       <template v-if="r.signals && r.signals[s.key] !== undefined && r.signals[s.key] !== null">
                         {{ (Number(r.signals[s.key]) * 100).toFixed(0) }}% · {{ Number(r.contributions?.[s.key] || 0).toFixed(1) }} pts
                       </template>
@@ -183,7 +183,7 @@ import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import ContributionBar from './ContributionBar.vue'
 import { getStorageUrl } from '@/lib/storageUrl'
-import { SIGNALS, apiError, num, type RankingSettings } from './signals'
+import { SIGNALS, signalsFor, apiError, num, type RankingSettings } from './signals'
 
 interface PreviewVenue {
   id: number; name: string; city: string | null; thumbnail: string | null
@@ -211,6 +211,13 @@ const ran = ref(false)
 const results = ref<PreviewResult[]>([])
 const understood = ref<{ chips?: Chip[] } | null>(null)
 const previousOrder = ref<number[]>([])
+/** Signals in the current settings, plus any the preview returned (e.g. `sentiment` on a newer backend). */
+const shownSignals = computed(() => {
+  const base = signalsFor(props.settings?.weights)
+  const seen = new Set(base.map(s => s.key))
+  const fromResults = SIGNALS.filter(s => !seen.has(s.key) && results.value.some(r => r.signals?.[s.key] != null || r.contributions?.[s.key] != null))
+  return [...base, ...fromResults]
+})
 
 const examples = [
   'shadi hall in lahore for 300 guests under 3000',

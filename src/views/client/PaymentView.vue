@@ -1,118 +1,145 @@
 <template>
-  <div class="content-container">
-    <!-- Back -->
-    <div class="mb-6">
-      <RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-ghost inline-flex items-center gap-1.5 text-sm">
-        <AppIcon icon="chevron-left" class="w-4 h-4" />
-        Back to Booking
-      </RouterLink>
-    </div>
+  <div class="space-y-6">
+    <RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-ghost btn-sm -ml-2">
+      <AppIcon icon="chevron-left" class="w-4 h-4" />
+      Back to booking
+    </RouterLink>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex justify-center py-16">
-      <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+    <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-5 gap-6 max-w-5xl" aria-busy="true" aria-label="Loading payment">
+      <div class="lg:col-span-3 card h-80 skeleton"></div>
+      <div class="lg:col-span-2 card h-80 skeleton"></div>
     </div>
 
-    <!-- Already paid / not payable -->
-    <div v-else-if="booking && booking.payment_status === 'paid'" class="card max-w-xl mx-auto p-8 text-center">
-      <div class="w-14 h-14 mx-auto rounded-2xl bg-primary-50 dark:bg-primary-900/30 text-primary-600 flex items-center justify-center mb-4">
-        <AppIcon icon="circle-check" class="w-7 h-7" />
+    <!-- Already paid -->
+    <div v-else-if="booking && booking.payment_status === 'paid'" class="card max-w-xl">
+      <div class="empty-state">
+        <span class="icon-chip tone-success"><AppIcon icon="circle-check" class="w-5 h-5" /></span>
+        <p class="empty-state-title mt-3">This booking is already paid</p>
+        <p class="empty-state-desc">{{ booking.event_name }} · <span class="ref">{{ booking.booking_number }}</span>. There is nothing more to pay.</p>
+        <div class="empty-state-actions"><RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-primary">View booking</RouterLink></div>
       </div>
-      <h2 class="text-lg font-semibold text-warm-900 dark:text-white">This booking is already paid</h2>
-      <p class="text-sm text-warm-500 mt-1">Booking {{ booking.booking_number }} — nothing more to pay.</p>
-      <RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-primary btn-sm mt-5">View booking</RouterLink>
     </div>
-    <div v-else-if="booking && booking.status !== 'confirmed'" class="card max-w-xl mx-auto p-8 text-center">
-      <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 flex items-center justify-center mb-4">
-        <AppIcon icon="clock" class="w-7 h-7" />
+
+    <!-- Not payable -->
+    <div v-else-if="booking && booking.status !== 'confirmed'" class="card max-w-xl">
+      <div class="empty-state">
+        <span class="icon-chip" :class="booking.status === 'pending' ? 'tone-warning' : 'tone-neutral'"><AppIcon :icon="booking.status === 'pending' ? 'clock' : 'ban'" class="w-5 h-5" /></span>
+        <p class="empty-state-title mt-3">{{ booking.status === 'pending' ? 'Waiting for the venue to confirm' : 'This booking can’t be paid' }}</p>
+        <p class="empty-state-desc">{{ booking.status === 'pending' ? 'You can pay as soon as the venue owner confirms your request. We’ll notify you.' : `The booking is ${booking.status}.` }}</p>
+        <div class="empty-state-actions"><RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-secondary">Back to booking</RouterLink></div>
       </div>
-      <h2 class="text-lg font-semibold text-warm-900 dark:text-white">{{ booking.status === 'pending' ? 'Waiting for the venue to confirm' : 'This booking can’t be paid' }}</h2>
-      <p class="text-sm text-warm-500 mt-1">{{ booking.status === 'pending' ? 'You can pay as soon as the venue owner confirms your request. We’ll notify you.' : `The booking is ${booking.status}.` }}</p>
-      <RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-outline btn-sm mt-5">Back to booking</RouterLink>
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="card border-coral/30 bg-coral/5 max-w-xl mx-auto">
-      <div class="p-6">
-        <h2 class="text-lg font-semibold text-coral mb-2">Payment Error</h2>
-        <p class="text-sm text-coral/80 mb-4">{{ error }}</p>
-        <RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-outline inline-flex items-center gap-1.5 text-sm">
-          <AppIcon icon="chevron-left" class="w-4 h-4" />
-          Back to Booking
-        </RouterLink>
-      </div>
-    </div>
-
-    <!-- Payment Form -->
-    <div v-else-if="paymentData" class="max-w-xl mx-auto">
-      <!-- Sandbox Banner -->
-      <div v-if="paymentData.sandbox" class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-accent/10 border border-accent/20 mb-6">
-        <AppIcon icon="alert-triangle" class="w-5 h-5 text-accent flex-shrink-0" />
-        <span class="font-medium text-sm text-amber-800 dark:text-amber-300">SANDBOX MODE &mdash; This is a test payment. No real money will be charged.</span>
-      </div>
-
-      <!-- Booking Summary -->
-      <div class="card mb-6">
-        <div class="px-5 py-4 border-b border-warm-100 dark:border-warm-700">
-          <h2 class="text-sm font-semibold text-warm-800 dark:text-warm-100">Payment Summary</h2>
-        </div>
-        <div class="p-5 text-sm">
-          <div class="flex justify-between mb-3"><span class="text-warm-500">Booking</span><span class="font-mono text-warm-800 dark:text-warm-100">{{ booking?.booking_number }}</span></div>
-          <div class="flex justify-between mb-3"><span class="text-warm-500">Event</span><span class="text-warm-800 dark:text-warm-100">{{ booking?.event_name }}</span></div>
-          <div class="flex justify-between mb-3"><span class="text-warm-500">Venue</span><span class="text-warm-800 dark:text-warm-100">{{ booking?.venue?.name }}</span></div>
-          <div class="flex justify-between mb-4"><span class="text-warm-500">Date</span><span class="text-warm-800 dark:text-warm-100">{{ formatDate(booking?.event_date) }}</span></div>
-          <div class="border-t border-warm-100 dark:border-warm-700 pt-4">
-            <div class="flex justify-between mb-2"><span class="text-warm-500">Base Price</span><span class="text-warm-800 dark:text-warm-100">{{ formatPKR(booking?.base_price) }}</span></div>
-            <div v-if="booking?.amenities_price > 0" class="flex justify-between mb-2"><span class="text-warm-500">Amenities</span><span class="text-warm-800 dark:text-warm-100">{{ formatPKR(booking?.amenities_price) }}</span></div>
-            <div class="flex justify-between mb-2"><span class="text-warm-500">Tax (5%)</span><span class="text-warm-800 dark:text-warm-100">{{ formatPKR(booking?.tax_amount) }}</span></div>
-          </div>
-          <div class="border-t border-warm-100 dark:border-warm-700 pt-4 mt-2">
-            <div class="flex justify-between font-bold text-lg">
-              <span class="text-warm-900 dark:text-white">Total Amount</span>
-              <span class="text-primary-600">PKR {{ formatPkr(amount.app_amount) }}</span>
-            </div>
-            <div class="flex items-center justify-between gap-3 mt-3 px-4 py-3 rounded-xl bg-warm-50 dark:bg-warm-800/60 border border-warm-100 dark:border-warm-700">
-              <span class="text-warm-500 text-xs leading-relaxed">
-                Charged as <strong class="text-warm-800 dark:text-warm-100">R{{ formatZar(amount.gateway_amount) }}</strong>
-                in PayFast{{ paymentData.sandbox ? ' sandbox' : '' }} at rate 1 PKR = {{ amount.exchange_rate }} ZAR
-              </span>
-              <span class="font-semibold text-warm-800 dark:text-warm-100 whitespace-nowrap">R{{ formatZar(amount.gateway_amount) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PayFast Hidden Form -->
-      <form ref="payFastForm" :action="paymentData.action_url" method="POST">
-        <input v-for="(value, key) in paymentData.fields" :key="String(key)" type="hidden" :name="String(key)" :value="value" />
-        <button type="submit" class="btn-primary w-full py-3.5 text-base font-semibold">
-          Pay Now &mdash; PKR {{ formatPkr(amount.app_amount) }} (R{{ formatZar(amount.gateway_amount) }})
-        </button>
-      </form>
-
-      <!-- Sandbox Debug -->
-      <div v-if="paymentData.sandbox" class="card mt-6">
-        <div class="p-5">
-          <h3 class="font-semibold text-warm-500 text-xs uppercase tracking-wider mb-3">Sandbox Details (Debug)</h3>
-          <div class="text-xs font-mono text-warm-500 space-y-1">
-            <p>Payment ID: {{ paymentData.fields.m_payment_id }}</p>
-            <p>Merchant ID: {{ paymentData.fields.merchant_id }}</p>
-            <p>Amount: {{ paymentData.fields.amount }} ZAR (PKR {{ amount.app_amount }} &times; {{ amount.exchange_rate }})</p>
-            <p>Signature: {{ paymentData.fields.signature }}</p>
-            <p>Action URL: {{ paymentData.action_url }}</p>
-          </div>
+    <div v-else-if="error" class="card max-w-xl">
+      <div class="empty-state">
+        <span class="icon-chip tone-danger"><AppIcon icon="alert-triangle" class="w-5 h-5" /></span>
+        <p class="empty-state-title mt-3">We couldn't start the payment</p>
+        <p class="empty-state-desc">{{ error }}</p>
+        <div class="empty-state-actions">
+          <button type="button" class="btn-primary" @click="loadPaymentData"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button>
+          <RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-secondary">Back to booking</RouterLink>
         </div>
       </div>
     </div>
+
+    <!-- Checkout -->
+    <template v-else-if="paymentData">
+      <header class="page-header !mb-0">
+        <div>
+          <p class="page-eyebrow">Checkout</p>
+          <h1 class="page-title">Pay for your booking</h1>
+          <p class="page-subtitle">Review the details, then continue to PayFast to pay securely.</p>
+        </div>
+      </header>
+
+      <div v-if="paymentData.sandbox" class="alert-warning max-w-5xl" role="note">
+        <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
+        <div><p class="alert-title">Sandbox mode</p><p class="text-sm">This is a test payment. No real money will be charged.</p></div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start max-w-5xl">
+        <!-- Summary -->
+        <section class="card overflow-hidden lg:col-span-3" aria-labelledby="summary-title">
+          <div class="flex gap-4 p-5 border-b border-line">
+            <img :src="venueImage(booking)" alt="" class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover shrink-0 bg-surface-sunken" @error="onImageError" />
+            <div class="min-w-0">
+              <h2 id="summary-title" class="text-base font-semibold text-ink break-words">{{ booking?.event_name }}</h2>
+              <p class="text-sm text-ink-secondary break-words">{{ booking?.venue?.name }}<template v-if="booking?.venue?.city"> · {{ booking.venue.city }}</template></p>
+              <p class="mt-1 text-sm text-ink-muted">{{ formatDate(booking?.event_date) }}<template v-if="booking?.start_time"> · {{ formatTimeRange(booking.start_time, booking.end_time) }}</template></p>
+              <p class="mt-1 ref text-ink-muted">{{ booking?.booking_number }}</p>
+            </div>
+          </div>
+          <div class="card-body">
+            <dl>
+              <div class="dl-row"><dt>Venue</dt><dd>{{ formatPKR(booking?.base_price) }}</dd></div>
+              <div v-if="booking?.amenities_price > 0" class="dl-row"><dt>Amenities</dt><dd>{{ formatPKR(booking?.amenities_price) }}</dd></div>
+              <div v-if="booking?.discount_amount > 0" class="dl-row"><dt>Discount</dt><dd class="!text-success-text">− {{ formatPKR(booking?.discount_amount) }}</dd></div>
+              <div class="dl-row"><dt>Tax (5%)</dt><dd>{{ formatPKR(booking?.tax_amount) }}</dd></div>
+              <div class="dl-row !border-t !border-line pt-3 mt-1">
+                <dt class="!text-ink font-semibold">Total</dt>
+                <dd class="text-lg !font-bold">PKR {{ formatPkr(amount.app_amount) }}</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+
+        <!-- Pay -->
+        <section class="card lg:col-span-2 lg:sticky lg:top-24" aria-labelledby="pay-title">
+          <div class="card-body space-y-4">
+            <div>
+              <h2 id="pay-title" class="text-sm font-medium text-ink-muted">Amount to pay</h2>
+              <p class="font-display text-3xl font-bold tracking-tight text-ink num">PKR {{ formatPkr(amount.app_amount) }}</p>
+            </div>
+            <div class="panel-sunken px-4 py-3 text-sm text-ink-secondary">
+              Charged as <strong class="text-ink num">R{{ formatZar(amount.gateway_amount) }}</strong> in PayFast{{ paymentData.sandbox ? ' sandbox' : '' }}
+              <span class="block text-xs text-ink-muted mt-0.5">Rate: 1 PKR = {{ amount.exchange_rate }} ZAR</span>
+            </div>
+
+            <!-- PayFast form (fields come from the API unchanged) -->
+            <form ref="payFastForm" :action="paymentData.action_url" method="POST">
+              <input v-for="(value, key) in paymentData.fields" :key="String(key)" type="hidden" :name="String(key)" :value="value" />
+              <button type="submit" class="btn-primary btn-lg btn-block">
+                <AppIcon icon="lock" class="w-4 h-4" />
+                Continue to PayFast
+              </button>
+            </form>
+
+            <ul class="space-y-2 text-sm text-ink-secondary">
+              <li class="flex gap-2"><AppIcon icon="shield-check" class="w-4 h-4 mt-0.5 shrink-0 text-brand-text" />Card details are entered on PayFast's secure page, never on EventGenius.</li>
+              <li class="flex gap-2"><AppIcon icon="circle-check" class="w-4 h-4 mt-0.5 shrink-0 text-brand-text" />Your booking is marked paid as soon as PayFast confirms.</li>
+              <li class="flex gap-2"><AppIcon icon="receipt" class="w-4 h-4 mt-0.5 shrink-0 text-brand-text" />You'll get a notification and can see the transaction on your booking.</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <!-- Sandbox debug -->
+      <details v-if="paymentData.sandbox" class="card max-w-5xl group">
+        <summary class="cursor-pointer select-none px-5 py-3.5 text-sm font-medium text-ink-secondary flex items-center justify-between">
+          Sandbox details (for testing)
+          <AppIcon icon="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180" />
+        </summary>
+        <div class="px-5 pb-5 text-xs font-mono text-ink-muted space-y-1 break-all">
+          <p>Payment ID: {{ paymentData.fields.m_payment_id }}</p>
+          <p>Merchant ID: {{ paymentData.fields.merchant_id }}</p>
+          <p>Amount: {{ paymentData.fields.amount }} ZAR (PKR {{ amount.app_amount }} &times; {{ amount.exchange_rate }})</p>
+          <p>Signature: {{ paymentData.fields.signature }}</p>
+          <p>Action URL: {{ paymentData.action_url }}</p>
+        </div>
+      </details>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { formatPKR } from '@/lib/format'
+import { formatPKR, formatTimeRange } from '@/lib/format'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import { venueImage, onImageError, formatEventDate } from '@/components/client/bookingUtils'
 
 const route = useRoute()
 const loading = ref(true)
@@ -155,8 +182,7 @@ async function loadPaymentData() {
 }
 
 function formatDate(d: string) {
-  if (!d) return ''
-  return new Date(d).toLocaleDateString('en-PK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  return formatEventDate(d, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 onMounted(loadPaymentData)

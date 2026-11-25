@@ -1,248 +1,356 @@
 <template>
-  <div class="booking-wizard-page font-['DM_Sans']">
+  <div class="booking-page">
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-24">
-      <div class="flex flex-col items-center gap-3">
-        <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin"></div>
-        <span class="text-sm text-warm-500">Loading venue...</span>
+    <div v-if="loading" aria-busy="true" aria-label="Loading venue">
+      <div class="skeleton h-3 w-32"></div>
+      <div class="skeleton mt-3 h-7 w-72 max-w-full"></div>
+      <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div class="skeleton h-96 !rounded-xl"></div>
+        <div class="skeleton h-80 !rounded-xl hidden lg:block"></div>
       </div>
     </div>
 
     <!-- Not found -->
-    <div v-else-if="!venue" class="text-center py-24">
-      <h5 class="font-semibold text-warm-800 dark:text-warm-200">Venue not found</h5>
-      <RouterLink to="/venues" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-soft hover:shadow-elevated">Browse Venues</RouterLink>
+    <div v-else-if="!venue" class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="building-store" class="w-5 h-5" /></div>
+        <p class="empty-state-title">Venue not found</p>
+        <p class="empty-state-desc">This venue may have been removed, or the link is incorrect.</p>
+        <div class="empty-state-actions"><RouterLink to="/venues" class="btn-primary">Browse venues</RouterLink></div>
+      </div>
     </div>
 
-    <!-- Wizard -->
     <template v-else>
-      <!-- Progress steps -->
-      <div class="wizard-progress">
-        <div
+      <header class="page-header">
+        <div class="min-w-0">
+          <p class="page-eyebrow">Book a venue</p>
+          <h1 class="page-title truncate">{{ venue.name }}</h1>
+          <p class="page-subtitle">Send a booking request. The owner confirms before you pay anything.</p>
+        </div>
+        <div class="page-header-actions">
+          <RouterLink :to="`/venues/${route.params.id}`" class="btn-secondary"><AppIcon icon="arrow-left" class="w-4 h-4" />Venue page</RouterLink>
+        </div>
+      </header>
+
+      <!-- Progress -->
+      <ol class="stepper" aria-label="Booking steps">
+        <li
           v-for="(s, i) in steps"
           :key="i"
-          class="wizard-step"
-          :class="{ 'wizard-step--active': step === i, 'wizard-step--done': step > i }"
-          @click="goToStep(i)"
+          class="stepper-item"
+          :class="{ 'is-active': step === i, 'is-done': step > i }"
+          :aria-current="step === i ? 'step' : undefined"
         >
-          <div class="wizard-step-num">
-            <AppIcon v-if="step > i" icon="check" class="w-3.5 h-3.5" />
-            <span v-else>{{ i + 1 }}</span>
-          </div>
-          <span class="wizard-step-label">{{ s }}</span>
-        </div>
-      </div>
-
-      <!-- Step 1: Venue Summary -->
-      <div v-if="step === 0" class="wizard-card">
-        <h2 class="wizard-card-title">Venue Summary</h2>
-        <div class="venue-summary">
-          <div class="venue-summary-image">
-            <img v-if="venueImage" :src="venueImage" :alt="venue.name" class="w-full h-full object-cover" />
-            <div v-else class="w-full h-full flex items-center justify-center bg-warm-100 dark:bg-warm-800">
-              <AppIcon icon="image" class="w-12 h-12 text-[var(--color-text-muted)]" />
-            </div>
-          </div>
-          <div class="venue-summary-info">
-            <h3 class="text-lg font-bold text-warm-800 dark:text-warm-100">{{ venue.name }}</h3>
-            <p v-if="venue.location" class="text-sm mt-1 text-warm-500">
-              <AppIcon icon="map-pin" class="w-3.5 h-3.5 mr-1" />
-              {{ venue.location }}
-            </p>
-            <div class="flex flex-wrap gap-4 mt-4">
-              <div class="venue-summary-stat">
-                <span class="venue-summary-stat-label">Price</span>
-                <span class="venue-summary-stat-value">PKR {{ formatPrice(venue) }}</span>
-                <span class="venue-summary-stat-unit">per head</span>
-              </div>
-              <div class="venue-summary-stat">
-                <span class="venue-summary-stat-label">Capacity</span>
-                <span class="venue-summary-stat-value">{{ venue.capacity_min }}–{{ venue.capacity_max }}</span>
-                <span class="venue-summary-stat-unit">guests</span>
-              </div>
-              <div v-if="venue.store?.name" class="venue-summary-stat">
-                <span class="venue-summary-stat-label">Hosted by</span>
-                <span class="venue-summary-stat-value">{{ venue.store.name }}</span>
-              </div>
-            </div>
-            <p v-if="venue.description" class="text-sm mt-4 text-warm-500">
-              {{ venue.description?.substring(0, 200) }}{{ venue.description?.length > 200 ? '...' : '' }}
-            </p>
-          </div>
-        </div>
-        <div class="wizard-actions">
-          <RouterLink :to="`/venues/${route.params.id}`" class="wizard-btn-secondary">Back to Venue</RouterLink>
-          <button @click="step = 1" class="wizard-btn-primary">Continue to Date & Time</button>
-        </div>
-      </div>
-
-      <!-- Step 2: Date & Time -->
-      <div v-if="step === 1" class="wizard-card">
-        <h2 class="wizard-card-title">Select Date & Time</h2>
-        <p class="wizard-card-desc">Choose your event dates and times. Select multiple days for multi-day events.</p>
-        <BookingCalendar
-          :venue-id="venue.id"
-          :operating-start="venue.operating_start"
-          :operating-end="venue.operating_end"
-          @update:selection="onCalendarUpdate"
-        />
-        <div v-if="calendarSlots.length > 0" class="selection-summary">
-          <h4 class="text-sm font-semibold mb-2 text-warm-800 dark:text-warm-100">Your Selection</h4>
-          <div class="selection-summary-list">
-            <div v-for="slot in calendarSlots" :key="slot.date" class="selection-summary-item">
-              <span class="font-medium text-warm-800 dark:text-warm-100">{{ formatSlotDate(slot.date) }}</span>
-              <span class="text-primary-500 font-semibold">{{ formatTimeRange(slot.start_time, slot.end_time) }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="wizard-actions">
-          <button @click="step = 0" class="wizard-btn-secondary">Back</button>
-          <button @click="step = 2" :disabled="calendarSlots.length === 0" class="wizard-btn-primary">
-            Continue to Event Details
+          <button type="button" class="stepper-btn" :disabled="i >= step" @click="goToStep(i)">
+            <span class="stepper-num">
+              <AppIcon v-if="step > i" icon="check" class="w-3.5 h-3.5" />
+              <span v-else>{{ i + 1 }}</span>
+            </span>
+            <span class="stepper-label">{{ s }}</span>
           </button>
-        </div>
-      </div>
+        </li>
+      </ol>
+      <p class="mb-4 text-sm text-ink-secondary sm:hidden">Step {{ step + 1 }} of {{ steps.length }} · <span class="font-semibold text-ink">{{ steps[step] }}</span></p>
 
-      <!-- Step 3: Event Details -->
-      <div v-if="step === 2" class="wizard-card">
-        <h2 class="wizard-card-title">Event Details</h2>
-        <p class="wizard-card-desc">Tell us about your event so the venue can prepare accordingly.</p>
-        <form @submit.prevent="step = 3" class="flex flex-col gap-5">
-          <div>
-            <label class="form-label-warm">Event Name *</label>
-            <input v-model="booking.event_name" type="text" required class="form-input-warm" placeholder="e.g. My Wedding Reception" />
-          </div>
-          <div>
-            <label class="form-label-warm">Event Type *</label>
-            <select v-model="booking.event_type" required class="form-input-warm">
-              <option value="" disabled>Select an event type</option>
-              <option v-for="opt in eventTypeOptions" :key="opt.slug" :value="opt.slug">
-                {{ opt.label }}
-              </option>
-            </select>
-            <p v-if="venue.event_types?.length" class="text-xs text-warm-400 mt-1.5">
-              This venue hosts: {{ eventTypeOptions.map(o => o.label).join(', ') }}
+      <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <div class="min-w-0">
+          <!-- Step 1: Venue Summary -->
+          <section v-if="step === 0" class="card" aria-labelledby="step-title">
+            <div class="card-header">
+              <div><h2 id="step-title" class="card-title">Venue summary</h2><p class="card-subtitle">Check this is the right venue before you choose a date.</p></div>
+            </div>
+            <div class="card-body">
+              <div class="flex flex-col gap-5 sm:flex-row">
+                <div class="aspect-[4/3] w-full shrink-0 overflow-hidden rounded-lg bg-surface-sunken sm:w-56">
+                  <img v-if="venueImage" :src="venueImage" :alt="venue.name" class="h-full w-full object-cover" />
+                  <div v-else class="flex h-full w-full items-center justify-center text-ink-muted"><AppIcon icon="image" class="w-8 h-8" /></div>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <h3 class="heading-3">{{ venue.name }}</h3>
+                  <p v-if="venue.location" class="mt-1 flex items-start gap-1.5 text-sm text-ink-muted">
+                    <AppIcon icon="map-pin" class="mt-0.5 w-4 h-4 shrink-0" />{{ venue.location }}
+                  </p>
+                  <dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div class="panel-sunken px-3 py-2.5">
+                      <dt class="text-xs text-ink-muted">Price</dt>
+                      <dd class="text-sm font-semibold text-ink num">PKR {{ formatPrice(venue) }} <span class="font-normal text-ink-muted">/ head</span></dd>
+                    </div>
+                    <div class="panel-sunken px-3 py-2.5">
+                      <dt class="text-xs text-ink-muted">Capacity</dt>
+                      <dd class="text-sm font-semibold text-ink num">{{ venue.capacity_min }}–{{ venue.capacity_max }} <span class="font-normal text-ink-muted">guests</span></dd>
+                    </div>
+                    <div v-if="venue.store?.name" class="panel-sunken px-3 py-2.5 col-span-2 sm:col-span-1 min-w-0">
+                      <dt class="text-xs text-ink-muted">Hosted by</dt>
+                      <dd class="truncate text-sm font-semibold text-ink">{{ venue.store.name }}</dd>
+                    </div>
+                  </dl>
+                  <p v-if="venue.description" class="mt-4 text-sm leading-relaxed text-ink-secondary">
+                    {{ venue.description?.substring(0, 200) }}{{ venue.description?.length > 200 ? '...' : '' }}
+                  </p>
+                </div>
+              </div>
+              <div class="mt-6 rounded-lg border border-line p-4">
+                <h3 class="text-sm font-semibold text-ink">What happens next</h3>
+                <ol class="mt-2 grid gap-2 text-sm text-ink-secondary sm:grid-cols-3">
+                  <li class="flex gap-2"><span class="next-num">1</span>Pick your date and time</li>
+                  <li class="flex gap-2"><span class="next-num">2</span>Add event details and add-ons</li>
+                  <li class="flex gap-2"><span class="next-num">3</span>Owner confirms, then you pay</li>
+                </ol>
+              </div>
+            </div>
+            <div class="card-footer step-actions">
+              <RouterLink :to="`/venues/${route.params.id}`" class="btn-secondary">Back to venue</RouterLink>
+              <button type="button" @click="step = 1" class="btn-primary">Continue to date and time <AppIcon icon="arrow-right" class="w-4 h-4" /></button>
+            </div>
+          </section>
+
+          <!-- Step 2: Date & Time -->
+          <section v-if="step === 1" class="card" aria-labelledby="step-title">
+            <div class="card-header">
+              <div><h2 id="step-title" class="card-title">Select date and time</h2><p class="card-subtitle">Choose your event dates and times. Select several days for a multi-day event.</p></div>
+            </div>
+            <div class="card-body">
+              <BookingCalendar
+                :venue-id="venue.id"
+                :operating-start="venue.operating_start"
+                :operating-end="venue.operating_end"
+                @update:selection="onCalendarUpdate"
+              />
+              <div v-if="calendarSlots.length > 0" class="mt-4 rounded-lg border border-success-line bg-success-soft p-4">
+                <h3 class="text-sm font-semibold text-success-text">Your selection</h3>
+                <ul class="mt-2 space-y-1.5">
+                  <li v-for="slot in calendarSlots" :key="slot.date" class="flex flex-wrap items-center justify-between gap-x-4 text-sm">
+                    <span class="font-medium text-ink">{{ formatSlotDate(slot.date) }}</span>
+                    <span class="font-semibold text-success-text num">{{ formatTimeRange(slot.start_time, slot.end_time) }}</span>
+                  </li>
+                </ul>
+              </div>
+              <p v-else class="mt-4 form-hint flex items-center gap-1.5"><AppIcon icon="info-circle" class="w-4 h-4" />Select at least one day to continue.</p>
+            </div>
+            <div class="card-footer step-actions">
+              <button type="button" @click="step = 0" class="btn-secondary"><AppIcon icon="arrow-left" class="w-4 h-4" />Back</button>
+              <button type="button" @click="step = 2" :disabled="calendarSlots.length === 0" class="btn-primary">
+                Continue to event details <AppIcon icon="arrow-right" class="w-4 h-4" />
+              </button>
+            </div>
+          </section>
+
+          <!-- Step 3: Event Details -->
+          <section v-if="step === 2" class="card" aria-labelledby="step-title">
+            <div class="card-header">
+              <div><h2 id="step-title" class="card-title">Event details</h2><p class="card-subtitle">Tell the venue about your event so they can prepare.</p></div>
+            </div>
+            <form @submit.prevent="step = 3" novalidate>
+              <div class="card-body space-y-5">
+                <div>
+                  <label for="bk-name" class="form-label">Event name <span class="req">*</span></label>
+                  <input
+                    id="bk-name"
+                    v-model="booking.event_name"
+                    type="text"
+                    required
+                    class="form-input"
+                    placeholder="e.g. Ayesha and Bilal's walima"
+                    :aria-invalid="touched.event_name && !booking.event_name ? 'true' : undefined"
+                    aria-describedby="bk-name-msg"
+                    @blur="touched.event_name = true"
+                  />
+                  <p v-if="touched.event_name && !booking.event_name" id="bk-name-msg" class="form-error">Enter a name for your event.</p>
+                  <p v-else id="bk-name-msg" class="form-hint">Shown to the venue owner with your request.</p>
+                </div>
+
+                <div class="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <label for="bk-type" class="form-label">Event type <span class="req">*</span></label>
+                    <select
+                      id="bk-type"
+                      v-model="booking.event_type"
+                      required
+                      class="form-select"
+                      :aria-invalid="touched.event_type && !booking.event_type ? 'true' : undefined"
+                      aria-describedby="bk-type-msg"
+                      @blur="touched.event_type = true"
+                    >
+                      <option value="" disabled>Select an event type</option>
+                      <option v-for="opt in eventTypeOptions" :key="opt.slug" :value="opt.slug">
+                        {{ opt.label }}
+                      </option>
+                    </select>
+                    <p v-if="touched.event_type && !booking.event_type" id="bk-type-msg" class="form-error">Choose the type of event.</p>
+                    <p v-else-if="venue.event_types?.length" id="bk-type-msg" class="form-hint">
+                      This venue hosts: {{ eventTypeOptions.map(o => o.label).join(', ') }}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label for="bk-guests" class="form-label">Expected guests <span class="req">*</span></label>
+                    <input
+                      id="bk-guests"
+                      v-model.number="booking.expected_guests"
+                      type="number"
+                      inputmode="numeric"
+                      required
+                      class="form-input num"
+                      :min="venue.capacity_min || 1"
+                      :max="venue.capacity_max || 10000"
+                      :placeholder="`${venue.capacity_min || 1}–${venue.capacity_max || '∞'}`"
+                      :aria-invalid="guestError || (touched.expected_guests && !booking.expected_guests) ? 'true' : undefined"
+                      aria-describedby="bk-guests-msg"
+                      @blur="touched.expected_guests = true"
+                    />
+                    <p v-if="guestError" id="bk-guests-msg" class="form-error">{{ guestError }}</p>
+                    <p v-else-if="touched.expected_guests && !booking.expected_guests" id="bk-guests-msg" class="form-error">Enter how many guests you expect.</p>
+                    <p v-else id="bk-guests-msg" class="form-hint">
+                      Venue capacity: {{ venue.capacity_min || 1 }} – {{ venue.capacity_max || 'unlimited' }}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label for="bk-req" class="form-label">Special requirements <span class="font-normal text-ink-muted">(optional)</span></label>
+                  <textarea id="bk-req" v-model="booking.special_requirements" class="form-textarea" rows="3" placeholder="Menu preferences, decor, stage or sound needs, timings for baraat…"></textarea>
+                </div>
+
+                <div class="amenity-wrap">
+                  <AmenityPicker v-model="selectedAmenityIds" :amenities="venue.amenities || []" />
+                </div>
+              </div>
+              <div class="card-footer step-actions">
+                <button type="button" @click="step = 1" class="btn-secondary"><AppIcon icon="arrow-left" class="w-4 h-4" />Back</button>
+                <button
+                  type="submit"
+                  :disabled="!booking.event_name || !booking.event_type || !booking.expected_guests || !!guestError"
+                  class="btn-primary"
+                >
+                  Review booking <AppIcon icon="arrow-right" class="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- Step 4: Review & Confirm -->
+          <section v-if="step === 3" class="card" aria-labelledby="step-title">
+            <div class="card-header">
+              <div><h2 id="step-title" class="card-title">Review and confirm</h2><p class="card-subtitle">Check everything below, then send your request.</p></div>
+            </div>
+            <div class="card-body space-y-5">
+              <div class="review-block">
+                <div class="review-block-head"><h3>Venue</h3></div>
+                <p class="text-sm font-medium text-ink">{{ venue.name }}</p>
+              </div>
+
+              <div class="review-block">
+                <div class="review-block-head">
+                  <h3>Date and time</h3>
+                  <button type="button" class="link text-sm" @click="step = 1">Change</button>
+                </div>
+                <ul class="divide-y divide-line">
+                  <li v-for="slot in calendarSlots" :key="slot.date" class="flex flex-wrap items-center justify-between gap-x-4 py-2 text-sm">
+                    <span class="font-medium text-ink">{{ formatSlotDate(slot.date) }}</span>
+                    <span class="text-ink-secondary num">{{ formatTimeRange(slot.start_time, slot.end_time) }}</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="review-block">
+                <div class="review-block-head">
+                  <h3>Event details</h3>
+                  <button type="button" class="link text-sm" @click="step = 2">Edit</button>
+                </div>
+                <dl>
+                  <div class="dl-row"><dt>Name</dt><dd>{{ booking.event_name }}</dd></div>
+                  <div v-if="booking.event_type" class="dl-row"><dt>Type</dt><dd>{{ labelForSlug(booking.event_type) }}</dd></div>
+                  <div class="dl-row"><dt>Guests</dt><dd>{{ booking.expected_guests }}</dd></div>
+                </dl>
+                <div v-if="booking.special_requirements" class="mt-2">
+                  <p class="text-xs text-ink-muted">Requirements</p>
+                  <p class="mt-0.5 whitespace-pre-line text-sm text-ink-secondary">{{ booking.special_requirements }}</p>
+                </div>
+              </div>
+
+              <!-- Errors -->
+              <div v-if="submitError" class="alert-danger" role="alert">
+                <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
+                <div>
+                  <p class="alert-title">{{ submitError }}</p>
+                  <ul v-if="Object.keys(fieldErrors).length" class="mt-1 list-disc pl-4 text-sm">
+                    <li v-for="(msgs, field) in extraFieldErrors" :key="field">{{ msgs[0] }}</li>
+                  </ul>
+                  <button v-if="fieldErrors.start_time || fieldErrors.end_time || fieldErrors.event_date" type="button" @click="step = 1" class="mt-1 text-sm font-semibold underline">
+                    Choose another date or time
+                  </button>
+                  <button v-else-if="fieldErrors.expected_guests" type="button" @click="step = 2" class="mt-1 text-sm font-semibold underline">
+                    Change guest count
+                  </button>
+                </div>
+              </div>
+
+              <!-- Success -->
+              <div v-if="submitSuccess" class="alert-success" role="status">
+                <AppIcon icon="circle-check" class="w-5 h-5 shrink-0" />
+                <p>Booking submitted successfully! Redirecting to your bookings...</p>
+              </div>
+            </div>
+            <div class="card-footer step-actions">
+              <button type="button" @click="step = 2" :disabled="submitting" class="btn-secondary"><AppIcon icon="arrow-left" class="w-4 h-4" />Back</button>
+              <button type="button" @click="submitBooking" :disabled="submitting || submitSuccess" class="btn-primary">
+                <span v-if="submitting" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                {{ submitting ? 'Submitting...' : 'Confirm booking' }}
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <!-- Summary sidebar -->
+        <aside class="lg:sticky lg:top-6" aria-label="Booking summary">
+          <div class="card overflow-hidden">
+            <div class="flex gap-3 border-b border-line p-4">
+              <div class="h-16 w-20 shrink-0 overflow-hidden rounded-md bg-surface-sunken">
+                <img v-if="venueImage" :src="venueImage" :alt="venue.name" class="h-full w-full object-cover" />
+              </div>
+              <div class="min-w-0">
+                <p class="truncate font-semibold text-ink">{{ venue.name }}</p>
+                <p class="truncate text-[0.8125rem] text-ink-muted">{{ venue.city || venue.location }}</p>
+                <p v-if="Number(venue.total_reviews) > 0" class="mt-0.5 flex items-center gap-1 text-[0.8125rem] text-ink-secondary">
+                  <AppIcon icon="star-filled" class="fill-current w-3.5 h-3.5 text-[#B45309]" />
+                  <span class="num">{{ Number(venue.avg_rating).toFixed(1) }} · {{ venue.total_reviews }} reviews</span>
+                </p>
+              </div>
+            </div>
+
+            <dl class="px-4 py-1">
+              <div class="dl-row">
+                <dt>Dates</dt>
+                <dd>
+                  <template v-if="calendarSlots.length">
+                    <span v-for="slot in calendarSlots" :key="slot.date" class="block">{{ formatSlotDate(slot.date) }}</span>
+                  </template>
+                  <span v-else class="font-normal text-ink-muted">Not chosen yet</span>
+                </dd>
+              </div>
+              <div v-if="calendarSlots.length" class="dl-row">
+                <dt>Time</dt>
+                <dd><span v-for="slot in calendarSlots" :key="slot.date" class="block">{{ formatTimeRange(slot.start_time, slot.end_time) }}</span></dd>
+              </div>
+              <div class="dl-row"><dt>Guests</dt><dd>{{ booking.expected_guests || '—' }}</dd></div>
+              <div v-if="booking.event_type" class="dl-row"><dt>Event</dt><dd>{{ labelForSlug(booking.event_type) }}</dd></div>
+            </dl>
+
+            <div class="border-t border-line bg-surface-sunken px-4 py-3">
+              <h2 class="text-[0.8125rem] font-semibold text-ink">Price estimate</h2>
+              <dl class="mt-1">
+                <div class="sum-row"><dt>PKR {{ formatPrice(venue) }} × {{ booking.expected_guests || 1 }} guest{{ booking.expected_guests !== 1 ? 's' : '' }}</dt><dd>PKR {{ fmt(pricing.base) }}</dd></div>
+                <div v-for="a in selectedPaidAmenities" :key="a.id" class="sum-row"><dt class="truncate">{{ a.name }}</dt><dd>PKR {{ fmt(Number(a.price || 0)) }}</dd></div>
+                <div class="sum-row"><dt>Tax (5%)</dt><dd>PKR {{ fmt(pricing.tax) }}</dd></div>
+                <div class="sum-row sum-total"><dt>Estimated total</dt><dd>PKR {{ fmt(pricing.total) }}</dd></div>
+              </dl>
+            </div>
+            <p class="flex gap-2 border-t border-line px-4 py-3 text-[0.8125rem] text-ink-muted">
+              <AppIcon icon="shield-check" class="w-4 h-4 shrink-0 text-brand-text" />
+              No payment now. You pay online after the owner confirms.
             </p>
           </div>
-          <div>
-            <label class="form-label-warm">Expected Guests *</label>
-            <input
-              v-model.number="booking.expected_guests"
-              type="number"
-              required
-              class="form-input-warm"
-              :min="venue.capacity_min || 1"
-              :max="venue.capacity_max || 10000"
-              :placeholder="`${venue.capacity_min || 1}–${venue.capacity_max || '∞'}`"
-            />
-            <p v-if="guestError" class="text-xs text-coral mt-1.5">{{ guestError }}</p>
-            <p v-else class="text-xs text-warm-400 mt-1.5">
-              Venue capacity: {{ venue.capacity_min || 1 }} – {{ venue.capacity_max || 'unlimited' }}
-            </p>
-          </div>
-          <div>
-            <label class="form-label-warm">Special Requirements</label>
-            <textarea v-model="booking.special_requirements" class="form-input-warm" rows="3" placeholder="Any special requests, equipment needs, dietary requirements..."></textarea>
-          </div>
-          <!-- Amenities (fix/features) -->
-          <AmenityPicker v-model="selectedAmenityIds" :amenities="venue.amenities || []" />
-          <div class="wizard-actions">
-            <button type="button" @click="step = 1" class="wizard-btn-secondary">Back</button>
-            <button
-              type="submit"
-              :disabled="!booking.event_name || !booking.event_type || !booking.expected_guests || !!guestError"
-              class="wizard-btn-primary"
-            >
-              Review Booking
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Step 4: Review & Confirm -->
-      <div v-if="step === 3" class="wizard-card">
-        <h2 class="wizard-card-title">Review & Confirm</h2>
-        <p class="wizard-card-desc">Please review your booking details before confirming.</p>
-
-        <div class="review-sections">
-          <!-- Venue -->
-          <div class="review-section">
-            <h4 class="review-section-title">Venue</h4>
-            <p class="review-value">{{ venue.name }}</p>
-          </div>
-
-          <!-- Dates & Times -->
-          <div class="review-section">
-            <h4 class="review-section-title">Date & Time</h4>
-            <div v-for="slot in calendarSlots" :key="slot.date" class="review-slot">
-              <span class="review-slot-date">{{ formatSlotDate(slot.date) }}</span>
-              <span class="review-slot-time">{{ formatTimeRange(slot.start_time, slot.end_time) }}</span>
-            </div>
-          </div>
-
-          <!-- Event -->
-          <div class="review-section">
-            <h4 class="review-section-title">Event Details</h4>
-            <div class="review-grid">
-              <div><span class="review-label">Name</span><span class="review-value">{{ booking.event_name }}</span></div>
-              <div v-if="booking.event_type"><span class="review-label">Type</span><span class="review-value">{{ labelForSlug(booking.event_type) }}</span></div>
-              <div><span class="review-label">Guests</span><span class="review-value">{{ booking.expected_guests }}</span></div>
-            </div>
-            <div v-if="booking.special_requirements" class="mt-2">
-              <span class="review-label">Requirements</span>
-              <p class="review-value text-sm">{{ booking.special_requirements }}</p>
-            </div>
-          </div>
-
-          <!-- Price estimate (base + paid amenities + 5% tax, mirrors backend BookingPricing) -->
-          <div class="review-section review-section--highlight">
-            <h4 class="review-section-title">Estimated Total</h4>
-            <p class="text-2xl font-bold text-primary-500 mb-2">PKR {{ fmt(pricing.total) }}</p>
-            <div class="text-sm text-warm-500 space-y-1">
-              <div class="flex justify-between gap-4">
-                <span>PKR {{ formatPrice(venue) }} / head x {{ booking.expected_guests }} guest{{ booking.expected_guests !== 1 ? 's' : '' }}</span>
-                <span>PKR {{ fmt(pricing.base) }}</span>
-              </div>
-              <div v-for="a in selectedPaidAmenities" :key="a.id" class="flex justify-between gap-4">
-                <span>{{ a.name }}</span><span>PKR {{ fmt(Number(a.price || 0)) }}</span>
-              </div>
-              <div class="flex justify-between gap-4">
-                <span>Tax (5%)</span><span>PKR {{ fmt(pricing.tax) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Errors -->
-        <div v-if="submitError" class="alert-error mt-4">
-          <AppIcon icon="alert-triangle" class="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <div>
-            <p class="mb-0">{{ submitError }}</p>
-            <ul v-if="Object.keys(fieldErrors).length" class="mt-1 mb-0 pl-4 list-disc text-sm">
-              <li v-for="(msgs, field) in extraFieldErrors" :key="field">{{ msgs[0] }}</li>
-            </ul>
-            <button v-if="fieldErrors.start_time || fieldErrors.end_time || fieldErrors.event_date" type="button" @click="step = 1" class="underline text-sm mt-1">
-              Choose another date or time
-            </button>
-            <button v-else-if="fieldErrors.expected_guests" type="button" @click="step = 2" class="underline text-sm mt-1">
-              Change guest count
-            </button>
-          </div>
-        </div>
-
-        <!-- Success -->
-        <div v-if="submitSuccess" class="alert-success mt-4">
-          <AppIcon icon="circle-check" class="w-4 h-4 flex-shrink-0 mt-0.5" />
-          Booking submitted successfully! Redirecting to your bookings...
-        </div>
-
-        <div class="wizard-actions">
-          <button @click="step = 2" :disabled="submitting" class="wizard-btn-secondary">Back</button>
-          <button @click="submitBooking" :disabled="submitting || submitSuccess" class="wizard-btn-primary inline-flex items-center gap-2">
-            <span v-if="submitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            {{ submitting ? 'Submitting...' : 'Confirm Booking' }}
-          </button>
-        </div>
+        </aside>
       </div>
     </template>
   </div>
@@ -292,6 +400,8 @@ const submitting = ref(false)
 const submitError = ref('')
 const fieldErrors = ref<Record<string, string[]>>({})
 const submitSuccess = ref(false)
+// Fields the user has left, so inline messages only show after they've had a go.
+const touched = reactive({ event_name: false, event_type: false, expected_guests: false })
 
 const booking = reactive({
   event_name: '',
@@ -373,6 +483,10 @@ async function loadVenue() {
     const offered: string[] = venue.value?.event_types || []
     booking.event_type = offered.length === 1 ? offered[0] : ''
     booking.expected_guests = Number(venue.value?.capacity_min) || 1
+    // The venue page passes the guest count from its estimate (?guests=…); use it when it fits.
+    const q = Number(route.query.guests)
+    const max = Number(venue.value?.capacity_max) || 0
+    if (Number.isInteger(q) && q >= booking.expected_guests && (!max || q <= max)) booking.expected_guests = q
   } catch {
     venue.value = null
   } finally {
@@ -427,422 +541,96 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.booking-wizard-page {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 1rem 0;
-}
+.booking-page { max-width: 1120px; margin: 0 auto; }
 
-/* Progress */
-.wizard-progress {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+/* Stepper */
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
   margin-bottom: 1.5rem;
-  padding: 0 0.5rem;
 }
-
-.wizard-step {
+.stepper-item { position: relative; min-width: 0; }
+.stepper-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex: 1;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0 0.5rem;
+  border-top: 3px solid var(--line);
+  text-align: left;
   cursor: default;
-  position: relative;
 }
-
-.wizard-step + .wizard-step::before {
-  content: '';
-  position: absolute;
-  left: -0.5rem;
-  top: 50%;
-  width: 0.5rem;
-  height: 2px;
-  background: var(--color-border-light);
-  transition: background 0.2s ease;
-}
-
-.wizard-step--done + .wizard-step::before {
-  background: #10B981;
-}
-
-.wizard-step-num {
-  width: 28px;
-  height: 28px;
-  border-radius: 9999px;
-  border: 2px solid var(--color-border-light);
-  display: flex;
+.stepper-item.is-done .stepper-btn { border-top-color: var(--brand-strong); cursor: pointer; }
+.stepper-item.is-active .stepper-btn { border-top-color: var(--brand-strong); }
+.stepper-btn:disabled { opacity: 1; }
+.stepper-num {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
+  width: 1.5rem;
+  height: 1.5rem;
   flex-shrink: 0;
-  transition: all 0.2s ease;
-}
-
-.wizard-step--active .wizard-step-num {
-  border-color: #10B981;
-  background: #10B981;
-  color: #fff;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
-}
-
-.wizard-step--done .wizard-step-num {
-  border-color: #10B981;
-  background: #ECFDF5;
-  color: #10B981;
-}
-
-:root.dark .wizard-step--done .wizard-step-num {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34D399;
-}
-
-.wizard-step--done {
-  cursor: pointer;
-}
-
-.wizard-step-label {
+  border-radius: 9999px;
+  border: 1px solid rgb(var(--c-line-strong) / 0.6);
+  background: var(--surface);
+  color: var(--ink-muted);
   font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  transition: color 0.15s ease;
-}
-
-.wizard-step--active .wizard-step-label {
-  color: var(--color-text);
   font-weight: 600;
 }
-
-.wizard-step--done .wizard-step-label {
-  color: #10B981;
+.stepper-item.is-active .stepper-num { background: var(--brand-strong); border-color: var(--brand-strong); color: var(--on-brand); }
+.stepper-item.is-done .stepper-num { background: var(--brand-soft); border-color: var(--brand-muted); color: var(--brand-text); }
+.stepper-label { font-size: 0.8125rem; font-weight: 500; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stepper-item.is-active .stepper-label { color: var(--ink); font-weight: 600; }
+.stepper-item.is-done .stepper-label { color: var(--ink-secondary); }
+.stepper-item.is-done .stepper-btn:hover .stepper-label { color: var(--brand-text); text-decoration: underline; }
+@media (max-width: 639.98px) {
+  .stepper { margin-bottom: 0.5rem; }
+  .stepper-label { display: none; }
 }
 
-@media (max-width: 640px) {
-  .wizard-step-label {
-    display: none;
-  }
-
-  .wizard-card {
-    padding: 1rem;
-  }
-
-  .wizard-card-title {
-    font-size: 1.125rem;
-  }
-
-  .wizard-actions {
-    margin-top: 1.25rem;
-    padding-top: 1rem;
-  }
-
-  .booking-wizard-page {
-    padding: 0.75rem 0;
-  }
-}
-
-/* Card */
-.wizard-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.06));
-}
-
-.wizard-card-title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 0.25rem;
-}
-
-.wizard-card-desc {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 1.25rem;
-}
-
-/* Actions */
-.wizard-actions {
+.step-actions {
   display: flex;
+  flex-wrap: wrap-reverse;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border-light);
+  gap: 0.75rem;
+}
+@media (max-width: 479.98px) {
+  .step-actions > * { flex: 1 1 100%; }
 }
 
-/* Buttons */
-.wizard-btn-primary {
+.next-num {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.5rem;
-  background: #10B981;
-  color: white;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  font-size: 0.6875rem;
   font-weight: 600;
-  font-size: 0.875rem;
-  border-radius: 0.75rem;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  color: var(--ink-secondary);
 }
 
-.wizard-btn-primary:hover {
-  background: #059669;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
-  transform: translateY(-1px);
-}
+.review-block { padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius-md); }
+.review-block-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.375rem; }
+.review-block-head h3 { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
 
-.wizard-btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
+.sum-row { display: flex; justify-content: space-between; gap: 1rem; padding: 0.3rem 0; font-size: 0.8125rem; color: var(--ink-secondary); }
+.sum-row dt { min-width: 0; }
+.sum-row dd { flex-shrink: 0; font-variant-numeric: tabular-nums; color: var(--ink); }
+.sum-total { margin-top: 0.375rem; padding-top: 0.625rem; border-top: 1px solid var(--line); font-size: 0.9375rem; font-weight: 600; color: var(--ink); }
 
-.wizard-btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.5rem;
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
-  font-weight: 600;
-  font-size: 0.875rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--color-border-light);
-  cursor: pointer;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.wizard-btn-secondary:hover {
-  border-color: var(--color-border);
-  background: var(--color-bg-hover);
-  box-shadow: var(--shadow-soft, 0 1px 3px rgba(0,0,0,0.06));
-}
-
-/* Form controls */
-.form-label-warm {
+/* AmenityPicker (shared component) uses a legacy label class; style it here. */
+.amenity-wrap :deep(.form-label-warm) {
   display: block;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-text);
   margin-bottom: 0.375rem;
-}
-
-.form-input-warm {
-  width: 100%;
-  padding: 0.625rem 0.875rem;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-light);
-  border-radius: 0.75rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.875rem;
-  color: var(--color-text);
-  transition: all 0.2s ease;
-  outline: none;
-}
-
-.form-input-warm:focus {
-  border-color: #10B981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
-}
-
-.form-input-warm::placeholder {
-  color: var(--color-text-muted);
-}
-
-/* Venue summary */
-.venue-summary {
-  display: flex;
-  gap: 1.5rem;
-  margin-top: 1rem;
-}
-
-@media (max-width: 640px) {
-  .venue-summary {
-    flex-direction: column;
-  }
-}
-
-.venue-summary-image {
-  width: 240px;
-  min-width: 240px;
-  height: 160px;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-@media (max-width: 640px) {
-  .venue-summary-image {
-    width: 100%;
-    min-width: 0;
-    height: 180px;
-  }
-}
-
-.venue-summary-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.venue-summary-stat {
-  display: flex;
-  flex-direction: column;
-}
-
-.venue-summary-stat-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-}
-
-.venue-summary-stat-value {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--color-text);
-  line-height: 1.2;
-}
-
-.venue-summary-stat-unit {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-/* Selection summary */
-.selection-summary {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: #ECFDF5;
-  border: 1px solid #A7F3D0;
-  border-radius: 0.75rem;
-}
-
-:root.dark .selection-summary {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.25);
-}
-
-.selection-summary-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.selection-summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.875rem;
-}
-
-/* Review sections */
-.review-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.review-section {
-  padding: 1rem;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-light);
-  border-radius: 0.75rem;
-}
-
-.review-section--highlight {
-  background: #ECFDF5;
-  border-color: #A7F3D0;
-}
-
-:root.dark .review-section--highlight {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.25);
-}
-
-.review-section-title {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-  margin-bottom: 0.5rem;
-}
-
-.review-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.5rem;
-}
-
-.review-label {
-  display: block;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-.review-value {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-text);
-}
-
-.review-slot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.375rem 0;
-}
-
-.review-slot + .review-slot {
-  border-top: 1px solid var(--color-border-light);
-}
-
-.review-slot-date {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.review-slot-time {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #10B981;
-}
-
-/* Alerts */
-.alert-error {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.875rem 1rem;
-  border-radius: 0.75rem;
-  background: rgba(249, 112, 102, 0.1);
-  color: #F97066;
-  font-size: 0.875rem;
-  border: 1px solid rgba(249, 112, 102, 0.2);
-}
-
-.alert-success {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.875rem 1rem;
-  border-radius: 0.75rem;
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
-  font-size: 0.875rem;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--ink);
 }
 </style>

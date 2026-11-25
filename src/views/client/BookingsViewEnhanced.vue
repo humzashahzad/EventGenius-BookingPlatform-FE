@@ -1,317 +1,279 @@
 <template>
-  <div class="content-container">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+  <div class="space-y-5">
+    <header class="page-header !mb-0">
       <div>
-        <h1 class="text-xl font-bold text-warm-900 tracking-tight dark:text-white">My Bookings</h1>
-        <p class="text-sm text-warm-500 mt-0.5">Track and manage all your venue reservations.</p>
-      </div>
-      <RouterLink to="/venues" class="btn-primary inline-flex items-center gap-2">
-        <AppIcon icon="plus" class="w-4 h-4" />
-        Book a Venue
-      </RouterLink>
-    </div>
-
-
-    <!-- Loading skeleton -->
-    <div v-if="loading">
-      <div v-for="i in 4" :key="i" class="card animate-pulse h-36 rounded-2xl mb-4"></div>
-    </div>
-
-    <!-- Empty state -->
-    <div v-else-if="bookings.length === 0" class="card">
-      <div class="p-8 py-14 text-center">
-        <div class="w-16 h-16 rounded-full bg-warm-100 flex items-center justify-center mx-auto mb-4 dark:bg-warm-700">
-          <AppIcon icon="calendar-event" class="w-8 h-8 text-warm-400" />
-        </div>
-        <h3 class="text-base font-semibold text-warm-800 dark:text-warm-100">No bookings found</h3>
-        <p class="text-sm text-warm-500 mt-1 max-w-xs mx-auto">
-          {{ filterStatus ? `No ${filterStatus} bookings yet.` : 'You haven\'t made any bookings yet.' }}
+        <h1 class="page-title">My bookings</h1>
+        <p class="page-subtitle">
+          <template v-if="!loading && bookings.length">{{ bookings.length }} booking{{ bookings.length === 1 ? '' : 's' }} · {{ counts.upcoming }} upcoming</template>
+          <template v-else>Track and manage your venue reservations.</template>
         </p>
-        <RouterLink to="/venues" class="btn-primary mt-4 inline-flex">Browse Venues</RouterLink>
+      </div>
+      <div class="page-header-actions">
+        <RouterLink to="/venues" class="btn-primary">
+          <AppIcon icon="plus" class="w-4 h-4" />
+          Book a venue
+        </RouterLink>
+      </div>
+    </header>
+
+    <!-- Toolbar: tabs + search + sort -->
+    <div class="card">
+      <nav class="tabs px-2 sm:px-3" role="tablist" aria-label="Filter bookings by status">
+        <button
+          v-for="t in visibleTabs"
+          :key="t.key"
+          type="button"
+          role="tab"
+          class="tab whitespace-nowrap"
+          :aria-selected="tab === t.key"
+          @click="setTab(t.key)"
+        >
+          {{ t.label }}
+          <span class="tab-count">{{ counts[t.key] }}</span>
+        </button>
+      </nav>
+      <div class="flex flex-col sm:flex-row gap-3 p-3 sm:p-4">
+        <div class="relative flex-1 min-w-0">
+          <label for="booking-search" class="sr-only">Search bookings</label>
+          <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
+          <input
+            id="booking-search"
+            v-model="search"
+            type="search"
+            class="form-input !pl-9"
+            placeholder="Search by event, venue, city or booking number"
+            autocomplete="off"
+          />
+        </div>
+        <div class="flex items-center gap-2 sm:w-64">
+          <label for="booking-sort" class="text-sm text-ink-muted whitespace-nowrap">Sort</label>
+          <select id="booking-sort" v-model="sort" class="form-select">
+            <option value="date_asc">Event date: soonest first</option>
+            <option value="date_desc">Event date: latest first</option>
+            <option value="created_desc">Recently booked</option>
+            <option value="amount_desc">Total: high to low</option>
+            <option value="amount_asc">Total: low to high</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <!-- Booking Cards -->
-    <div v-else class="space-y-4">
-      <div
-        v-for="b in bookings"
-        :key="b.id"
-        class="booking-card"
-        :class="`booking-card-${b.status}`"
-      >
-        <!-- Card body -->
-        <div class="p-5">
-          <div class="flex items-start gap-4">
-            <!-- Thumbnail -->
-            <div class="booking-thumb flex-shrink-0 rounded-xl overflow-hidden bg-warm-100 dark:bg-warm-700">
-              <img v-if="b.venue?.thumbnail" :src="getImageUrl(b.venue.thumbnail)" class="w-full h-full object-cover" :alt="b.venue?.name" />
-              <div v-else class="w-full h-full flex items-center justify-center">
-                <AppIcon icon="map-pin" class="w-8 h-8 text-warm-300" />
-              </div>
-            </div>
+    <!-- Loading -->
+    <div v-if="loading" class="space-y-3" aria-busy="true" aria-label="Loading bookings">
+      <div v-for="i in 4" :key="i" class="card overflow-hidden flex">
+        <div class="skeleton !rounded-none w-24 sm:w-40 h-28 sm:h-36 shrink-0"></div>
+        <div class="p-4 flex-1 space-y-2.5"><div class="skeleton h-4 w-24"></div><div class="skeleton h-5 w-2/3"></div><div class="skeleton h-4 w-1/2"></div></div>
+      </div>
+    </div>
 
-            <!-- Info -->
-            <div class="flex-1 min-w-0">
-              <div class="flex items-start justify-between gap-2 mb-1">
-                <div class="min-w-0">
-                  <span class="font-mono text-xs text-warm-400 tracking-wide uppercase">{{ b.booking_number }}</span>
-                  <h3 class="font-semibold text-warm-800 truncate mt-0.5 dark:text-warm-100">{{ b.venue?.name }}</h3>
-                </div>
-                <div class="flex flex-wrap items-center justify-end gap-1.5 flex-shrink-0">
-                  <span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span>
-                  <span v-if="b.payment_status === 'paid'" class="badge-primary inline-flex items-center gap-1"><AppIcon icon="circle-check" class="w-3 h-3" />Paid</span>
-                  <span v-else-if="b.payment_status === 'refunded'" class="badge-warm">Refunded</span>
-                  <span v-else-if="b.status === 'confirmed'" class="badge-accent">Unpaid</span>
-                </div>
-              </div>
+    <!-- Error -->
+    <div v-else-if="loadError" class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="alert-triangle" class="w-5 h-5" /></div>
+        <p class="empty-state-title">We couldn't load your bookings</p>
+        <p class="empty-state-desc">{{ loadError }}</p>
+        <div class="empty-state-actions"><button type="button" class="btn-primary" @click="loadBookings"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button></div>
+      </div>
+    </div>
 
-              <div class="flex flex-wrap gap-3 mt-2">
-                <span class="flex items-center gap-1.5 text-sm text-warm-500">
-                  <AppIcon icon="tags" class="w-3.5 h-3.5" />
-                  <span class="font-medium">{{ b.event_name }}</span>
-                </span>
-                <span class="flex items-center gap-1.5 text-sm text-warm-500">
-                  <AppIcon icon="calendar-event" class="w-3.5 h-3.5" />
-                  {{ formatDate(b.event_date) }}
-                </span>
-                <span v-if="b.start_time" class="flex items-center gap-1.5 text-sm text-warm-500">
-                  <AppIcon icon="clock" class="w-3.5 h-3.5" />
-                  {{ formatTimeRange(b.start_time, b.end_time) }}
-                </span>
-                <span v-if="b.guests_count" class="flex items-center gap-1.5 text-sm text-warm-500">
-                  <AppIcon icon="users" class="w-3.5 h-3.5" />
-                  {{ b.guests_count }} guests
-                </span>
-              </div>
-            </div>
-          </div>
+    <!-- Empty -->
+    <div v-else-if="filtered.length === 0" class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon"><AppIcon :icon="search ? 'search' : 'calendar-event'" class="w-5 h-5" /></div>
+        <p class="empty-state-title">{{ emptyTitle }}</p>
+        <p class="empty-state-desc">{{ emptyDesc }}</p>
+        <div class="empty-state-actions">
+          <button v-if="search || tab !== 'all'" type="button" class="btn-secondary" @click="search = ''; setTab('all')">Clear filters</button>
+          <RouterLink to="/venues" class="btn-primary">Browse venues</RouterLink>
         </div>
+      </div>
+    </div>
 
-        <!-- Footer -->
-        <div class="flex items-center justify-between px-5 py-3 bg-primary-50/50 dark:bg-warm-800/50 border-t border-warm-100 dark:border-warm-700">
-          <div>
-            <span class="text-xs text-warm-500 uppercase font-semibold tracking-wide">Total Amount</span>
-            <p class="font-bold text-lg text-warm-900 dark:text-white">{{ formatPKR(b.total_amount) }}</p>
-          </div>
-          <RouterLink :to="`/customer/bookings/${b.id}`" class="btn-outline text-sm inline-flex items-center gap-1">
-            View Details
+    <!-- List -->
+    <template v-else>
+      <p class="sr-only" role="status">{{ filtered.length }} bookings shown</p>
+      <ul class="space-y-3">
+        <li v-for="b in paged" :key="b.id">
+          <article class="card card-hover overflow-hidden">
+            <div class="flex">
+              <RouterLink :to="`/customer/bookings/${b.id}`" class="relative block w-24 sm:w-44 shrink-0 bg-surface-sunken" tabindex="-1" aria-hidden="true">
+                <img :src="venueImage(b)" alt="" class="absolute inset-0 w-full h-full object-cover" loading="lazy" @error="onImageError" />
+              </RouterLink>
+              <div class="flex-1 min-w-0 p-4 sm:p-5">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span :class="statusBadgeClass(b.status)">{{ statusLabel(b.status) }}</span>
+                  <span v-if="paymentBadge(b)" :class="paymentBadge(b)!.cls">{{ paymentBadge(b)!.label }}</span>
+                  <span v-if="isUpcomingBooking(b)" class="text-xs font-medium text-ink-muted">· {{ countdownLabel(b.event_date) }}</span>
+                </div>
+                <h2 class="mt-1.5 text-base font-semibold text-ink break-words">
+                  <RouterLink :to="`/customer/bookings/${b.id}`" class="hover:underline underline-offset-2">{{ b.event_name }}</RouterLink>
+                </h2>
+                <p class="text-sm text-ink-secondary break-words">
+                  {{ b.venue?.name }}<template v-if="b.venue?.city"> · {{ b.venue.city }}</template>
+                </p>
+                <ul class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-muted">
+                  <li class="inline-flex items-center gap-1.5"><AppIcon icon="calendar-event" class="w-3.5 h-3.5" />{{ formatEventDate(b.event_date) }}</li>
+                  <li v-if="b.start_time" class="inline-flex items-center gap-1.5"><AppIcon icon="clock" class="w-3.5 h-3.5" />{{ formatTimeRange(b.start_time, b.end_time) }}</li>
+                  <li v-if="guestsOf(b)" class="inline-flex items-center gap-1.5"><AppIcon icon="users" class="w-3.5 h-3.5" />{{ guestsOf(b) }} guests</li>
+                </ul>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 border-t border-line bg-surface-sunken/60 px-4 sm:px-5 py-3">
+              <div class="min-w-0 mr-auto">
+                <p class="text-xs text-ink-muted">Total · <span class="ref">{{ b.booking_number }}</span></p>
+                <p class="text-base font-semibold text-ink num">{{ formatPKR(b.total_amount) }}</p>
+              </div>
+              <p v-if="b.status === 'pending'" class="w-full sm:w-auto order-last sm:order-none text-xs text-warning-text inline-flex items-center gap-1.5">
+                <AppIcon icon="clock" class="w-3.5 h-3.5" /> Waiting for the venue to confirm
+              </p>
+              <div class="flex gap-2">
+                <RouterLink v-if="needsPayment(b)" :to="`/customer/bookings/${b.id}/pay`" class="btn-primary btn-sm">
+                  <AppIcon icon="credit-card" class="w-4 h-4" /> Pay now
+                </RouterLink>
+                <RouterLink :to="`/customer/bookings/${b.id}`" class="btn-secondary btn-sm">
+                  Details<span class="sr-only"> for {{ b.event_name }}</span>
+                  <AppIcon icon="chevron-right" class="w-4 h-4" />
+                </RouterLink>
+              </div>
+            </div>
+          </article>
+        </li>
+      </ul>
+
+      <!-- Pagination -->
+      <nav v-if="lastPage > 1" class="flex flex-wrap items-center justify-between gap-3" aria-label="Pagination">
+        <p class="text-sm text-ink-muted num">Showing {{ (page - 1) * PER_PAGE + 1 }}–{{ Math.min(page * PER_PAGE, filtered.length) }} of {{ filtered.length }}</p>
+        <div class="flex items-center gap-1">
+          <button type="button" class="btn-icon" :disabled="page === 1" aria-label="Previous page" @click="page--">
+            <AppIcon icon="chevron-left" class="w-4 h-4" />
+          </button>
+          <button
+            v-for="p in lastPage"
+            :key="p"
+            type="button"
+            class="btn-sm min-w-[2.25rem]"
+            :class="p === page ? 'btn-primary' : 'btn-ghost'"
+            :aria-current="p === page ? 'page' : undefined"
+            @click="page = p"
+          >{{ p }}</button>
+          <button type="button" class="btn-icon" :disabled="page === lastPage" aria-label="Next page" @click="page++">
             <AppIcon icon="chevron-right" class="w-4 h-4" />
-          </RouterLink>
+          </button>
         </div>
-
-        <!-- Status alerts -->
-        <div v-if="b.status === 'pending'" class="flex items-center gap-2 px-5 py-2.5 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-200/50 dark:border-amber-800/30 text-amber-700 dark:text-amber-400">
-          <AppIcon icon="clock" class="w-4 h-4 flex-shrink-0" />
-          <span class="text-sm">Awaiting confirmation from venue owner</span>
-        </div>
-        <div v-if="b.status === 'confirmed' && isUpcoming(b.event_date)" class="flex items-center gap-2 px-5 py-2.5 bg-primary-50 dark:bg-primary-900/20 border-t border-primary-200/50 dark:border-primary-800/30 text-primary-700 dark:text-primary-400">
-          <AppIcon icon="circle-check" class="w-4 h-4 flex-shrink-0" />
-          <span class="text-sm">{{ getDaysUntil(b.event_date) }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Pagination -->
-    <nav v-if="meta.last_page > 1" class="flex justify-center mt-6">
-      <div class="flex items-center gap-1">
-        <button
-          @click="changePage(meta.current_page - 1)"
-          :disabled="meta.current_page === 1"
-          class="w-9 h-9 rounded-xl border border-warm-200 flex items-center justify-center text-warm-600 hover:bg-warm-50 disabled:opacity-50 transition-colors dark:border-warm-700"
-        >
-          <AppIcon icon="chevron-left" class="w-4 h-4" />
-        </button>
-        <button
-          v-for="p in pageNumbers"
-          :key="p"
-          @click="changePage(p)"
-          class="w-9 h-9 rounded-xl text-sm font-medium transition-all duration-200"
-          :class="p === meta.current_page ? 'bg-primary-600 text-white shadow-soft' : 'border border-warm-200 text-warm-600 hover:bg-warm-50'"
-        >{{ p }}</button>
-        <button
-          @click="changePage(meta.current_page + 1)"
-          :disabled="meta.current_page === meta.last_page"
-          class="w-9 h-9 rounded-xl border border-warm-200 flex items-center justify-center text-warm-600 hover:bg-warm-50 disabled:opacity-50 transition-colors dark:border-warm-700"
-        >
-          <AppIcon icon="chevron-right" class="w-4 h-4" />
-        </button>
-      </div>
-    </nav>
+      </nav>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { formatTime, formatTimeRange, formatPKR } from '@/lib/format'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, computed, watch, onMounted } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import { getStorageUrl } from '@/lib/storageUrl'
-import { useTopBarActionsStore } from '@/stores/topBarActions'
+import { formatTimeRange, formatPKR } from '@/lib/format'
+import { statusBadgeClass, statusLabel } from '@/lib/status'
+import {
+  venueImage, onImageError, formatEventDate, countdownLabel, eventDateTime,
+  isUpcomingBooking, needsPayment, paymentBadge, guestsOf,
+} from '@/components/client/bookingUtils'
+
+type TabKey = 'all' | 'upcoming' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected'
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'confirmed', label: 'Confirmed' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' },
+  { key: 'rejected', label: 'Rejected' },
+]
+const PER_PAGE = 10
+
+const route = useRoute()
+const router = useRouter()
 
 const bookings = ref<any[]>([])
-const loading = ref(false)
-const filterStatus = ref('')
+const loading = ref(true)
+const loadError = ref('')
 const search = ref('')
-const meta = ref({ current_page: 1, last_page: 1 })
-const statusCounts = ref<Record<string, number>>({})
-let page = 1
-const topBarActions = useTopBarActionsStore()
+const sort = ref<'date_asc' | 'date_desc' | 'created_desc' | 'amount_desc' | 'amount_asc'>('date_desc')
+const tab = ref<TabKey>(TABS.some(t => t.key === route.query.status) ? (route.query.status as TabKey) : 'all')
+const page = ref(1)
 
-const pageNumbers = computed(() => {
-  const total = meta.value.last_page
-  const current = meta.value.current_page
-  const pages: number[] = []
-  for (let i = Math.max(1, current - 2); i <= Math.min(total, current + 2); i++) {
-    pages.push(i)
-  }
-  return pages
+function matchesTab(b: any, key: TabKey) {
+  if (key === 'all') return true
+  if (key === 'upcoming') return isUpcomingBooking(b)
+  return b.status === key
+}
+
+const counts = computed(() => {
+  const c = {} as Record<TabKey, number>
+  for (const t of TABS) c[t.key] = bookings.value.filter(b => matchesTab(b, t.key)).length
+  return c
 })
+
+// Hide the rejected tab unless there is something in it.
+const visibleTabs = computed(() => TABS.filter(t => t.key !== 'rejected' || counts.value.rejected > 0 || tab.value === 'rejected'))
+
+const filtered = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  const list = bookings.value.filter(b => {
+    if (!matchesTab(b, tab.value)) return false
+    if (!q) return true
+    return [b.event_name, b.venue?.name, b.venue?.city, b.booking_number, b.store?.name]
+      .some(v => String(v || '').toLowerCase().includes(q))
+  })
+  const time = (b: any) => eventDateTime(b.event_date, b.start_time)?.getTime() ?? 0
+  const sorters: Record<string, (a: any, b: any) => number> = {
+    date_asc: (a, b) => time(a) - time(b),
+    date_desc: (a, b) => time(b) - time(a),
+    created_desc: (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    amount_desc: (a, b) => Number(b.total_amount) - Number(a.total_amount),
+    amount_asc: (a, b) => Number(a.total_amount) - Number(b.total_amount),
+  }
+  return [...list].sort(sorters[sort.value])
+})
+
+const lastPage = computed(() => Math.max(1, Math.ceil(filtered.value.length / PER_PAGE)))
+const paged = computed(() => filtered.value.slice((page.value - 1) * PER_PAGE, page.value * PER_PAGE))
+
+const tabLabel = computed(() => TABS.find(t => t.key === tab.value)?.label.toLowerCase() ?? '')
+const emptyTitle = computed(() => {
+  if (search.value) return 'No bookings match your search'
+  if (tab.value !== 'all') return `No ${tabLabel.value} bookings`
+  return 'No bookings yet'
+})
+const emptyDesc = computed(() => {
+  if (search.value) return `Nothing matches "${search.value}". Try another name or clear the filters.`
+  if (tab.value !== 'all') return 'Bookings with this status will show up here.'
+  return 'Find a venue for your next event and send a booking request. It will show up here.'
+})
+
+function setTab(key: TabKey) {
+  tab.value = key
+  // Upcoming reads best soonest-first; history reads best latest-first.
+  sort.value = key === 'upcoming' || key === 'pending' || key === 'confirmed' ? 'date_asc' : 'date_desc'
+  router.replace({ query: { ...route.query, status: key === 'all' ? undefined : key } })
+}
+
+watch([search, tab, sort], () => { page.value = 1 })
+watch(lastPage, (lp) => { if (page.value > lp) page.value = lp })
 
 async function loadBookings() {
   loading.value = true
+  loadError.value = ''
   try {
-    const params: any = { per_page: 10, page }
-    if (filterStatus.value) params.status = filterStatus.value
-    if (search.value) params.search = search.value
-
-    const { data } = await api.get('/client/bookings', { params })
-    bookings.value = data.data.data
-    meta.value = { current_page: data.data.current_page, last_page: data.data.last_page }
-
-    if (!filterStatus.value) {
-      await loadStatusCounts()
-    }
+    const { data } = await api.get('/client/bookings', { params: { per_page: 1000 } })
+    bookings.value = data.data?.data || []
+  } catch (e: any) {
+    loadError.value = e?.response?.data?.message || 'Please check your connection and try again.'
   } finally {
     loading.value = false
   }
 }
 
-function resetAndLoad() { page = 1; loadBookings() }
-
-async function loadStatusCounts() {
-  try {
-    const { data } = await api.get('/client/bookings', { params: { per_page: 1000 } })
-    const allBookings = data.data.data
-
-    statusCounts.value = {
-      '': allBookings.length,
-      'pending': allBookings.filter((b: any) => b.status === 'pending').length,
-      'confirmed': allBookings.filter((b: any) => b.status === 'confirmed').length,
-      'completed': allBookings.filter((b: any) => b.status === 'completed').length,
-      'cancelled': allBookings.filter((b: any) => b.status === 'cancelled').length,
-    }
-  } catch (error) {
-    console.error('Failed to load status counts:', error)
-  }
-}
-
-function changePage(p: number) {
-  page = p
-  loadBookings()
-}
-
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-PK', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function isUpcoming(dateStr: string) {
-  const eventDate = new Date(dateStr)
-  const now = new Date()
-  return eventDate > now
-}
-
-function getDaysUntil(dateStr: string) {
-  const eventDate = new Date(dateStr)
-  const now = new Date()
-  const diffTime = eventDate.getTime() - now.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) return 'Event is today!'
-  if (diffDays === 1) return 'Event is tomorrow!'
-  if (diffDays <= 7) return `Event in ${diffDays} days`
-  return `Event in ${Math.floor(diffDays / 7)} weeks`
-}
-
-function getImageUrl(path: string) {
-  return getStorageUrl(path)
-}
-
-function statusClass(s: string) {
-  const m: Record<string, string> = {
-    pending: 'badge-accent',
-    confirmed: 'badge-primary',
-    completed: 'badge-primary',
-    cancelled: 'badge-coral',
-    rejected: 'badge-coral',
-  }
-  return m[s] || 'badge-warm'
-}
-
 onMounted(() => {
+  if (tab.value === 'upcoming' || tab.value === 'pending' || tab.value === 'confirmed') sort.value = 'date_asc'
   loadBookings()
-  topBarActions.set({
-    searchPlaceholder: 'Search bookings...',
-    searchValue: search.value,
-    filterOptions: [
-      { key: 'status', label: 'All Status', options: [
-        { value: 'pending', label: 'Pending' },
-        { value: 'confirmed', label: 'Confirmed' },
-        { value: 'completed', label: 'Completed' },
-        { value: 'cancelled', label: 'Cancelled' },
-      ]},
-    ],
-    initialFilterValues: { status: filterStatus.value },
-    onSearch(q: string) {
-      search.value = q
-      resetAndLoad()
-    },
-    onFilter(key: string, value: string) {
-      if (key === 'status') filterStatus.value = value
-      resetAndLoad()
-    },
-  })
-})
-
-onUnmounted(() => {
-  topBarActions.clear()
 })
 </script>
-
-<style scoped>
-.booking-thumb {
-  width: 5.5rem;
-  height: 5.5rem;
-}
-
-.booking-card {
-  border-left: 4px solid transparent;
-  border-radius: 1rem;
-  background-color: white;
-  box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,0.08));
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  overflow: hidden;
-}
-
-:root.dark .booking-card {
-  background-color: var(--color-warm-800, #292524);
-}
-
-.booking-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-elevated, 0 10px 25px rgba(0,0,0,0.1));
-}
-
-.booking-card-pending   { border-left-color: #F59E0B; }
-.booking-card-confirmed { border-left-color: #10B981; }
-.booking-card-completed { border-left-color: #10B981; }
-.booking-card-cancelled { border-left-color: #F97066; }
-
-@media (max-width: 576px) {
-  .booking-thumb {
-    width: 4rem;
-    height: 4rem;
-  }
-}
-</style>

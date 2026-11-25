@@ -1,7 +1,7 @@
 <template>
   <div ref="rootEl" class="smart-search relative w-full min-w-0" :class="variant === 'hero' ? 'smart-search--hero' : ''">
     <form role="search" class="flex items-center gap-2 w-full min-w-0" :class="variant === 'hero' ? 'smart-hero-field' : 'smart-bar-field'" @submit.prevent="submit()">
-      <AppIcon icon="sparkles" class="shrink-0 w-[18px] h-[18px]" :class="variant === 'hero' ? 'text-primary-600' : 'text-primary-500 dark:text-primary-400'" />
+      <AppIcon icon="search" class="shrink-0 w-[18px] h-[18px] text-ink-muted" aria-hidden="true" />
       <input
         :id="inputId"
         ref="inputEl"
@@ -18,7 +18,8 @@
         :aria-activedescendant="activeIndex >= 0 ? optionId(activeIndex) : undefined"
         :aria-label="ariaLabel"
         :placeholder="placeholder"
-        class="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 text-[0.9375rem] text-warm-800 dark:text-warm-100 placeholder:text-warm-400 dark:placeholder:text-warm-500 truncate"
+        class="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 text-ink placeholder:text-ink-muted truncate"
+        :class="variant === 'hero' ? 'text-base' : 'text-[0.9375rem]'"
         @input="onInput"
         @focus="onFocus"
         @keydown="onKeydown"
@@ -26,7 +27,7 @@
       <button
         v-if="modelValue"
         type="button"
-        class="shrink-0 p-1 rounded-full text-warm-400 hover:text-warm-600 hover:bg-warm-100 dark:hover:bg-warm-700 dark:hover:text-warm-200"
+        class="shrink-0 w-8 h-8 inline-flex items-center justify-center rounded-md text-ink-muted hover:text-ink hover:bg-surface-hover"
         aria-label="Clear search"
         @click="clear"
       >
@@ -34,8 +35,8 @@
       </button>
       <button
         type="submit"
-        class="shrink-0 inline-flex items-center gap-1.5 rounded-xl font-semibold text-sm text-white bg-primary-600 hover:bg-primary-700 transition-colors"
-        :class="variant === 'hero' ? 'px-4 py-2.5' : 'px-3 py-2'"
+        class="smart-submit shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg font-semibold text-sm"
+        :class="variant === 'hero' ? 'h-11 px-3 sm:px-5' : 'h-9 px-3'"
         aria-label="Search"
       >
         <AppIcon icon="search" class="w-4 h-4" />
@@ -47,10 +48,10 @@
       <div
         v-show="isOpen"
         ref="panelEl"
-        class="fixed z-[900] rounded-xl border border-warm-200 dark:border-warm-700 bg-white dark:bg-warm-800 shadow-elevated overflow-hidden text-left"
+        class="fixed z-[900] rounded-xl border border-line bg-surface-raised shadow-elevated overflow-hidden text-left"
         :style="panelStyle"
       >
-        <p v-if="!modelValue.trim()" class="px-3 pt-2.5 pb-1 text-[0.6875rem] font-bold uppercase tracking-wide text-warm-400 dark:text-warm-500">
+        <p v-if="!modelValue.trim()" class="px-3 pt-2.5 pb-1 eyebrow">
           Try searching for
         </p>
         <ul :id="listId" role="listbox" :aria-label="`${ariaLabel} suggestions`" class="max-h-[min(60vh,22rem)] overflow-y-auto overscroll-contain py-1">
@@ -61,7 +62,7 @@
             role="option"
             :aria-selected="i === activeIndex ? 'true' : 'false'"
             class="flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none min-w-0"
-            :class="i === activeIndex ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-warm-50 dark:hover:bg-warm-700/60'"
+            :class="i === activeIndex ? 'bg-surface-hover' : ''"
             @mousedown.prevent
             @mousemove="activeIndex = i"
             @click="pick(s)"
@@ -70,10 +71,10 @@
               <AppIcon :icon="iconFor(s.type)" class="w-4 h-4" />
             </span>
             <span class="flex-1 min-w-0">
-              <span class="block truncate text-sm font-medium text-warm-800 dark:text-warm-100">{{ s.label }}</span>
-              <span v-if="s.type === 'venue' && s.city" class="block truncate text-xs text-warm-500 dark:text-warm-400">{{ s.city }}</span>
+              <span class="block truncate text-sm font-medium text-ink">{{ s.label }}</span>
+              <span v-if="s.type === 'venue' && s.city" class="block truncate text-xs text-ink-muted">{{ s.city }}</span>
             </span>
-            <span class="shrink-0 text-[0.6875rem] font-semibold text-warm-400 dark:text-warm-500">{{ typeLabel(s.type) }}</span>
+            <span class="shrink-0 text-xs font-medium text-ink-muted">{{ typeLabel(s.type) }}</span>
           </li>
         </ul>
       </div>
@@ -271,10 +272,10 @@ const iconFor = (t: SuggestionType) => ICONS[t]
 const typeLabel = (t: SuggestionType) => LABELS[t]
 function iconBg(t: SuggestionType) {
   switch (t) {
-    case 'venue': return 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-    case 'city': return 'bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400'
-    case 'category': return 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-    default: return 'bg-warm-100 text-warm-500 dark:bg-warm-700 dark:text-warm-300'
+    case 'venue': return 'tone-brand'
+    case 'city': return 'tone-info'
+    case 'category': return 'tone-warning'
+    default: return 'tone-neutral'
   }
 }
 
@@ -283,34 +284,35 @@ defineExpose({ focus: () => inputEl.value?.focus() })
 
 <style scoped>
 .smart-bar-field {
-  padding: 0.375rem 0.375rem 0.375rem 0.875rem;
-  border-radius: 0.75rem;
-  transition: box-shadow 0.15s;
+  min-height: 44px;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid rgb(var(--c-line-strong) / 0.55);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.smart-bar-field:hover { border-color: var(--line-strong); }
+
+.smart-hero-field {
+  min-height: 56px;
+  padding: 0.375rem 0.375rem 0.375rem 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid rgb(var(--c-line-strong) / 0.55);
+  box-shadow: var(--shadow-md);
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 
 /* The focus ring goes around the whole field, not the bare input inside it. */
-.smart-search input:focus-visible {
-  outline: none;
-}
-
-.smart-bar-field:focus-within {
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.45);
-}
-
+.smart-search input:focus-visible { outline: none; }
+.smart-bar-field:focus-within,
 .smart-hero-field:focus-within {
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25), 0 0 0 3px rgba(110, 231, 183, 0.7);
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 1px var(--focus-ring);
 }
 
-.smart-hero-field {
-  background: #fff;
-  border-radius: 1rem;
-  padding: 0.4375rem 0.4375rem 0.4375rem 1rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
-}
-
-:root.dark .smart-hero-field {
-  background: #292524;
-}
+.smart-submit { background: var(--brand-strong); color: var(--on-brand); transition: background-color .15s ease; }
+.smart-submit:hover { background: var(--brand-hover); }
 
 /* Hide the browser's own clear button; we draw our own. */
 input[type='search']::-webkit-search-cancel-button {

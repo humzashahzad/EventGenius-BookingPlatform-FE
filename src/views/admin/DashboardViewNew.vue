@@ -1,365 +1,371 @@
 <template>
-  <div class="content-container">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between mb-8">
+  <div class="space-y-6">
+    <header class="page-header !mb-0">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-warm-50">Dashboard</h1>
-        <p class="text-warm-500 dark:text-warm-400 mt-1">Welcome back, {{ authStore.user?.name?.split(' ')[0] }}. Here's what's happening today.</p>
+        <p class="page-eyebrow">{{ today }}</p>
+        <h1 class="page-title">Welcome back, {{ authStore.user?.name?.split(' ')[0] || 'admin' }}</h1>
+        <p class="page-subtitle">
+          <template v-if="loading">Loading platform overview…</template>
+          <template v-else-if="pendingTotal">{{ pendingTotal }} item{{ pendingTotal === 1 ? '' : 's' }} need your attention.</template>
+          <template v-else>Everything is under control.</template>
+        </p>
       </div>
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-warm-400 dark:text-warm-500 hidden sm:block">{{ today }}</span>
-        <RouterLink to="/support/stores" class="btn-outline inline-flex items-center gap-1.5 text-sm">
-          <AppIcon icon="building" class="w-4 h-4" />
-          Review Stores
-        </RouterLink>
+      <div class="page-header-actions">
+        <RouterLink to="/support/bookings" class="btn-secondary"><AppIcon icon="calendar-event" class="w-4 h-4" />Bookings</RouterLink>
+        <RouterLink to="/support/stores" class="btn-primary"><AppIcon icon="building-store" class="w-4 h-4" />Review stores</RouterLink>
       </div>
-    </div>
+    </header>
 
-    <!-- Loading skeleton -->
-    <div v-if="loading">
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div v-for="i in 6" :key="i" class="h-24 rounded-2xl bg-warm-200 dark:bg-warm-800 animate-pulse"></div>
-      </div>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="h-64 rounded-2xl bg-warm-200 dark:bg-warm-800 animate-pulse"></div>
-        <div class="h-64 rounded-2xl bg-warm-200 dark:bg-warm-800 animate-pulse"></div>
+    <div v-if="loadError && !loading" class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
+        <p class="empty-state-title">Couldn't load the dashboard</p>
+        <p class="empty-state-desc">{{ loadError }}</p>
+        <div class="empty-state-actions"><button class="btn-primary" @click="load">Try again</button></div>
       </div>
     </div>
 
     <template v-else>
-      <!-- Stat Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div class="stat-card group">
-          <div class="stat-icon bg-primary-50 dark:bg-primary-900/30">
-            <AppIcon icon="users" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
-          </div>
-          <div>
-            <h4 class="stat-value">{{ stats.total_clients }}</h4>
-            <span class="stat-label">Total Clients</span>
-          </div>
-        </div>
-        <div class="stat-card group">
-          <div class="stat-icon bg-accent/10 dark:bg-accent/20">
-            <AppIcon icon="building" class="w-5 h-5 text-accent dark:text-amber-400" />
-          </div>
-          <div>
-            <h4 class="stat-value">{{ stats.total_stores }}</h4>
-            <span class="stat-label">Total Stores</span>
-          </div>
-        </div>
-        <div class="stat-card group">
-          <div class="stat-icon bg-amber-50 dark:bg-amber-900/30">
-            <AppIcon icon="clock" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
-          </div>
-          <div>
-            <h4 class="stat-value text-amber-600 dark:text-amber-400 flex items-center gap-2">
-              {{ stats.pending_stores }}
-              <span v-if="stats.pending_stores > 0" class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white dark:bg-warm-800 text-amber-600 dark:text-amber-400 text-[10px] font-bold shadow-soft">!</span>
-            </h4>
-            <span class="stat-label">Pending Stores</span>
-          </div>
-        </div>
-        <div class="stat-card group">
-          <div class="stat-icon bg-primary-50 dark:bg-primary-900/30">
-            <AppIcon icon="map-pin" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
-          </div>
-          <div>
-            <h4 class="stat-value">{{ stats.total_venues }}</h4>
-            <span class="stat-label">Total Venues</span>
-          </div>
-        </div>
-        <div class="stat-card group">
-          <div class="stat-icon bg-emerald-50 dark:bg-emerald-900/30">
-            <AppIcon icon="calendar-event" class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div>
-            <h4 class="stat-value">{{ stats.total_bookings }}</h4>
-            <span class="stat-label">Bookings</span>
-          </div>
-        </div>
-        <div class="stat-card group">
-          <div class="stat-icon bg-emerald-50 dark:bg-emerald-900/30">
-            <AppIcon icon="dollar-sign" class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div>
-            <h5 class="stat-value text-emerald-600 dark:text-emerald-400">{{ formatRevenue(stats.total_revenue) }}</h5>
-            <span class="stat-label">Revenue</span>
-          </div>
-        </div>
-      </div>
+      <!-- KPIs -->
+      <section aria-label="Platform figures" class="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-4">
+        <KpiTile label="Clients" icon="users" tone="info" :loading="loading" to="/support/users"
+          :value="stats.total_clients.toLocaleString('en-PK')" helper="registered customers" />
+        <KpiTile label="Stores" icon="building-store" tone="neutral" :loading="loading" to="/support/stores"
+          :value="stats.total_stores" :helper="`${stats.pending_stores} awaiting approval`" />
+        <KpiTile label="Pending approvals" icon="clock" :tone="stats.pending_stores ? 'warning' : 'success'" :loading="loading" to="/support/stores?status=pending"
+          :value="stats.pending_stores" :helper="stats.pending_stores ? 'Stores waiting to go live' : 'Nothing waiting'" />
+        <KpiTile label="Venues" icon="building" tone="brand" :loading="loading" to="/support/venues"
+          :value="stats.total_venues" :helper="stats.total_stores ? `${(stats.total_venues / stats.total_stores).toFixed(1)} per store` : ''" />
+        <KpiTile label="Bookings" icon="calendar-event" tone="info" :loading="loading || bookingsLoading" to="/support/bookings"
+          :value="stats.total_bookings.toLocaleString('en-PK')" :delta="kpi.bookings.delta" :helper="`${kpi.bookings.cur} in last 30 days`" />
+        <KpiTile label="Revenue" icon="wallet" tone="success" :loading="loading || bookingsLoading"
+          unit="PKR" :value="compactNumber(stats.total_revenue)" :title="formatPKR(stats.total_revenue)"
+          :delta="kpi.revenue.delta" :helper="`${compactPKR(kpi.revenue.cur)} in 30 days`" />
+      </section>
+      <p class="-mt-3 text-xs text-ink-muted">Changes compare the last 30 days with the 30 days before. Revenue is completed payments.</p>
 
-      <!-- Charts Row -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div class="card">
-          <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
-            <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Revenue Trend (Last 7 Days)</h5>
-          </div>
-          <div class="p-5">
-            <LineChart v-if="hasRevenue" :data="revenueData" color="#10B981" />
-            <div v-else class="empty-state h-[300px]">
-              <div class="empty-state-icon"><AppIcon icon="currency-dollar" class="w-6 h-6" /></div>
-              <p class="text-sm font-medium text-warm-700 dark:text-warm-200">No payments in the last 7 days</p>
-              <p class="text-xs text-warm-500 mt-1">Completed PayFast payments appear here.</p>
+      <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+        <!-- Trend -->
+        <section class="card xl:col-span-3 min-w-0">
+          <div class="card-header flex-wrap gap-3">
+            <div class="min-w-0">
+              <h2 class="card-title">{{ metric === 'revenue' ? 'Platform revenue' : 'New bookings' }}</h2>
+              <p class="card-subtitle">{{ metric === 'revenue' ? 'Paid booking value' : 'Booking requests' }} by {{ range === '12m' ? 'month' : 'day' }}</p>
             </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
-            <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Bookings Overview (Last 7 Days)</h5>
-          </div>
-          <div class="p-5">
-            <BarChart v-if="hasBookings" :data="bookingsData" />
-            <div v-else class="empty-state h-[300px]">
-              <div class="empty-state-icon"><AppIcon icon="calendar-event" class="w-6 h-6" /></div>
-              <p class="text-sm font-medium text-warm-700 dark:text-warm-200">No bookings in the last 7 days</p>
-              <p class="text-xs text-warm-500 mt-1">New booking requests appear here.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Donut + Activity -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div class="card">
-          <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
-            <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Booking Status Distribution</h5>
-          </div>
-          <div class="p-5">
-            <DonutChart v-if="bookingStatusData.length" :data="bookingStatusData" />
-            <div v-else class="empty-state h-[300px]">
-              <div class="empty-state-icon"><AppIcon icon="calendar-event" class="w-6 h-6" /></div>
-              <p class="text-sm font-medium text-warm-700 dark:text-warm-200">No bookings yet</p>
-              <p class="text-xs text-warm-500 mt-1">Status breakdown appears once bookings exist.</p>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="px-5 pt-5 pb-2 border-b border-warm-100 dark:border-warm-800">
-            <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Recent Activity</h5>
-          </div>
-          <div class="p-5">
-            <p v-if="!recentActivity.length" class="text-sm text-warm-500 py-8 text-center">No activity yet.</p>
-            <div v-else class="space-y-4">
-              <div v-for="(activity, index) in recentActivity" :key="index" class="flex gap-3 relative">
-                <!-- Timeline line -->
-                <div v-if="index < recentActivity.length - 1" class="absolute left-[13px] top-8 bottom-0 w-0.5 bg-warm-100 dark:bg-warm-800"></div>
-                <!-- Indicator -->
-                <div class="w-7 h-7 rounded-full bg-primary-50 dark:bg-primary-900/30 border-2 border-white dark:border-warm-900 flex items-center justify-center flex-shrink-0 z-10 shadow-soft">
-                  <AppIcon v-if="activity.type === 'booking'" icon="calendar-event" class="w-3 h-3 text-primary-600 dark:text-primary-400" />
-                  <AppIcon v-else-if="activity.type === 'payment'" icon="credit-card" class="w-3 h-3 text-primary-600 dark:text-primary-400" />
-                  <AppIcon v-else-if="activity.type === 'store'" icon="building" class="w-3 h-3 text-primary-600 dark:text-primary-400" />
-                  <AppIcon v-else icon="user" class="w-3 h-3 text-primary-600 dark:text-primary-400" />
-                </div>
-                <!-- Content -->
-                <div class="flex-1 pt-0.5">
-                  <RouterLink :to="activity.link" class="block text-sm font-medium text-warm-800 dark:text-warm-200 mb-0.5 hover:text-primary-600">{{ activity.text }}</RouterLink>
-                  <span class="text-xs text-warm-400 dark:text-warm-500">{{ activity.time }}</span>
-                </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="segmented" role="group" aria-label="Metric">
+                <button type="button" :aria-pressed="metric === 'revenue'" @click="metric = 'revenue'">Revenue</button>
+                <button type="button" :aria-pressed="metric === 'bookings'" @click="metric = 'bookings'">Bookings</button>
+              </div>
+              <div class="segmented" role="group" aria-label="Range">
+                <button type="button" :aria-pressed="range === '30d'" @click="range = '30d'">30 days</button>
+                <button type="button" :aria-pressed="range === '12m'" @click="range = '12m'">12 months</button>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Tables -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <!-- Recent Bookings -->
-        <div class="card">
-          <div class="px-5 pt-5 pb-3 flex items-center justify-between border-b border-warm-100 dark:border-warm-800">
-            <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Recent Bookings</h5>
-            <RouterLink to="/support/bookings" class="btn-ghost text-xs inline-flex items-center gap-1">
-              View all <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
-            </RouterLink>
-          </div>
-          <div v-if="!recentBookings.length" class="p-5 text-center py-8">
-            <div class="w-12 h-12 rounded-2xl bg-warm-100 dark:bg-warm-800 flex items-center justify-center mx-auto mb-3">
-              <AppIcon icon="calendar-event" class="w-6 h-6 text-warm-400" />
-            </div>
-            <p class="text-sm text-warm-500 dark:text-warm-400">No bookings yet</p>
-          </div>
-          <div v-else class="table-wrapper">
-            <table class="w-full">
-              <thead>
-                <tr class="table-header">
-                  <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Client</th>
-                  <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Venue</th>
-                  <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Status</th>
-                  <th class="text-right px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="b in recentBookings" :key="b.id" class="table-row">
-                  <td class="px-5 py-3">
-                    <div class="flex items-center gap-2">
-                      <div class="w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
-                        <span class="text-[10px] font-bold text-primary-700 dark:text-primary-300">{{ b.client?.name?.[0]?.toUpperCase() }}</span>
-                      </div>
-                      <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ b.client?.name }}</span>
-                    </div>
-                  </td>
-                  <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400">{{ b.venue?.name }}</td>
-                  <td class="px-5 py-3"><span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span></td>
-                  <td class="px-5 py-3 text-right text-sm font-medium text-warm-700 dark:text-warm-300 whitespace-nowrap">{{ formatPKR(b.total_amount) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Recent Stores -->
-        <div class="card">
-          <div class="px-5 pt-5 pb-3 flex items-center justify-between border-b border-warm-100 dark:border-warm-800">
-            <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Recent Stores</h5>
-            <RouterLink to="/support/stores" class="btn-ghost text-xs inline-flex items-center gap-1">
-              View all <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
-            </RouterLink>
-          </div>
-          <div v-if="!recentStores.length" class="p-5 text-center py-8">
-            <div class="w-12 h-12 rounded-2xl bg-warm-100 dark:bg-warm-800 flex items-center justify-center mx-auto mb-3">
-              <AppIcon icon="building" class="w-6 h-6 text-warm-400" />
-            </div>
-            <p class="text-sm text-warm-500 dark:text-warm-400">No stores yet</p>
-          </div>
-          <div v-else class="p-5">
-            <div class="divide-y divide-warm-100 dark:divide-warm-800">
-              <div v-for="s in recentStores" :key="s.id" class="flex items-center justify-between py-3 first:pt-0 last:pb-0 hover:bg-warm-50 dark:hover:bg-warm-800/50 -mx-2 px-2 rounded-xl transition-colors">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center flex-shrink-0">
-                    <span class="text-xs font-bold text-accent dark:text-amber-400">{{ s.name?.[0]?.toUpperCase() }}</span>
-                  </div>
-                  <div>
-                    <h6 class="text-sm font-semibold text-warm-800 dark:text-warm-200 mb-0">{{ s.name }}</h6>
-                    <span class="text-xs text-warm-400 dark:text-warm-500">{{ s.owner?.email }}</span>
-                  </div>
-                </div>
-                <span :class="storeStatusClass(s.status)" class="capitalize">{{ s.status }}</span>
+          <div class="card-body">
+            <div v-if="loading || bookingsLoading" class="skeleton h-[300px] w-full" />
+            <template v-else-if="bookings.length">
+              <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
+                <p class="text-2xl font-display font-bold text-ink num">{{ metric === 'revenue' ? compactPKR(chartTotal) : chartTotal.toLocaleString('en-PK') }}</p>
+                <span v-if="chartDelta !== null" :class="chartDelta >= 0 ? 'stat-delta-up' : 'stat-delta-down'" class="text-xs">
+                  <AppIcon :icon="chartDelta >= 0 ? 'trending-up' : 'trending-down'" class="w-3 h-3" />{{ Math.abs(chartDelta).toFixed(0) }}%
+                </span>
+                <span class="text-xs text-ink-muted">{{ range === '12m' ? 'last 12 months vs the 12 before' : 'last 30 days vs the 30 before' }}</span>
               </div>
-            </div>
+              <TrendBars :data="chartData" :height="260" :color="metric === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)'"
+                :format="metric === 'revenue' ? (v: number) => formatPKR(v) : (v: number) => `${v} booking${v === 1 ? '' : 's'}`"
+                :aria-label="metric === 'revenue' ? 'Platform revenue' : 'New bookings'" />
+            </template>
+            <!-- Fallback: 7-day series from the dashboard endpoint -->
+            <template v-else>
+              <p class="text-xs text-ink-muted mb-3">Showing the last 7 days.</p>
+              <TrendBars :data="fallbackData" :height="260" :color="metric === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)'"
+                :format="metric === 'revenue' ? (v: number) => formatPKR(v) : (v: number) => String(v)" aria-label="Last 7 days" />
+            </template>
           </div>
-        </div>
+        </section>
+
+        <!-- Pending actions -->
+        <section class="card xl:col-span-2 min-w-0 flex flex-col">
+          <div class="card-header"><div><h2 class="card-title">Pending actions</h2><p class="card-subtitle">Work waiting for the support team</p></div></div>
+          <ul class="divide-y divide-line flex-1">
+            <li v-for="a in actions" :key="a.label">
+              <RouterLink :to="a.to" class="flex items-center gap-3 px-5 py-3.5 hover:bg-surface-hover">
+                <span class="icon-chip icon-chip-sm" :class="a.count ? a.tone : 'tone-neutral'"><AppIcon :icon="a.icon" class="w-4 h-4" /></span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium text-ink">{{ a.label }}</p>
+                  <p class="text-xs text-ink-muted truncate">{{ a.hint }}</p>
+                </div>
+                <span v-if="a.loading" class="skeleton h-5 w-8" />
+                <span v-else class="text-lg font-display font-bold num" :class="a.count ? 'text-ink' : 'text-ink-muted'">{{ a.count }}</span>
+                <AppIcon icon="chevron-right" class="w-4 h-4 text-ink-muted" />
+              </RouterLink>
+            </li>
+          </ul>
+          <div v-if="pendingStoresList.length" class="border-t border-line px-5 py-3">
+            <p class="eyebrow mb-2">Stores waiting</p>
+            <ul class="space-y-2">
+              <li v-for="s in pendingStoresList" :key="s.id" class="flex items-center justify-between gap-3 text-sm">
+                <span class="truncate text-ink">{{ s.name }}</span>
+                <span class="text-xs text-ink-muted shrink-0">{{ timeAgo(s.created_at) }}</span>
+              </li>
+            </ul>
+          </div>
+        </section>
       </div>
 
-      <!-- Quick Admin Actions -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <RouterLink to="/support/users" class="card-hover flex items-center gap-3 p-4 group">
-          <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center group-hover:bg-primary-100 dark:group-hover:bg-primary-900/50 transition-colors flex-shrink-0">
-            <AppIcon icon="users" class="w-5 h-5 text-primary-600 dark:text-primary-400" />
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <!-- Status distribution -->
+        <section class="card min-w-0">
+          <div class="card-header"><div><h2 class="card-title">Bookings by status</h2><p class="card-subtitle">All time · {{ statusTotal.toLocaleString('en-PK') }} bookings</p></div></div>
+          <div class="card-body">
+            <div v-if="loading" class="space-y-3"><div v-for="i in 5" :key="i" class="skeleton h-6 w-full" /></div>
+            <template v-else-if="statusRows.length">
+              <div class="flex h-3 rounded-full overflow-hidden gap-[2px] mb-5" role="img" :aria-label="statusRows.map(r => `${r.label} ${r.pct}%`).join(', ')">
+                <div v-for="r in statusRows" :key="r.key" :style="{ width: r.pct + '%', backgroundColor: r.color }" />
+              </div>
+              <ul class="space-y-2.5">
+                <li v-for="r in statusRows" :key="r.key" class="flex items-center justify-between gap-3 text-sm">
+                  <span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" :style="{ backgroundColor: r.color }" aria-hidden="true" />{{ r.label }}</span>
+                  <span class="num text-ink font-medium">{{ r.value.toLocaleString('en-PK') }} <span class="text-ink-muted font-normal text-xs w-10 inline-block text-right">{{ r.pct }}%</span></span>
+                </li>
+              </ul>
+            </template>
+            <p v-else class="text-sm text-ink-muted">No bookings yet.</p>
           </div>
-          <div>
-            <h6 class="text-sm font-semibold text-warm-800 dark:text-warm-200 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">Manage Users</h6>
-            <span class="text-xs text-warm-500 dark:text-warm-400">{{ stats.total_clients }} clients</span>
-          </div>
-        </RouterLink>
+        </section>
 
-        <RouterLink to="/support/stores" class="card-hover flex items-center gap-3 p-4 group">
-          <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center group-hover:bg-amber-100 dark:group-hover:bg-amber-900/50 transition-colors flex-shrink-0 relative">
-            <AppIcon icon="building" class="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            <span v-if="stats.pending_stores > 0" class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-coral text-white text-[10px] font-bold flex items-center justify-center shadow-soft">{{ stats.pending_stores }}</span>
+        <!-- Activity -->
+        <section class="card xl:col-span-2 min-w-0">
+          <div class="card-header"><div><h2 class="card-title">Recent activity</h2><p class="card-subtitle">Latest bookings, payments and sign-ups</p></div></div>
+          <div v-if="loading" class="p-5 space-y-3"><div v-for="i in 6" :key="i" class="skeleton h-8 w-full" /></div>
+          <div v-else-if="!activityFeed.length" class="empty-state !py-10">
+            <div class="empty-state-icon"><AppIcon icon="inbox" class="w-5 h-5" /></div>
+            <p class="empty-state-title">No activity yet</p>
+            <p class="empty-state-desc">Bookings, payments and new stores appear here.</p>
+            <div class="empty-state-actions"><RouterLink to="/support/bookings" class="btn-secondary btn-sm">All bookings</RouterLink></div>
           </div>
-          <div>
-            <h6 class="text-sm font-semibold text-warm-800 dark:text-warm-200 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">Review Stores</h6>
-            <span class="text-xs text-warm-500 dark:text-warm-400">{{ stats.pending_stores }} awaiting</span>
-          </div>
-        </RouterLink>
+          <ol v-else class="divide-y divide-line">
+            <li v-for="(a, i) in activityFeed.slice(0, 8)" :key="i">
+              <RouterLink :to="a.link || '/support/dashboard'" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-hover">
+                <span class="icon-chip icon-chip-sm" :class="ACT[a.type]?.tone || 'tone-neutral'"><AppIcon :icon="ACT[a.type]?.icon || 'bell'" class="w-4 h-4" /></span>
+                <p class="text-sm text-ink-secondary flex-1 min-w-0 truncate">{{ a.text }}</p>
+                <time class="text-xs text-ink-muted shrink-0" :datetime="a.time">{{ timeAgo(a.time) }}</time>
+              </RouterLink>
+            </li>
+          </ol>
+        </section>
+      </div>
 
-        <RouterLink to="/support/venues" class="card-hover flex items-center gap-3 p-4 group">
-          <div class="w-10 h-10 rounded-xl bg-accent/10 dark:bg-accent/20 flex items-center justify-center group-hover:bg-accent/20 dark:group-hover:bg-accent/30 transition-colors flex-shrink-0">
-            <AppIcon icon="map-pin" class="w-5 h-5 text-accent dark:text-amber-400" />
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <!-- Recent bookings -->
+        <section class="card xl:col-span-2 min-w-0 overflow-hidden">
+          <div class="card-header">
+            <div><h2 class="card-title">Recent bookings</h2><p class="card-subtitle">Latest 10 across all stores</p></div>
+            <RouterLink to="/support/bookings" class="btn-ghost btn-sm">View all <AppIcon icon="chevron-right" class="w-4 h-4" /></RouterLink>
           </div>
-          <div>
-            <h6 class="text-sm font-semibold text-warm-800 dark:text-warm-200 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">All Venues</h6>
-            <span class="text-xs text-warm-500 dark:text-warm-400">{{ stats.total_venues }} venues</span>
+          <div v-if="loading" class="p-4 space-y-3"><div v-for="i in 5" :key="i" class="skeleton h-9 w-full" /></div>
+          <div v-else-if="!recentBookings.length" class="empty-state !py-10">
+            <div class="empty-state-icon"><AppIcon icon="calendar-event" class="w-5 h-5" /></div>
+            <p class="empty-state-title">No bookings yet</p>
+            <p class="empty-state-desc">New bookings across the platform show up here.</p>
+            <div class="empty-state-actions"><RouterLink to="/support/venues" class="btn-secondary btn-sm">Venues</RouterLink></div>
           </div>
-        </RouterLink>
+          <template v-else>
+            <ul class="md:hidden divide-y divide-line">
+              <li v-for="b in recentBookings" :key="b.id" class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-ink truncate">{{ b.client?.name }}</p>
+                  <p class="text-xs text-ink-muted truncate">{{ b.venue?.name }} · {{ b.store?.name }}</p>
+                </div>
+                <div class="text-right shrink-0 space-y-1">
+                  <p class="text-sm font-medium text-ink num">{{ compactPKR(b.total_amount) }}</p>
+                  <span :class="statusBadgeClass(b.status)">{{ statusLabel(b.status) }}</span>
+                </div>
+              </li>
+            </ul>
+            <div class="hidden md:block table-wrapper">
+              <table class="data-table is-compact">
+                <thead><tr><th>Client &amp; venue</th><th>Status</th><th class="cell-num">Amount</th></tr></thead>
+                <tbody>
+                  <tr v-for="b in recentBookings" :key="b.id">
+                    <td>
+                      <p class="cell-primary truncate max-w-[320px]">{{ b.client?.name }} <span class="ref text-xs font-normal text-ink-muted">{{ b.booking_number }}</span></p>
+                      <p class="text-xs text-ink-muted truncate max-w-[320px]">{{ b.venue?.name }} · {{ b.store?.name }} · {{ timeAgo(b.created_at) }}</p>
+                    </td>
+                    <td><span :class="statusBadgeClass(b.status)">{{ statusLabel(b.status) }}</span></td>
+                    <td class="cell-num text-ink font-medium">{{ formatPKR(b.total_amount) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </section>
 
-        <RouterLink to="/support/bookings" class="card-hover flex items-center gap-3 p-4 group">
-          <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors flex-shrink-0">
-            <AppIcon icon="file-text" class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        <!-- Recent stores -->
+        <section class="card min-w-0">
+          <div class="card-header">
+            <div><h2 class="card-title">New stores</h2><p class="card-subtitle">Latest sign-ups</p></div>
+            <RouterLink to="/support/stores" class="btn-ghost btn-sm">View all <AppIcon icon="chevron-right" class="w-4 h-4" /></RouterLink>
           </div>
-          <div>
-            <h6 class="text-sm font-semibold text-warm-800 dark:text-warm-200 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">All Bookings</h6>
-            <span class="text-xs text-warm-500 dark:text-warm-400">{{ stats.total_bookings }} total</span>
+          <div v-if="loading" class="p-4 space-y-3"><div v-for="i in 4" :key="i" class="skeleton h-10 w-full" /></div>
+          <div v-else-if="!recentStores.length" class="empty-state !py-10">
+            <div class="empty-state-icon"><AppIcon icon="building-store" class="w-5 h-5" /></div>
+            <p class="empty-state-title">No stores yet</p>
+            <p class="empty-state-desc">Store owners who sign up appear here.</p>
+            <div class="empty-state-actions"><RouterLink to="/support/stores" class="btn-secondary btn-sm">Stores</RouterLink></div>
           </div>
-        </RouterLink>
+          <ul v-else class="divide-y divide-line">
+            <li v-for="s in recentStores" :key="s.id" class="flex items-center gap-3 px-5 py-3">
+              <span class="avatar w-9 h-9 text-xs shrink-0">{{ initials(s.name) }}</span>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-ink truncate">{{ s.name }}</p>
+                <p class="text-xs text-ink-muted truncate">{{ s.owner?.email }}</p>
+              </div>
+              <span :class="statusBadgeClass(s.status)">{{ statusLabel(s.status) }}</span>
+            </li>
+          </ul>
+        </section>
       </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { formatPKR } from '@/lib/format'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'
+import { formatPKR } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
+import { statusBadgeClass, statusLabel } from '@/lib/status'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import LineChart from '@/components/charts/LineChart.vue'
-import BarChart from '@/components/charts/BarChart.vue'
-import DonutChart from '@/components/charts/DonutChart.vue'
+import KpiTile from '@/components/dashboard/KpiTile.vue'
+import TrendBars from '@/components/dashboard/TrendBars.vue'
+import { compactNumber, compactPKR, pctDelta, dayBuckets, monthBuckets, fillBuckets, sumBetween, timeAgo, initials } from '@/components/dashboard/metrics'
 
 const authStore = useAuthStore()
 const loading = ref(true)
+const loadError = ref('')
 const stats = reactive({ total_clients: 0, total_stores: 0, pending_stores: 0, total_venues: 0, total_bookings: 0, total_revenue: 0 })
 const recentBookings = ref<any[]>([])
 const recentStores = ref<any[]>([])
-
-const today = new Date().toLocaleDateString('en-PK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-
-// Real data from GET /admin/dashboard
 const charts = ref<any>({})
 const statusCounts = ref<Record<string, number>>({})
 const activityFeed = ref<any[]>([])
+const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-const revenueData = computed(() => (charts.value.revenue_trend ?? []).map((d: any) => ({ label: d.label, value: d.value })))
-const bookingsData = computed(() => (charts.value.bookings_trend ?? []).map((d: any) => ({ label: d.label, value: d.value })))
-const hasRevenue = computed(() => revenueData.value.some((d: any) => d.value > 0))
-const hasBookings = computed(() => bookingsData.value.some((d: any) => d.value > 0))
+const bookings = ref<any[]>([])
+const bookingsLoading = ref(true)
+const pendingStoresList = ref<any[]>([])
+const reviewHealth = ref<{ loading: boolean; flagged: number | null; hidden: number | null }>({ loading: true, flagged: null, hidden: null })
 
+const metric = ref<'revenue' | 'bookings'>('revenue')
+const range = ref<'30d' | '12m'>('12m')
+
+const ACT: Record<string, { icon: string; tone: string }> = {
+  booking: { icon: 'calendar-event', tone: 'tone-info' },
+  payment: { icon: 'wallet', tone: 'tone-success' },
+  store: { icon: 'building-store', tone: 'tone-warning' },
+  user: { icon: 'user-plus', tone: 'tone-brand' },
+  review: { icon: 'star', tone: 'tone-warning' },
+}
+
+// Booking status colours follow the status badges (one colour per status).
 const STATUS_COLORS: Record<string, string> = {
-  confirmed: '#10B981', pending: '#F59E0B', completed: '#047857', cancelled: '#A8A29E', rejected: '#F97066',
+  pending: '#f59e0b', confirmed: '#10b981', completed: '#3b82f6', cancelled: '#a8a29e', rejected: '#ef4444',
 }
-const bookingStatusData = computed(() =>
-  Object.entries(statusCounts.value)
-    .filter(([, v]) => Number(v) > 0)
-    .map(([k, v]) => ({ label: k.charAt(0).toUpperCase() + k.slice(1), value: Number(v), color: STATUS_COLORS[k] ?? '#78716C' })),
-)
+const statusTotal = computed(() => Object.values(statusCounts.value).reduce((s, v) => s + Number(v), 0))
+const statusRows = computed(() => ['pending', 'confirmed', 'completed', 'cancelled', 'rejected', ...Object.keys(statusCounts.value)]
+  .filter((k, i, a) => a.indexOf(k) === i && Number(statusCounts.value[k]) > 0)
+  .map(k => ({ key: k, label: statusLabel(k), value: Number(statusCounts.value[k]), color: STATUS_COLORS[k] ?? '#78716c', pct: Math.round((Number(statusCounts.value[k]) / (statusTotal.value || 1)) * 100) })))
 
-function timeAgo(iso: string) {
-  const diff = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)} h ago`
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-}
-const recentActivity = computed(() => activityFeed.value.map((a: any) => ({ ...a, time: timeAgo(a.time) })))
+const paidValue = (b: any) => (b.payment_status === 'paid' ? Number(b.total_amount) || 0 : 0)
+const kpi = computed(() => {
+  const DAY = 86_400_000
+  const end = new Date(Date.now() + 1)
+  const mid = new Date(end.getTime() - 30 * DAY)
+  const start = new Date(mid.getTime() - 30 * DAY)
+  const pair = (date: (r: any) => string | null, val?: (r: any) => number) => {
+    const cur = sumBetween(bookings.value, date, mid, end, val)
+    const prev = sumBetween(bookings.value, date, start, mid, val)
+    return { cur, delta: bookingsLoading.value || !bookings.value.length ? null : pctDelta(cur, prev) }
+  }
+  return { bookings: pair(r => r.created_at), revenue: pair(r => r.paid_at, paidValue) }
+})
+
+const chartBuckets = computed(() => {
+  const date = (r: any) => (metric.value === 'revenue' ? r.paid_at : r.created_at)
+  const val = metric.value === 'revenue' ? paidValue : () => 1
+  if (range.value === '12m') {
+    const all = fillBuckets(monthBuckets(24), bookings.value, date, val)
+    return { cur: all.slice(12), prev: all.slice(0, 12) }
+  }
+  const all = fillBuckets(dayBuckets(60), bookings.value, date, val)
+  return { cur: all.slice(30), prev: all.slice(0, 30) }
+})
+const chartData = computed(() => chartBuckets.value.cur.map(b => ({ label: b.label, title: b.title, value: b.value })))
+const chartTotal = computed(() => chartBuckets.value.cur.reduce((s, b) => s + b.value, 0))
+const chartDelta = computed(() => pctDelta(chartTotal.value, chartBuckets.value.prev.reduce((s, b) => s + b.value, 0)))
+const fallbackData = computed(() => ((metric.value === 'revenue' ? charts.value.revenue_trend : charts.value.bookings_trend) ?? [])
+  .map((d: any) => ({ label: d.label, value: Number(d.value) || 0 })))
+
+const stalePending = computed(() => {
+  const cutoff = Date.now() - 3 * 86_400_000
+  return bookings.value.filter(b => b.status === 'pending' && new Date(b.created_at).getTime() < cutoff).length
+})
+const unpaidConfirmed = computed(() => bookings.value.filter(b => b.status === 'confirmed' && b.payment_status !== 'paid' && b.payment_status !== 'refunded').length)
+
+const actions = computed(() => [
+  { label: 'Store approvals', hint: 'New stores waiting to go live', icon: 'building-store', tone: 'tone-warning', count: stats.pending_stores, to: '/support/stores?status=pending', loading: loading.value },
+  reviewHealth.value.flagged !== null
+    ? { label: 'Flagged reviews', hint: 'Spam, duplicates or rating/text mismatch', icon: 'alert-triangle', tone: 'tone-danger', count: reviewHealth.value.flagged, to: '/support/reviews', loading: false }
+    : { label: 'Hidden reviews', hint: 'Reviews currently hidden from venues', icon: 'eye-off', tone: 'tone-danger', count: reviewHealth.value.hidden ?? 0, to: '/support/reviews', loading: reviewHealth.value.loading },
+  { label: 'Slow booking replies', hint: 'Pending for more than 3 days', icon: 'calendar-clock', tone: 'tone-info', count: stalePending.value, to: '/support/bookings?status=pending', loading: bookingsLoading.value },
+  { label: 'Confirmed but unpaid', hint: 'Customers who still need to pay', icon: 'wallet', tone: 'tone-warning', count: unpaidConfirmed.value, to: '/support/bookings?status=confirmed', loading: bookingsLoading.value },
+])
+const pendingTotal = computed(() => stats.pending_stores + (reviewHealth.value.flagged ?? 0))
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     const { data } = await api.get('/admin/dashboard')
     Object.assign(stats, data.data.stats)
-    recentBookings.value = data.data.recent_bookings
-    recentStores.value = data.data.recent_stores
+    recentBookings.value = data.data.recent_bookings ?? []
+    recentStores.value = data.data.recent_stores ?? []
     charts.value = data.data.charts ?? {}
     statusCounts.value = data.data.bookings_by_status ?? {}
     activityFeed.value = data.data.recent_activity ?? []
+  } catch (e: any) {
+    loadError.value = e.response?.data?.message || 'Please check your connection and try again.'
+    return
   } finally { loading.value = false }
+  loadExtras()
 }
 
-function formatRevenue(v: number) {
-  if (v >= 1_000_000) return `PKR ${(v / 1_000_000).toFixed(1)}M`
-  if (v >= 1_000) return `PKR ${(v / 1_000).toFixed(0)}K`
-  return `PKR ${Number(v || 0).toLocaleString()}`
-}
-
-function statusClass(s: string) {
-  const m: Record<string, string> = { pending: 'badge-accent', confirmed: 'badge-primary', completed: 'badge-primary', cancelled: 'badge-coral', rejected: 'badge-coral' }
-  return m[s] || 'badge-warm'
-}
-
-function storeStatusClass(s: string) {
-  const m: Record<string, string> = { approved: 'badge-primary', pending: 'badge-accent', suspended: 'badge-coral', rejected: 'badge-coral' }
-  return m[s] || 'badge-warm'
+function loadExtras() {
+  // All bookings once, for 30-day deltas and the 12-month trend.
+  bookingsLoading.value = true
+  api.get('/admin/bookings', { params: { per_page: 5000 } })
+    .then(({ data }) => { bookings.value = data.data?.data ?? [] })
+    .catch(() => { bookings.value = [] })
+    .finally(() => { bookingsLoading.value = false })
+  if (stats.pending_stores) {
+    api.get('/admin/stores', { params: { status: 'pending', per_page: 5 } })
+      .then(({ data }) => { pendingStoresList.value = data.data?.data ?? [] }).catch(() => {})
+  }
+  // Review health: AI insights when available, otherwise the hidden-review count.
+  api.get('/admin/reviews/insights', { params: { limit: 1 } })
+    .then(({ data }) => {
+      const fc = data.data?.flag_counts
+      if (!fc) throw new Error('no insights')
+      const flagged = Object.entries(fc).filter(([k]) => k !== 'very_short').reduce((s, [, v]) => s + Number(v || 0), 0)
+      reviewHealth.value = { loading: false, flagged, hidden: null }
+    })
+    .catch(() => api.get('/admin/reviews', { params: { approved: 0, per_page: 1 } })
+      .then(({ data }) => { reviewHealth.value = { loading: false, flagged: null, hidden: data.data?.total ?? 0 } })
+      .catch(() => { reviewHealth.value = { loading: false, flagged: null, hidden: 0 } }))
 }
 
 onMounted(load)

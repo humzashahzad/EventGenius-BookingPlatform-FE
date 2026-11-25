@@ -1,109 +1,74 @@
 <template>
-  <div class="content-container">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between mb-8">
+  <div class="space-y-6">
+    <header class="page-header !mb-0">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-warm-50">Settings</h1>
-        <p class="text-warm-500 dark:text-warm-400 mt-1">Manage your admin account and profile picture.</p>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Your support account, profile picture and password.</p>
       </div>
-      <button @click="save" :disabled="saving" class="btn-primary inline-flex items-center gap-1.5">
-        <AppIcon v-if="saving" icon="loader" class="w-4 h-4 animate-spin" />
-        <AppIcon v-else icon="check" class="w-4 h-4" />
-        {{ saving ? 'Saving...' : 'Save Changes' }}
-      </button>
+    </header>
+
+    <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-busy="true">
+      <div class="skeleton h-64"></div>
+      <div class="lg:col-span-2 skeleton h-80"></div>
     </div>
 
-    <!-- Alerts -->
-    <transition name="fade">
-      <div v-if="successMsg" class="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3 mb-6 flex items-center gap-2.5">
-        <AppIcon icon="circle-check" class="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-        <span class="text-sm text-emerald-700 dark:text-emerald-300">{{ successMsg }}</span>
-      </div>
-    </transition>
-    <transition name="fade">
-      <div v-if="errorMsg" class="rounded-2xl bg-coral/5 dark:bg-coral/10 border border-coral/20 px-4 py-3 mb-6 flex items-center gap-2.5">
-        <AppIcon icon="alert-circle" class="w-5 h-5 text-coral flex-shrink-0" />
-        <span class="text-sm text-coral">{{ errorMsg }}</span>
-      </div>
-    </transition>
-
-    <!-- Loading skeleton -->
-    <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="h-64 rounded-2xl bg-warm-200 dark:bg-warm-800 animate-pulse"></div>
-      <div class="lg:col-span-2 h-64 rounded-2xl bg-warm-200 dark:bg-warm-800 animate-pulse"></div>
-    </div>
-
-    <!-- Form -->
-    <form v-else @submit.prevent="save" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left: Avatar card -->
-      <div class="lg:col-span-1">
-        <div class="card p-6 text-center">
+    <form v-else @submit.prevent="save" class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <aside class="card lg:sticky lg:top-[calc(var(--topbar-height)+1.5rem)]">
+        <div class="card-body text-center">
           <div class="mx-auto mb-4 w-24 h-24">
-            <img v-if="avatarUrl" :src="avatarUrl" alt="Profile" class="rounded-2xl w-full h-full object-cover shadow-card" />
-            <div v-else class="rounded-2xl w-full h-full flex items-center justify-center bg-primary-50 dark:bg-primary-900/30">
-              <span class="text-3xl font-bold text-primary-600 dark:text-primary-400">{{ userInitials }}</span>
-            </div>
+            <img v-if="avatarUrl" :src="avatarUrl" alt="Profile photo" class="rounded-full w-full h-full object-cover border border-line" />
+            <div v-else class="avatar w-full h-full text-2xl">{{ userInitials }}</div>
           </div>
           <ProfileAvatarUpload :current-avatar="authStore.user?.avatar" @update="onAvatarUpdate" />
-          <div class="mt-5">
-            <h5 class="text-lg font-semibold text-warm-900 dark:text-warm-50 mb-1">{{ form.name || 'Admin' }}</h5>
-            <p class="text-sm text-warm-500 dark:text-warm-400 mb-3">{{ form.email }}</p>
-            <span class="badge-primary">Admin</span>
-          </div>
+          <p class="mt-4 font-semibold text-ink">{{ form.name || 'Admin' }}</p>
+          <p class="text-sm text-ink-muted truncate">{{ form.email }}</p>
+          <span class="badge-info mt-3 inline-flex">Support team</span>
         </div>
-      </div>
+      </aside>
 
-      <!-- Right: Account form -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Account info -->
-        <div class="card">
-          <div class="px-6 py-4 border-b border-warm-100 dark:border-warm-800 flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-              <AppIcon icon="user" class="w-4 h-4 text-primary-600 dark:text-primary-400" />
+      <div class="lg:col-span-2 space-y-6 min-w-0">
+        <section class="card">
+          <div class="card-header"><div><h2 class="card-title">Account</h2><p class="card-subtitle">Name and sign-in email.</p></div></div>
+          <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="st-name" class="form-label">Name</label>
+              <input id="st-name" v-model="form.name" type="text" class="form-input" placeholder="Your name" autocomplete="name" />
             </div>
-            <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Account</h5>
-          </div>
-          <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label class="form-label">Name</label>
-                <input v-model="form.name" type="text" class="form-input" placeholder="Your name" />
-              </div>
-              <div>
-                <label class="form-label">Email</label>
-                <input v-model="form.email" type="email" class="form-input" placeholder="admin@example.com" />
-              </div>
+            <div>
+              <label for="st-email" class="form-label">Email</label>
+              <input id="st-email" v-model="form.email" type="email" class="form-input" placeholder="admin@example.com" autocomplete="email" />
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Change Password -->
-        <div class="card">
-          <div class="px-6 py-4 border-b border-warm-100 dark:border-warm-800 flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
-                <AppIcon icon="lock" class="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              </div>
-              <h5 class="text-base font-semibold text-warm-900 dark:text-warm-50">Change Password</h5>
+        <section class="card">
+          <div class="card-header"><div><h2 class="card-title">Change password</h2><p class="card-subtitle">Leave blank to keep your current password.</p></div></div>
+          <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label for="st-cur" class="form-label">Current password <span v-if="form.password" class="req">*</span></label>
+              <input id="st-cur" v-model="form.current_password" type="password" class="form-input" placeholder="Required to set a new password" autocomplete="current-password" :required="!!form.password" />
             </div>
-            <span class="text-xs text-warm-400 dark:text-warm-500">Leave blank to keep current</span>
-          </div>
-          <div class="p-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div class="sm:col-span-2">
-                <label class="form-label">Current Password</label>
-                <input v-model="form.current_password" type="password" class="form-input" placeholder="Required to set a new password" autocomplete="current-password" :required="!!form.password" />
-              </div>
-              <div>
-                <label class="form-label">New Password</label>
-                <input v-model="form.password" type="password" class="form-input" placeholder="New password" />
-              </div>
-              <div>
-                <label class="form-label">Confirm Password</label>
-                <input v-model="form.password_confirmation" type="password" class="form-input" placeholder="Confirm" />
-              </div>
+            <div>
+              <label for="st-new" class="form-label">New password</label>
+              <input id="st-new" v-model="form.password" type="password" class="form-input" placeholder="New password" autocomplete="new-password" />
+            </div>
+            <div>
+              <label for="st-conf" class="form-label">Confirm new password</label>
+              <input id="st-conf" v-model="form.password_confirmation" type="password" class="form-input" placeholder="Repeat new password" autocomplete="new-password" :aria-invalid="mismatch" />
+              <p v-if="mismatch" class="form-error">Passwords don't match yet.</p>
             </div>
           </div>
+        </section>
+
+        <div class="save-bar">
+          <div class="min-w-0 flex-1 text-sm" aria-live="polite">
+            <p v-if="errorMsg" class="flex items-center gap-2 text-danger-text font-medium"><AppIcon icon="alert-circle" class="w-4 h-4 shrink-0" /><span class="truncate">{{ errorMsg }}</span></p>
+            <p v-else-if="successMsg" class="flex items-center gap-2 text-success-text font-medium"><AppIcon icon="circle-check" class="w-4 h-4 shrink-0" /><span class="truncate">{{ successMsg }}</span></p>
+          </div>
+          <button type="submit" :disabled="saving" class="btn-primary">
+            <AppIcon :icon="saving ? 'loader' : 'check'" :class="saving ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
+            {{ saving ? 'Saving…' : 'Save changes' }}
+          </button>
         </div>
       </div>
     </form>
@@ -131,6 +96,7 @@ function getAvatarUrl(path: string | undefined): string | null {
   return p.startsWith('storage/') ? `${base}/${p}` : `${base}/storage/${p}`
 }
 
+const mismatch = computed(() => !!form.password_confirmation && form.password !== form.password_confirmation)
 const avatarUrl = computed(() => getAvatarUrl(authStore.user?.avatar))
 const userInitials = computed(() => {
   const name = form.name || authStore.user?.name || ''
@@ -185,6 +151,11 @@ onMounted(load)
 </script>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.save-bar {
+  position: sticky; bottom: 0; z-index: var(--z-sticky);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+}
 </style>

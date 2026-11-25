@@ -781,13 +781,7 @@ onMounted(() => {
 }
 
 .timeline-block--buffer {
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(245, 158, 11, 0.14),
-    rgba(245, 158, 11, 0.14) 4px,
-    rgba(245, 158, 11, 0.26) 4px,
-    rgba(245, 158, 11, 0.26) 8px
-  );
+  background: rgba(245, 158, 11, 0.18);
   border: 1px dashed rgba(245, 158, 11, 0.42);
   z-index: 1;
 }
@@ -849,13 +843,7 @@ onMounted(() => {
 }
 
 .legend-swatch--buffer {
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(245, 158, 11, 0.14),
-    rgba(245, 158, 11, 0.14) 3px,
-    rgba(245, 158, 11, 0.26) 3px,
-    rgba(245, 158, 11, 0.26) 6px
-  );
+  background: rgba(245, 158, 11, 0.18);
   border: 1px dashed rgba(245, 158, 11, 0.42);
 }
 
