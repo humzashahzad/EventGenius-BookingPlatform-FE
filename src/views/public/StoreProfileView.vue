@@ -23,13 +23,15 @@
         <div class="store-hero-overlay"></div>
         <div class="store-hero-content">
           <div class="store-hero-avatar">
-            <img v-if="store.user?.avatar" :src="getAvatarUrl(store.user.avatar)" :alt="store.user.name" />
-            <span v-else class="store-hero-initials">{{ getInitials(store.user?.name || store.name) }}</span>
+            <img v-if="store.logo" :src="getAvatarUrl(store.logo)" :alt="store.name" />
+            <img v-else-if="store.user?.avatar" :src="getAvatarUrl(store.user.avatar)" :alt="store.name" />
+            <span v-else class="store-hero-initials">{{ getInitials(store.name || '') }}</span>
           </div>
-          <h1 class="store-hero-name">{{ store.user?.name || store.name }}</h1>
+          <h1 class="store-hero-name">{{ store.name }}</h1>
+          <p v-if="store.city" class="store-hero-tagline" style="margin-top:0.25rem;">{{ [store.city, store.country].filter(Boolean).join(', ') }}</p>
           <p v-if="landing?.tagline" class="store-hero-tagline">{{ landing.tagline }}</p>
           <div class="store-hero-actions">
-            <button @click="startChat" class="store-hero-btn">
+            <button v-if="authStore.isLoggedIn && store.user?.id && authStore.user?.id !== store.user.id" @click="startChat" class="store-hero-btn">
               <AppIcon icon="message-circle" class="w-5 h-5" />
               Contact Store
             </button>
@@ -47,6 +49,10 @@
           <div class="stat-item">
             <div class="stat-number">{{ stats?.total_bookings || 0 }}</div>
             <div class="stat-text">Bookings</div>
+          </div>
+          <div v-if="stats?.total_reviews" class="stat-item">
+            <div class="stat-number">{{ Number(stats.avg_rating).toFixed(1) }} &#9733;</div>
+            <div class="stat-text">{{ stats.total_reviews }} Review{{ stats.total_reviews === 1 ? '' : 's' }}</div>
           </div>
           <div class="stat-item">
             <div class="stat-number">{{ stats?.member_since || 'N/A' }}</div>
@@ -76,6 +82,23 @@
         </div>
       </section>
 
+      <!-- Gallery -->
+      <section v-if="landing?.gallery?.length" class="py-12 px-4">
+        <div class="mx-auto max-w-6xl">
+          <h4 class="text-xl font-bold text-warm-800 dark:text-warm-100 mb-10 text-center">Gallery</h4>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <img
+              v-for="(g, i) in landing.gallery"
+              :key="i"
+              :src="getImageUrl(g)"
+              :alt="`${store.name} photo ${i + 1}`"
+              class="w-full aspect-square object-cover rounded-2xl"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </section>
+
       <!-- Venues -->
       <section v-if="store.venues?.length" class="py-12 px-4">
         <div class="mx-auto max-w-6xl">
@@ -84,7 +107,7 @@
             <div v-for="venue in store.venues" :key="venue.id">
               <RouterLink :to="`/venues/${venue.id}`" class="venue-card">
                 <div class="venue-card-img">
-                  <img v-if="venue.images?.length" :src="getImageUrl(venue.images[0].path)" :alt="venue.name" />
+                  <img v-if="venue.images?.length" :src="getImageUrl((venue.images.find((i: any) => i.is_primary) || venue.images[0]).path)" :alt="venue.name" />
                   <div v-else class="venue-card-placeholder">
                     <AppIcon icon="building" class="w-10 h-10" style="color:var(--color-text-muted);" />
                   </div>
@@ -162,9 +185,11 @@ import api from '@/lib/axios'
 import { useChat } from '@/composables/useChat'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const { startConversation } = useChat()
+const authStore = useAuthStore()
 
 const store = ref<any>(null)
 const stats = ref<any>(null)

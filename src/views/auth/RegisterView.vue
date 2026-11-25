@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen overflow-hidden flex items-center justify-center bg-warm-100 dark:bg-warm-950 p-4 sm:p-6">
+  <div class="fixed inset-0 overflow-hidden overscroll-none flex items-center justify-center bg-warm-100 dark:bg-warm-950 p-3 sm:p-6">
     <div class="w-full h-full max-h-full flex rounded-3xl overflow-hidden shadow-elevated bg-warm-50 dark:bg-warm-900">
       <!-- Left: Brand Panel (desktop) -->
       <div class="hidden lg:flex lg:w-[58%] xl:w-[66%] items-center justify-center relative bg-gradient-to-br from-primary-800 via-primary-700 to-primary-600 overflow-hidden rounded-3xl m-2">
@@ -10,7 +10,7 @@
         <div class="relative z-10 max-w-[480px] px-8">
           <div class="flex items-center gap-3 mb-8">
             <div class="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
-              <AppIcon icon="calendar-event" class="w-5 h-5 text-white" />
+              <AppLogo tone="white" class="w-7 h-7" />
             </div>
             <div>
               <p class="text-primary-200 font-extrabold uppercase text-xs tracking-widest">EventGenius</p>
@@ -31,16 +31,20 @@
       </div>
 
       <!-- Right: Form -->
-      <div class="flex-1 flex items-center justify-center p-6 sm:p-12 overflow-hidden">
-        <div class="w-full max-w-[400px]">
+      <div class="flex-1 flex overflow-y-auto overscroll-contain p-4 sm:p-12">
+        <div class="w-full max-w-[400px] m-auto">
         <div class="lg:hidden flex items-center gap-2 mb-8">
-          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center">
-            <span class="text-white font-bold text-sm">EG</span>
-          </div>
+          <AppLogo class="w-9 h-9" />
           <span class="font-bold text-warm-800 dark:text-white">EventGenius</span>
         </div>
 
-        <h1 class="text-xl font-bold text-warm-800 dark:text-white mb-1">Create your account</h1>
+        <RouterLink to="/" class="inline-flex items-center gap-1.5 text-sm text-warm-500 hover:text-primary-600 dark:text-warm-400 mb-8">
+
+          <AppIcon icon="arrow-left" class="w-4 h-4" /> Back to EventGenius
+
+        </RouterLink>
+
+        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-white mb-1">Create your account</h1>
         <p class="text-warm-500 dark:text-warm-400 mb-6">
           {{ portal === 'shop' ? 'Register as a store owner to list your venues.' : 'Join EventGenius to browse and book venues.' }}
         </p>
@@ -127,6 +131,7 @@
 </template>
 
 <script setup lang="ts">
+import AppLogo from '@/components/brand/AppLogo.vue'
 import { ref, reactive, computed } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -182,7 +187,10 @@ async function handleRegister() {
     canvasRef.value?.triggerPulse('success')
     setTimeout(() => {
       loading.value = false
-      router.push(authStore.defaultRoute)
+      // Customers who signed up mid-booking go straight back to it.
+      const r = route.query.redirect
+      const back = typeof r === 'string' && r.startsWith('/') && !r.startsWith('//') && portal.value === 'customer' && !r.startsWith('/shop') && !r.startsWith('/support') ? r : null
+      router.push(back ?? authStore.defaultRoute)
     }, 600)
   } else {
     loading.value = false

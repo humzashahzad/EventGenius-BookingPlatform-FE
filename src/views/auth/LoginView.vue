@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen overflow-hidden flex items-center justify-center bg-warm-100 dark:bg-warm-950 p-4 sm:p-6">
+  <div class="fixed inset-0 overflow-hidden overscroll-none flex items-center justify-center bg-warm-100 dark:bg-warm-950 p-3 sm:p-6">
     <div class="w-full h-full max-h-full flex rounded-3xl overflow-hidden shadow-elevated bg-warm-50 dark:bg-warm-900">
       <!-- Left: Brand panel (desktop) -->
       <div class="hidden lg:flex lg:w-[58%] xl:w-[66%] items-center justify-center relative bg-gradient-to-br from-primary-800 via-primary-700 to-primary-600 overflow-hidden rounded-3xl m-2">
@@ -10,7 +10,7 @@
         <div class="relative z-10 max-w-[480px] px-8">
           <div class="flex items-center gap-3 mb-8">
             <div class="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
-              <AppIcon icon="calendar-event" class="w-5 h-5 text-white" />
+              <AppLogo tone="white" class="w-7 h-7" />
             </div>
             <div>
               <p class="text-primary-200 font-extrabold uppercase text-xs tracking-widest">EventGenius</p>
@@ -31,17 +31,19 @@
       </div>
 
       <!-- Right: Form -->
-      <div class="flex-1 flex items-center justify-center p-6 sm:p-12">
-        <div class="w-full max-w-[400px]">
-        <div class="lg:hidden flex items-center gap-2 mb-8">
-          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center">
-            <span class="text-white font-bold text-sm">EG</span>
-          </div>
+      <div class="flex-1 flex overflow-y-auto overscroll-contain p-4 sm:p-12">
+        <div class="w-full max-w-[400px] m-auto">
+        <div class="lg:hidden flex items-center gap-2 mb-4 sm:mb-6 [@media(max-height:600px)]:hidden">
+          <AppLogo class="w-9 h-9" />
           <span class="font-bold text-warm-800 dark:text-white">EventGenius</span>
         </div>
 
-        <h1 class="text-xl font-bold text-warm-800 dark:text-white mb-1">Sign in to your account</h1>
-        <p class="text-warm-500 dark:text-warm-400 mb-6">Continue to manage your venues and bookings.</p>
+        <RouterLink to="/" class="flex w-fit items-center gap-1.5 text-sm text-warm-500 hover:text-primary-600 dark:text-warm-400 mb-5 sm:mb-8">
+          <AppIcon icon="arrow-left" class="w-4 h-4" /> Back to EventGenius
+        </RouterLink>
+        <span class="badge-primary mb-3">{{ portalCopy.badge }}</span>
+        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-white mb-1">{{ portalCopy.title }}</h1>
+        <p class="text-warm-500 dark:text-warm-400 mb-6">{{ portalCopy.subtitle }}</p>
 
         <form @submit.prevent="handleLogin" class="space-y-5">
           <div>
@@ -102,7 +104,13 @@
 
         <p v-if="portal !== 'support'" class="mt-6 text-center text-sm text-warm-500 dark:text-warm-400">
           Don't have an account?
-          <RouterLink :to="registerPath" class="ml-1 font-semibold text-primary-600 hover:text-primary-700">Register</RouterLink>
+          <RouterLink :to="{ path: registerPath, query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="ml-1 font-semibold text-primary-600 hover:text-primary-700">Create one</RouterLink>
+        </p>
+        <p v-if="portal === 'customer'" class="mt-3 text-center text-xs text-warm-400">
+          Own a venue? <RouterLink to="/shop/sign-in" class="font-semibold text-warm-600 dark:text-warm-300 hover:text-primary-600">Sign in to the shop portal</RouterLink>
+        </p>
+        <p v-else-if="portal === 'shop'" class="mt-3 text-center text-xs text-warm-400">
+          Booking an event? <RouterLink to="/customer/sign-in" class="font-semibold text-warm-600 dark:text-warm-300 hover:text-primary-600">Sign in as a customer</RouterLink>
         </p>
         </div>
       </div>
@@ -111,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import AppLogo from '@/components/brand/AppLogo.vue'
 import { ref, computed } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -123,6 +132,11 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const portal = computed(() => (route.meta.portal as string) ?? 'customer')
+const portalCopy = computed(() => ({
+  customer: { badge: 'Customer', title: 'Welcome back', subtitle: 'Sign in to book venues and manage your events.' },
+  shop: { badge: 'Venue owner', title: 'Sign in to your shop', subtitle: 'Manage your venues, bookings and customers.' },
+  support: { badge: 'Administrator', title: 'Admin sign in', subtitle: 'Restricted to EventGenius staff.' },
+}[portal.value as 'customer' | 'shop' | 'support'] ?? { badge: 'Customer', title: 'Welcome back', subtitle: '' }))
 const registerPath = computed(() => (portal.value === 'shop' ? '/shop/sign-up' : '/customer/sign-up'))
 const forgotPasswordLink = computed(() => {
   const p = portal.value
@@ -130,6 +144,18 @@ const forgotPasswordLink = computed(() => {
   if (p === 'support') return '/forgot-password?from=support'
   return '/forgot-password?from=customer'
 })
+
+/** Internal path from ?redirect=, if it is reachable from this portal. */
+function safeRedirect(): string | null {
+  const r = route.query.redirect
+  if (typeof r !== 'string' || !r.startsWith('/') || r.startsWith('//')) return null
+  const target = r.startsWith('/support') ? 'support' : r.startsWith('/shop') ? 'shop' : 'customer'
+  // Must match the account that actually signed in (a shop owner using the
+  // customer page goes to the shop dashboard, not a customer-only page).
+  const role = authStore.user?.role
+  const accountPortal = role === 'admin' ? 'support' : role === 'store_owner' ? 'shop' : 'customer'
+  return target === portal.value && target === accountPortal ? r : null
+}
 
 const form = ref({ email: '', password: '' })
 const error = ref('')
@@ -154,7 +180,7 @@ async function handleLogin() {
     // Wait for the pulse animation slightly before redirecting
     setTimeout(async () => {
       loading.value = false
-      const destination = result.redirectTo ?? authStore.defaultRoute
+      const destination = safeRedirect() ?? result.redirectTo ?? authStore.defaultRoute
       toast.success('Signed in successfully.')
       try {
         await router.replace(destination)

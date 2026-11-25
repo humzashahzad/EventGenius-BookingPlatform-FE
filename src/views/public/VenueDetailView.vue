@@ -71,15 +71,23 @@
             <h2 class="detail-title">{{ venue.name }}</h2>
             <p class="detail-location">
               <AppIcon icon="map-pin" class="w-3.5 h-3.5" />
-              {{ venue.address }}, {{ venue.city }}, {{ venue.country }}
+              {{ formatAddress(venue) }}
             </p>
+            <RouterLink
+              v-if="venue.store?.id"
+              :to="{ name: 'store-profile', params: { id: venue.store.id } }"
+              class="inline-flex items-center gap-1.5 mt-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              <AppIcon icon="building-store" class="w-3.5 h-3.5" />
+              {{ venue.store.name }}
+            </RouterLink>
           </div>
           <div class="detail-rating">
             <div class="detail-rating-score">
               <AppIcon icon="star-filled" class="w-4 h-4 text-[#F59E0B]" />
-              {{ venue.avg_rating?.toFixed(1) || 'New' }}
+              {{ venue.total_reviews ? Number(venue.avg_rating).toFixed(1) : 'New' }}
             </div>
-            <span class="detail-rating-count">{{ venue.total_reviews }} reviews</span>
+            <span class="detail-rating-count">{{ venue.total_reviews || 0 }} review{{ venue.total_reviews === 1 ? '' : 's' }}</span>
           </div>
         </div>
 
@@ -147,7 +155,7 @@
             <div v-for="amenity in venue.amenities" :key="amenity.id" class="amenity-item">
               <AppIcon icon="circle-check" class="w-4 h-4 text-[#10B981]" />
               <span class="amenity-name">{{ amenity.name }}</span>
-              <span v-if="amenity.is_paid" class="amenity-price">PKR {{ amenity.price }}</span>
+              <span v-if="amenity.is_paid" class="amenity-price">{{ formatPKR(amenity.price) }}</span>
             </div>
           </div>
         </div>
@@ -158,27 +166,17 @@
             <AppIcon icon="message-star" class="w-[18px] h-[18px] text-[#10B981]" />
             Reviews
           </h3>
-          <div v-if="!venue.reviews?.length" class="empty-state" style="padding:2rem;">
-            <div class="empty-state-icon" style="width:3.5rem;height:3.5rem;">
-              <AppIcon icon="message-off" class="w-5 h-5" />
-            </div>
-            <p class="empty-state-title" style="font-size:0.9375rem;">No reviews yet</p>
-            <p class="empty-state-desc" style="font-size:0.8125rem;">Be the first to review this venue after your booking!</p>
-          </div>
-          <div v-else class="reviews-list">
-            <div v-for="(review, idx) in venue.reviews" :key="review.id" class="review-card" :class="{ 'border-b-0': idx === venue.reviews.length - 1 }">
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2">
-                  <div class="review-avatar">{{ review.client?.name?.charAt(0) || '?' }}</div>
-                  <span class="review-author">{{ review.client?.name }}</span>
+          <VenueReviews :venue-id="venue.id">
+            <template #empty>
+              <div class="empty-state" style="padding:2rem;">
+                <div class="empty-state-icon" style="width:3.5rem;height:3.5rem;">
+                  <AppIcon icon="message-off" class="w-5 h-5" />
                 </div>
-                <div class="review-stars">
-                  <AppIcon v-for="i in review.rating" :key="i" icon="star-filled" class="w-3 h-3 text-[#F59E0B]" />
-                </div>
+                <p class="empty-state-title" style="font-size:0.9375rem;">No reviews yet</p>
+                <p class="empty-state-desc" style="font-size:0.8125rem;">Be the first to review this venue after your booking!</p>
               </div>
-              <p class="review-text">{{ review.comment }}</p>
-            </div>
-          </div>
+            </template>
+          </VenueReviews>
         </div>
       </div>
 
@@ -206,7 +204,7 @@
 
           <div v-else>
             <p class="booking-note" style="margin-bottom:0.75rem;">Sign in to book this venue</p>
-            <RouterLink to="/customer/sign-in" class="booking-btn">Sign In to Book</RouterLink>
+            <RouterLink :to="{ path: '/customer/sign-in', query: { redirect: `/venues/${route.params.id}/book` } }" class="booking-btn">Sign In to Book</RouterLink>
           </div>
         </div>
       </div>
@@ -233,6 +231,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatPKR, formatAddress } from '@/lib/format'
 import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
@@ -240,6 +239,7 @@ import { useAuthStore } from '@/stores/auth'
 import { getStorageUrl } from '@/lib/storageUrl'
 import ImageLightbox from '@/components/gallery/ImageLightbox.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import VenueReviews from '@/components/reviews/VenueReviews.vue'
 import type { LightboxImage } from '@/components/gallery/ImageLightbox.vue'
 
 const route = useRoute()
@@ -334,8 +334,10 @@ onMounted(loadVenue)
 
 .gallery-main {
   position: relative;
-  aspect-ratio: 16/9;
-  max-height: 480px;
+  width: 100%;
+  /* Full width at every size; height scales with the viewport (was a capped
+     16:9 box that left an empty strip beside the photo on wide screens). */
+  height: clamp(240px, 42vw, 520px);
   background: var(--color-bg-hover);
 }
 

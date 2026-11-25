@@ -4,6 +4,8 @@ import 'vue-sonner/style.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
+import VueApexCharts from 'vue3-apexcharts'
+
 import App from './App.vue'
 import router from './router'
 import { migrateOldToken } from '@/lib/portalToken'
@@ -12,6 +14,8 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
+// Registers the global <apexchart> component used by components/charts/*
+app.use(VueApexCharts)
 
 // Migrate old single auth_token to portal-specific keys (one-time)
 migrateOldToken().finally(() => {

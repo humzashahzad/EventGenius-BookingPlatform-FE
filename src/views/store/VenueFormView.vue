@@ -238,6 +238,9 @@
       </div>
     </form>
 
+    <!-- Amenities editor (edit only; manages its own API calls) -->
+    <AmenityEditor v-if="isEdit" :venue-id="String(route.params.id)" class="mt-6" />
+
     <!-- Map Modal -->
     <div v-if="showMapModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div class="bg-white dark:bg-warm-900 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -296,6 +299,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { useCategoriesStore } from '@/stores/categories'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AmenityEditor from '@/components/amenities/AmenityEditor.vue'
 
 const route  = useRoute()
 const router = useRouter()
@@ -447,33 +451,40 @@ function confirmLocation() {
   closeMapModal()
 }
 
+// The platform serves Pakistan; keep a reliable built-in list so the form never
+// depends on a third-party API (and never sends our auth token to one).
+const PK_CITIES = [
+  'Abbottabad', 'Bahawalpur', 'Faisalabad', 'Gujranwala', 'Gujrat', 'Hyderabad', 'Islamabad', 'Jhelum',
+  'Kamalia', 'Karachi', 'Lahore', 'Larkana', 'Mardan', 'Multan', 'Murree', 'Peshawar', 'Quetta',
+  'Rahim Yar Khan', 'Rawalpindi', 'Sahiwal', 'Sargodha', 'Sialkot', 'Sukkur', 'Toba Tek Singh',
+]
+
 async function fetchCountries() {
-  loadingCountries.value = true
-  try {
-    const { data } = await api.get('https://restcountries.com/v3.1/all?fields=name,cca2')
-    countriesList.value = data.map((c: any) => ({
-      name: c.name.common,
-      code: c.cca2
-    })).sort((a: any, b: any) => a.name.localeCompare(b.name))
-  } catch (error) {
-    console.error('Failed to fetch countries:', error)
-  } finally {
-    loadingCountries.value = false
-  }
+  countriesList.value = [{ name: 'Pakistan', code: 'PK' }]
+  loadingCountries.value = false
 }
 
 async function fetchCities(countryName: string) {
   if (!countryName) return
   loadingCities.value = true
-  citiesList.value = []
+  citiesList.value = [...PK_CITIES]
   try {
-    const { data } = await api.post('https://countriesnow.space/api/v0.1/countries/cities', {
-      country: countryName
+    // Optional enrichment from a public dataset — plain fetch, no credentials.
+    const res = await fetch('https://countriesnow.space/api/v0.1/countries/cities', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ country: countryName }),
     })
-    citiesList.value = data.data || []
-  } catch (error) {
-    console.error('Failed to fetch cities:', error)
+    if (res.ok) {
+      const json = await res.json()
+      const extra: string[] = Array.isArray(json?.data) ? json.data : []
+      citiesList.value = Array.from(new Set([...PK_CITIES, ...extra])).sort((x, y) => x.localeCompare(y))
+    }
+  } catch {
+    // Built-in list is enough.
   } finally {
+    // Keep the venue's current city selectable even if it isn't in the list.
+    if (form.city && !citiesList.value.includes(form.city)) citiesList.value.unshift(form.city)
     loadingCities.value = false
   }
 }

@@ -20,12 +20,13 @@
         v-for="day in weekDays"
         :key="day.dateStr"
         @click="toggleDay(day)"
-        :disabled="day.isPast"
+        :disabled="!day.isSelectable"
+        :title="!day.isSelectable && !day.isPast ? 'Bookings must be made at least one day in advance' : undefined"
         class="week-day"
         :class="{
           'week-day--today': day.isToday,
           'week-day--selected': isSelected(day.dateStr),
-          'week-day--past': day.isPast,
+          'week-day--past': !day.isSelectable,
           'week-day--has-bookings': day.bookingCount > 0 && !isSelected(day.dateStr),
         }"
       >
@@ -39,6 +40,7 @@
     <!-- Selection hint -->
     <p v-if="selectedDates.length === 0" class="calendar-hint">
       Click on days to select them. You can select multiple days for multi-day events.
+      Bookings must be made at least one day in advance.
     </p>
 
     <!-- Loading -->
@@ -185,6 +187,8 @@ interface WeekDay {
   monthName: string
   isToday: boolean
   isPast: boolean
+  /** Backend requires event_date to be after today, so today is not bookable. */
+  isSelectable: boolean
   bookingCount: number
 }
 
@@ -222,6 +226,11 @@ function getMonday(d: Date): Date {
 const today = new Date()
 today.setHours(0, 0, 0, 0)
 
+// The API rejects same-day bookings (event_date must be after today),
+// so the first selectable day is tomorrow.
+const firstBookableDay = new Date(today)
+firstBookableDay.setDate(firstBookableDay.getDate() + 1)
+
 const isCurrentWeek = computed(() => {
   const thisMonday = getMonday(new Date())
   return weekStart.value.getTime() === thisMonday.getTime()
@@ -247,6 +256,7 @@ const weekDays = computed<WeekDay[]>(() => {
       monthName: d.toLocaleDateString('en-US', { month: 'short' }),
       isToday: d.toDateString() === today.toDateString(),
       isPast: d < today,
+      isSelectable: d >= firstBookableDay,
       bookingCount: bookingsOnDay.length,
     })
   }
@@ -325,7 +335,7 @@ function isSelected(dateStr: string): boolean {
 }
 
 function toggleDay(day: WeekDay) {
-  if (day.isPast) return
+  if (!day.isSelectable) return
   const idx = selectedDates.value.indexOf(day.dateStr)
   if (idx >= 0) {
     selectedDates.value.splice(idx, 1)
@@ -446,7 +456,8 @@ async function fetchMonthAvailability() {
       params: { year, month },
     })
     if (response.data.success) {
-      monthBookings.value = response.data.data.booked_dates || []
+      // API returns a list of dates (ISO strings); the calendar expects { date: 'YYYY-MM-DD' } objects.
+      monthBookings.value = (response.data.data.booked_dates || []).map((d: string) => ({ date: String(d).slice(0, 10) }))
     }
   } catch {
     // Silently fail

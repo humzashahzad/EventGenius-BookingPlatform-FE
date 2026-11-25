@@ -1,64 +1,57 @@
 <template>
-  <footer class="relative bg-warm-900 dark:bg-warm-950 text-warm-400">
-    <div class="h-1 bg-gradient-to-r from-primary-500 via-accent to-primary-300 bg-[length:200%_100%] animate-gradient-shift" />
-    <div class="content-container py-6 sm:py-8 lg:py-10">
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
-        <div class="lg:col-span-4">
+  <footer class="bg-warm-900 dark:bg-warm-950 text-warm-400 border-t border-warm-800">
+    <div class="content-container py-10 lg:py-12">
+      <div class="grid grid-cols-2 md:grid-cols-12 gap-8">
+        <div class="col-span-2 md:col-span-5">
           <RouterLink to="/" class="inline-flex items-center gap-2.5 mb-4">
-            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center">
-              <span class="text-white font-extrabold text-sm">EG</span>
-            </div>
+            <AppLogo tone="on-dark" class="w-9 h-9" />
             <span class="font-extrabold text-lg text-white tracking-tight">EventGenius</span>
           </RouterLink>
-          <p class="text-sm text-warm-500 max-w-xs leading-relaxed">
-            The easiest way to discover and book event venues. From weddings to conferences, we've got you covered.
+          <p class="text-sm text-warm-400 max-w-sm leading-relaxed">
+            Discover, compare and book event venues across Pakistan — from weddings to conferences — with secure online payment.
           </p>
-          <div class="flex gap-2 mt-5">
-            <a href="#" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-warm-500 hover:bg-primary-500/20 hover:border-primary-500/40 hover:text-primary-400 transition-colors" aria-label="Facebook">
-              <AppIcon icon="brand-facebook" class="w-5 h-5" />
-            </a>
-            <a href="#" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-warm-500 hover:bg-primary-500/20 hover:border-primary-500/40 hover:text-primary-400 transition-colors" aria-label="Instagram">
-              <AppIcon icon="brand-instagram" class="w-5 h-5" />
-            </a>
-            <a href="#" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-warm-500 hover:bg-primary-500/20 hover:border-primary-500/40 hover:text-primary-400 transition-colors" aria-label="Twitter">
-              <AppIcon icon="brand-x" class="w-5 h-5" />
-            </a>
+          <div class="flex flex-wrap gap-4 mt-5 text-xs text-warm-500">
+            <span class="inline-flex items-center gap-1.5"><AppIcon icon="shield" class="w-4 h-4 text-primary-400" />Verified venues</span>
+            <span class="inline-flex items-center gap-1.5"><AppIcon icon="credit-card" class="w-4 h-4 text-primary-400" />Secure PayFast checkout</span>
           </div>
         </div>
-        <div class="sm:col-span-1 lg:col-span-2">
-          <h6 class="text-xs font-bold uppercase tracking-wider text-warm-500 mb-4">Platform</h6>
-          <ul class="space-y-2.5">
-            <li><RouterLink to="/venues" class="text-sm text-warm-500 hover:text-primary-400 transition-colors">Browse Venues</RouterLink></li>
-            <li><RouterLink to="/customer/sign-up" class="text-sm text-warm-500 hover:text-primary-400 transition-colors">Create Account</RouterLink></li>
-            <li><RouterLink to="/shop/sign-up" class="text-sm text-warm-500 hover:text-primary-400 transition-colors">List Your Venue</RouterLink></li>
+
+        <nav class="md:col-span-2" aria-label="Customers">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-warm-300 mb-4">Customers</h2>
+          <ul class="space-y-2.5 text-sm">
+            <li><RouterLink to="/venues" class="hover:text-primary-400 transition-colors">Browse venues</RouterLink></li>
+            <li><RouterLink to="/customer/sign-up" class="hover:text-primary-400 transition-colors">Create account</RouterLink></li>
+            <li><RouterLink to="/customer/sign-in" class="hover:text-primary-400 transition-colors">Sign in</RouterLink></li>
           </ul>
-        </div>
-        <div class="sm:col-span-1 lg:col-span-2">
-          <h6 class="text-xs font-bold uppercase tracking-wider text-warm-500 mb-4">Support</h6>
-          <ul class="space-y-2.5">
-            <li><RouterLink to="/customer/messages" class="text-sm text-warm-500 hover:text-primary-400 transition-colors">Contact Us</RouterLink></li>
-            <li><a href="mailto:help@eventgenius.com" class="text-sm text-warm-500 hover:text-primary-400 transition-colors">help@eventgenius.com</a></li>
+        </nav>
+
+        <nav class="md:col-span-2" aria-label="Venue owners">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-warm-300 mb-4">Venue owners</h2>
+          <ul class="space-y-2.5 text-sm">
+            <li><RouterLink to="/shop/sign-up" class="hover:text-primary-400 transition-colors">List your venue</RouterLink></li>
+            <li><RouterLink to="/shop/sign-in" class="hover:text-primary-400 transition-colors">Shop sign in</RouterLink></li>
           </ul>
-        </div>
-        <div class="sm:col-span-2 lg:col-span-4">
-          <h6 class="text-xs font-bold uppercase tracking-wider text-warm-500 mb-4">Stay Updated</h6>
-          <p class="text-sm text-warm-500 mb-4">Get the latest venue listings and booking tips.</p>
-          <div class="flex rounded-xl overflow-hidden border border-white/10 bg-white/5">
-            <input type="email" placeholder="Enter your email" class="flex-1 px-4 py-3 bg-transparent text-white placeholder-warm-500 text-sm outline-none" />
-            <button type="button" class="p-3 bg-gradient-to-r from-primary-500 to-primary-400 text-white hover:opacity-90 transition-opacity">
-              <AppIcon icon="arrow-right" class="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+        </nav>
+
+        <nav class="col-span-2 md:col-span-3" aria-label="Support">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-warm-300 mb-4">Support</h2>
+          <ul class="space-y-2.5 text-sm">
+            <li><RouterLink to="/customer/messages" class="hover:text-primary-400 transition-colors">Message support</RouterLink></li>
+            <li><RouterLink to="/forgot-password" class="hover:text-primary-400 transition-colors">Reset your password</RouterLink></li>
+          </ul>
+        </nav>
       </div>
-      <div class="mt-10 pt-6 border-t border-white/10 text-center">
-        <p class="text-sm text-warm-600">&copy; {{ year }} EventGenius. All rights reserved.</p>
+
+      <div class="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row gap-2 items-center justify-between text-xs text-warm-500">
+        <p>&copy; {{ year }} EventGenius. All rights reserved.</p>
+        <p>Final Year Project · Payments run in PayFast sandbox mode</p>
       </div>
     </div>
   </footer>
 </template>
 
 <script setup lang="ts">
+import AppLogo from '@/components/brand/AppLogo.vue'
 import { RouterLink } from 'vue-router'
 import AppIcon from '@/components/ui/AppIcon.vue'
 

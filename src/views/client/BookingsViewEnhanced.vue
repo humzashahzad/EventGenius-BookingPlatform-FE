@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
       <div>
-        <h1 class="text-xl font-bold text-warm-900 tracking-tight">My Bookings</h1>
+        <h1 class="text-xl font-bold text-warm-900 tracking-tight dark:text-white">My Bookings</h1>
         <p class="text-sm text-warm-500 mt-0.5">Track and manage all your venue reservations.</p>
       </div>
       <RouterLink to="/venues" class="btn-primary inline-flex items-center gap-2">
@@ -21,10 +21,10 @@
     <!-- Empty state -->
     <div v-else-if="bookings.length === 0" class="card">
       <div class="p-8 py-14 text-center">
-        <div class="w-16 h-16 rounded-full bg-warm-100 flex items-center justify-center mx-auto mb-4">
+        <div class="w-16 h-16 rounded-full bg-warm-100 flex items-center justify-center mx-auto mb-4 dark:bg-warm-700">
           <AppIcon icon="calendar-event" class="w-8 h-8 text-warm-400" />
         </div>
-        <h3 class="text-base font-semibold text-warm-800">No bookings found</h3>
+        <h3 class="text-base font-semibold text-warm-800 dark:text-warm-100">No bookings found</h3>
         <p class="text-sm text-warm-500 mt-1 max-w-xs mx-auto">
           {{ filterStatus ? `No ${filterStatus} bookings yet.` : 'You haven\'t made any bookings yet.' }}
         </p>
@@ -44,7 +44,7 @@
         <div class="p-5">
           <div class="flex items-start gap-4">
             <!-- Thumbnail -->
-            <div class="booking-thumb flex-shrink-0 rounded-xl overflow-hidden bg-warm-100">
+            <div class="booking-thumb flex-shrink-0 rounded-xl overflow-hidden bg-warm-100 dark:bg-warm-700">
               <img v-if="b.venue?.thumbnail" :src="getImageUrl(b.venue.thumbnail)" class="w-full h-full object-cover" :alt="b.venue?.name" />
               <div v-else class="w-full h-full flex items-center justify-center">
                 <AppIcon icon="map-pin" class="w-8 h-8 text-warm-300" />
@@ -56,9 +56,14 @@
               <div class="flex items-start justify-between gap-2 mb-1">
                 <div class="min-w-0">
                   <span class="font-mono text-xs text-warm-400 tracking-wide uppercase">{{ b.booking_number }}</span>
-                  <h3 class="font-semibold text-warm-800 truncate mt-0.5">{{ b.venue?.name }}</h3>
+                  <h3 class="font-semibold text-warm-800 truncate mt-0.5 dark:text-warm-100">{{ b.venue?.name }}</h3>
                 </div>
-                <span :class="statusClass(b.status)" class="capitalize flex-shrink-0">{{ b.status }}</span>
+                <div class="flex flex-wrap items-center justify-end gap-1.5 flex-shrink-0">
+                  <span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span>
+                  <span v-if="b.payment_status === 'paid'" class="badge-primary inline-flex items-center gap-1"><AppIcon icon="circle-check" class="w-3 h-3" />Paid</span>
+                  <span v-else-if="b.payment_status === 'refunded'" class="badge-warm">Refunded</span>
+                  <span v-else-if="b.status === 'confirmed'" class="badge-accent">Unpaid</span>
+                </div>
               </div>
 
               <div class="flex flex-wrap gap-3 mt-2">
@@ -72,7 +77,7 @@
                 </span>
                 <span v-if="b.start_time" class="flex items-center gap-1.5 text-sm text-warm-500">
                   <AppIcon icon="clock" class="w-3.5 h-3.5" />
-                  {{ b.start_time }} &ndash; {{ b.end_time }}
+                  {{ formatTimeRange(b.start_time, b.end_time) }}
                 </span>
                 <span v-if="b.guests_count" class="flex items-center gap-1.5 text-sm text-warm-500">
                   <AppIcon icon="users" class="w-3.5 h-3.5" />
@@ -87,7 +92,7 @@
         <div class="flex items-center justify-between px-5 py-3 bg-primary-50/50 dark:bg-warm-800/50 border-t border-warm-100 dark:border-warm-700">
           <div>
             <span class="text-xs text-warm-500 uppercase font-semibold tracking-wide">Total Amount</span>
-            <p class="font-bold text-lg text-warm-900">PKR {{ Number(b.total_amount).toLocaleString() }}</p>
+            <p class="font-bold text-lg text-warm-900 dark:text-white">{{ formatPKR(b.total_amount) }}</p>
           </div>
           <RouterLink :to="`/customer/bookings/${b.id}`" class="btn-outline text-sm inline-flex items-center gap-1">
             View Details
@@ -113,7 +118,7 @@
         <button
           @click="changePage(meta.current_page - 1)"
           :disabled="meta.current_page === 1"
-          class="w-9 h-9 rounded-xl border border-warm-200 flex items-center justify-center text-warm-600 hover:bg-warm-50 disabled:opacity-50 transition-colors"
+          class="w-9 h-9 rounded-xl border border-warm-200 flex items-center justify-center text-warm-600 hover:bg-warm-50 disabled:opacity-50 transition-colors dark:border-warm-700"
         >
           <AppIcon icon="chevron-left" class="w-4 h-4" />
         </button>
@@ -127,7 +132,7 @@
         <button
           @click="changePage(meta.current_page + 1)"
           :disabled="meta.current_page === meta.last_page"
-          class="w-9 h-9 rounded-xl border border-warm-200 flex items-center justify-center text-warm-600 hover:bg-warm-50 disabled:opacity-50 transition-colors"
+          class="w-9 h-9 rounded-xl border border-warm-200 flex items-center justify-center text-warm-600 hover:bg-warm-50 disabled:opacity-50 transition-colors dark:border-warm-700"
         >
           <AppIcon icon="chevron-right" class="w-4 h-4" />
         </button>
@@ -137,6 +142,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatTime, formatTimeRange, formatPKR } from '@/lib/format'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'

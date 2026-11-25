@@ -31,6 +31,13 @@ const router = createRouter({
       meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
 
+    {
+      path: '/stores/:id',
+      name: 'store-profile',
+      component: () => import('@/views/public/StoreProfileView.vue'),
+      meta: { layout: 'public' },
+    },
+
     // ── Customer (was Client) ────────────────────────────────────────────
     {
       path: '/customer/sign-in',
@@ -55,6 +62,24 @@ const router = createRouter({
       name: 'reset-password',
       component: () => import('@/views/auth/ResetPasswordView.vue'),
       meta: { layout: 'auth', guestOnly: true, portal: 'customer' },
+    },
+    {
+      path: '/customer/dashboard',
+      name: 'customer-dashboard',
+      component: () => import('@/views/client/DashboardViewEnhanced.vue'),
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
+    },
+    {
+      path: '/customer',
+      redirect: '/customer/dashboard',
+    },
+    {
+      path: '/shop',
+      redirect: '/shop/dashboard',
+    },
+    {
+      path: '/support',
+      redirect: '/support/dashboard',
     },
     {
       path: '/customer/bookings',
@@ -157,6 +182,18 @@ const router = createRouter({
       meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
     },
     {
+      path: '/shop/bookings/:id',
+      name: 'shop-booking-detail',
+      component: () => import('@/views/store/BookingDetailView.vue'),
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
+    },
+    {
+      path: '/shop/reviews',
+      name: 'shop-reviews',
+      component: () => import('@/views/store/ReviewsView.vue'),
+      meta: { layout: 'shop', requiresAuth: true, role: 'store_owner' },
+    },
+    {
       path: '/shop/landing',
       name: 'shop-landing',
       component: () => import('@/views/store/ShopLandingEditor.vue'),
@@ -248,6 +285,18 @@ const router = createRouter({
       component: () => import('@/views/admin/CategoriesView.vue'),
       meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
+    {
+      path: '/support/reviews',
+      name: 'support-reviews',
+      component: () => import('@/views/admin/ReviewsView.vue'),
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
+    },
+    {
+      path: '/support/search',
+      name: 'support-search',
+      component: () => import('@/views/admin/SearchRankingView.vue'),
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
+    },
     // ── Catch-all ─────────────────────────────────────────────────────────
     {
       path: '/:pathMatch(.*)*',
@@ -279,7 +328,8 @@ router.beforeEach(async (to) => {
 
   // Not logged in trying to access a protected route → send to the right login page
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    return loginRouteForPath(to.path)
+    // Remember the destination so sign-in can send the user straight back.
+    return { ...loginRouteForPath(to.path), query: { redirect: to.fullPath } }
   }
 
   // Already logged in trying to access a guest-only page → go to dashboard

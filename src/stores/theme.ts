@@ -5,7 +5,14 @@ export type ThemeMode = 'light' | 'dark' | 'auto'
 export type ResolvedTheme = 'light' | 'dark'
 
 export const useThemeStore = defineStore('theme', () => {
-  const themeMode = ref<ThemeMode>((localStorage.getItem('themeMode') as ThemeMode) || 'dark')
+  function readSavedMode(): ThemeMode | null {
+    try {
+      const v = localStorage.getItem('themeMode')
+      return v === 'light' || v === 'dark' || v === 'auto' ? v : null
+    } catch { return null }
+  }
+  // First visit follows the operating-system preference.
+  const themeMode = ref<ThemeMode>(readSavedMode() ?? 'auto')
   const systemPreference = ref<ResolvedTheme>('light')
 
   // Computed resolved theme (actual theme to apply)
@@ -69,7 +76,7 @@ export const useThemeStore = defineStore('theme', () => {
 
   // Watch theme mode changes
   watch(themeMode, (newMode) => {
-    localStorage.setItem('themeMode', newMode)
+    try { localStorage.setItem('themeMode', newMode) } catch { /* storage unavailable */ }
   }, { immediate: true })
 
   // Watch resolved theme and apply it

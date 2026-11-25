@@ -91,7 +91,7 @@
           <div class="selection-summary-list">
             <div v-for="slot in calendarSlots" :key="slot.date" class="selection-summary-item">
               <span class="font-medium text-warm-800 dark:text-warm-100">{{ formatSlotDate(slot.date) }}</span>
-              <span class="text-primary-500 font-semibold">{{ slot.start_time }} — {{ slot.end_time }}</span>
+              <span class="text-primary-500 font-semibold">{{ formatTimeRange(slot.start_time, slot.end_time) }}</span>
             </div>
           </div>
         </div>
@@ -113,6 +113,18 @@
             <input v-model="booking.event_name" type="text" required class="form-input-warm" placeholder="e.g. My Wedding Reception" />
           </div>
           <div>
+            <label class="form-label-warm">Event Type *</label>
+            <select v-model="booking.event_type" required class="form-input-warm">
+              <option value="" disabled>Select an event type</option>
+              <option v-for="opt in eventTypeOptions" :key="opt.slug" :value="opt.slug">
+                {{ opt.label }}
+              </option>
+            </select>
+            <p v-if="venue.event_types?.length" class="text-xs text-warm-400 mt-1.5">
+              This venue hosts: {{ eventTypeOptions.map(o => o.label).join(', ') }}
+            </p>
+          </div>
+          <div>
             <label class="form-label-warm">Expected Guests *</label>
             <input
               v-model.number="booking.expected_guests"
@@ -123,7 +135,8 @@
               :max="venue.capacity_max || 10000"
               :placeholder="`${venue.capacity_min || 1}–${venue.capacity_max || '∞'}`"
             />
-            <p class="text-xs text-warm-400 mt-1.5">
+            <p v-if="guestError" class="text-xs text-coral mt-1.5">{{ guestError }}</p>
+            <p v-else class="text-xs text-warm-400 mt-1.5">
               Venue capacity: {{ venue.capacity_min || 1 }} – {{ venue.capacity_max || 'unlimited' }}
             </p>
           </div>
@@ -131,11 +144,13 @@
             <label class="form-label-warm">Special Requirements</label>
             <textarea v-model="booking.special_requirements" class="form-input-warm" rows="3" placeholder="Any special requests, equipment needs, dietary requirements..."></textarea>
           </div>
+          <!-- Amenities (fix/features) -->
+          <AmenityPicker v-model="selectedAmenityIds" :amenities="venue.amenities || []" />
           <div class="wizard-actions">
             <button type="button" @click="step = 1" class="wizard-btn-secondary">Back</button>
             <button
               type="submit"
-              :disabled="!booking.event_name || !booking.expected_guests"
+              :disabled="!booking.event_name || !booking.event_type || !booking.expected_guests || !!guestError"
               class="wizard-btn-primary"
             >
               Review Booking
@@ -161,7 +176,7 @@
             <h4 class="review-section-title">Date & Time</h4>
             <div v-for="slot in calendarSlots" :key="slot.date" class="review-slot">
               <span class="review-slot-date">{{ formatSlotDate(slot.date) }}</span>
-              <span class="review-slot-time">{{ slot.start_time }} — {{ slot.end_time }}</span>
+              <span class="review-slot-time">{{ formatTimeRange(slot.start_time, slot.end_time) }}</span>
             </div>
           </div>
 
@@ -170,7 +185,7 @@
             <h4 class="review-section-title">Event Details</h4>
             <div class="review-grid">
               <div><span class="review-label">Name</span><span class="review-value">{{ booking.event_name }}</span></div>
-              <div v-if="booking.event_type"><span class="review-label">Type</span><span class="review-value capitalize">{{ booking.event_type.replace(/_/g, ' ') }}</span></div>
+              <div v-if="booking.event_type"><span class="review-label">Type</span><span class="review-value">{{ labelForSlug(booking.event_type) }}</span></div>
               <div><span class="review-label">Guests</span><span class="review-value">{{ booking.expected_guests }}</span></div>
             </div>
             <div v-if="booking.special_requirements" class="mt-2">
@@ -179,20 +194,40 @@
             </div>
           </div>
 
-          <!-- Price estimate -->
+          <!-- Price estimate (base + paid amenities + 5% tax, mirrors backend BookingPricing) -->
           <div class="review-section review-section--highlight">
             <h4 class="review-section-title">Estimated Total</h4>
-            <p class="text-2xl font-bold text-primary-500 mb-1">PKR {{ estimatedTotal }}</p>
-            <p class="text-sm text-warm-500 mb-0">
-              PKR {{ formatPrice(venue) }} / head x {{ booking.expected_guests }} guest{{ booking.expected_guests !== 1 ? 's' : '' }}
-            </p>
+            <p class="text-2xl font-bold text-primary-500 mb-2">PKR {{ fmt(pricing.total) }}</p>
+            <div class="text-sm text-warm-500 space-y-1">
+              <div class="flex justify-between gap-4">
+                <span>PKR {{ formatPrice(venue) }} / head x {{ booking.expected_guests }} guest{{ booking.expected_guests !== 1 ? 's' : '' }}</span>
+                <span>PKR {{ fmt(pricing.base) }}</span>
+              </div>
+              <div v-for="a in selectedPaidAmenities" :key="a.id" class="flex justify-between gap-4">
+                <span>{{ a.name }}</span><span>PKR {{ fmt(Number(a.price || 0)) }}</span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span>Tax (5%)</span><span>PKR {{ fmt(pricing.tax) }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Errors -->
         <div v-if="submitError" class="alert-error mt-4">
           <AppIcon icon="alert-triangle" class="w-4 h-4 flex-shrink-0 mt-0.5" />
-          {{ submitError }}
+          <div>
+            <p class="mb-0">{{ submitError }}</p>
+            <ul v-if="Object.keys(fieldErrors).length" class="mt-1 mb-0 pl-4 list-disc text-sm">
+              <li v-for="(msgs, field) in extraFieldErrors" :key="field">{{ msgs[0] }}</li>
+            </ul>
+            <button v-if="fieldErrors.start_time || fieldErrors.end_time || fieldErrors.event_date" type="button" @click="step = 1" class="underline text-sm mt-1">
+              Choose another date or time
+            </button>
+            <button v-else-if="fieldErrors.expected_guests" type="button" @click="step = 2" class="underline text-sm mt-1">
+              Change guest count
+            </button>
+          </div>
         </div>
 
         <!-- Success -->
@@ -214,6 +249,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatTime, formatTimeRange } from '@/lib/format'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
@@ -221,6 +257,7 @@ import { useCategoriesStore } from '@/stores/categories'
 import { getStorageUrl } from '@/lib/storageUrl'
 import BookingCalendar from '@/components/booking/BookingCalendar.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import AmenityPicker from '@/components/booking/AmenityPicker.vue'
 import type { SelectedDaySlot } from '@/components/booking/BookingCalendar.vue'
 
 const route = useRoute()
@@ -229,6 +266,23 @@ const categoriesStore = useCategoriesStore()
 
 const activeCategories = computed(() => categoriesStore.categories.filter(c => c.is_active))
 
+/** Prettify a slug we have no category record for (e.g. "bridal_showers"). */
+function labelForSlug(slug: string): string {
+  const match = activeCategories.value.find(c => c.slug === slug)
+  if (match) return match.name
+  return slug.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase())
+}
+
+/**
+ * The venue owner picks which categories the venue hosts; the booking must use
+ * one of them. If the venue lists none, any active category is allowed.
+ */
+const eventTypeOptions = computed(() => {
+  const offered: string[] = venue.value?.event_types || []
+  const slugs = offered.length ? offered : activeCategories.value.map(c => c.slug)
+  return slugs.map(slug => ({ slug, label: labelForSlug(slug) }))
+})
+
 const steps = ['Venue', 'Date & Time', 'Event Details', 'Review']
 const step = ref(0)
 const venue = ref<any>(null)
@@ -236,6 +290,7 @@ const loading = ref(true)
 const calendarSlots = ref<SelectedDaySlot[]>([])
 const submitting = ref(false)
 const submitError = ref('')
+const fieldErrors = ref<Record<string, string[]>>({})
 const submitSuccess = ref(false)
 
 const booking = reactive({
@@ -245,6 +300,28 @@ const booking = reactive({
   special_requirements: '',
 })
 
+const guestMin = computed(() => Number(venue.value?.capacity_min) || 1)
+const guestMax = computed(() => Number(venue.value?.capacity_max) || 0)
+const guestError = computed(() => {
+  const g = Number(booking.expected_guests)
+  if (!g) return ''
+  if (!Number.isInteger(g) || g < guestMin.value || (guestMax.value && g > guestMax.value)) {
+    return guestMax.value
+      ? `This venue accommodates between ${guestMin.value} and ${guestMax.value} guests.`
+      : `This venue requires at least ${guestMin.value} guests.`
+  }
+  return ''
+})
+
+// Field errors that add information beyond the headline message.
+const extraFieldErrors = computed(() => {
+  const out: Record<string, string[]> = {}
+  for (const [field, msgs] of Object.entries(fieldErrors.value)) {
+    if (msgs?.length && !submitError.value.startsWith(msgs[0])) out[field] = msgs
+  }
+  return out
+})
+
 const venueImage = computed(() => {
   const imgs = venue.value?.images || []
   const primary = imgs.find((i: any) => i.is_primary)
@@ -252,11 +329,21 @@ const venueImage = computed(() => {
   return path ? getStorageUrl(path) : null
 })
 
-const estimatedTotal = computed(() => {
-  const pricePerHead = venue.value?.price_per_head ?? 0
-  const guests = booking.expected_guests || 1
-  return Number(pricePerHead * guests).toLocaleString()
+// ── Amenities & pricing (fix/features) ────────────────────────────────
+const selectedAmenityIds = ref<number[]>([])
+const selectedPaidAmenities = computed(() =>
+  (venue.value?.amenities || []).filter((a: any) => a.is_paid && selectedAmenityIds.value.includes(a.id)),
+)
+const pricing = computed(() => {
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const base = round2((venue.value?.price_per_head ?? 0) * (booking.expected_guests || 1))
+  const amenities = round2(selectedPaidAmenities.value.reduce((sum: number, a: any) => sum + Number(a.price || 0), 0))
+  const tax = round2((base + amenities) * 0.05)
+  return { base, amenities, tax, total: round2(base + amenities + tax) }
 })
+function fmt(n: number) {
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
 
 function formatPrice(v: any) {
   const price = v.price_per_head
@@ -281,7 +368,11 @@ async function loadVenue() {
   try {
     const { data } = await api.get(`/venues/${route.params.id}`)
     venue.value = data.data
-    booking.event_type = venue.value?.event_types?.[0] || 'general'
+    // Preselect only when the venue offers exactly one type; otherwise the
+    // customer chooses. Never fall back to a slug that isn't a real category.
+    const offered: string[] = venue.value?.event_types || []
+    booking.event_type = offered.length === 1 ? offered[0] : ''
+    booking.expected_guests = Number(venue.value?.capacity_min) || 1
   } catch {
     venue.value = null
   } finally {
@@ -292,6 +383,7 @@ async function loadVenue() {
 async function submitBooking() {
   submitting.value = true
   submitError.value = ''
+  fieldErrors.value = {}
   submitSuccess.value = false
 
   // Use first slot as primary date for backward compatibility
@@ -307,13 +399,22 @@ async function submitBooking() {
       end_time: primarySlot.end_time,
       expected_guests: booking.expected_guests,
       special_requirements: booking.special_requirements,
+      amenity_ids: selectedPaidAmenities.value.map((a: any) => a.id),
       // Send all slots for multi-day support
       slots: calendarSlots.value,
     })
     submitSuccess.value = true
     setTimeout(() => router.push('/customer/bookings'), 2000)
   } catch (e: any) {
-    submitError.value = e.response?.data?.message || 'Booking failed. Please try again.'
+    const status = e.response?.status
+    fieldErrors.value = e.response?.data?.errors || {}
+    if (status === 429) {
+      submitError.value = e.response?.data?.message || 'Too many requests. Please wait a minute and try again.'
+    } else if (!e.response) {
+      submitError.value = 'Could not reach the server. Check your connection and try again.'
+    } else {
+      submitError.value = e.response?.data?.message || 'Booking failed. Please try again.'
+    }
   } finally {
     submitting.value = false
   }

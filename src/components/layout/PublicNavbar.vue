@@ -5,9 +5,7 @@
   >
     <div class="content-container flex items-center justify-between">
       <RouterLink to="/" class="flex items-center gap-2.5 shrink-0">
-        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center shadow-lg shadow-primary-500/20">
-          <span class="text-white font-extrabold text-sm">EG</span>
-        </div>
+        <AppLogo class="w-9 h-9" />
         <span class="font-extrabold text-base sm:text-lg text-warm-800 dark:text-white tracking-tight">EventGenius</span>
       </RouterLink>
 
@@ -72,6 +70,7 @@
 </template>
 
 <script setup lang="ts">
+import AppLogo from '@/components/brand/AppLogo.vue'
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'

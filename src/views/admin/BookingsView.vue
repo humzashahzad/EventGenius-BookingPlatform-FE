@@ -64,8 +64,22 @@
               </td>
               <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 capitalize">{{ b.event_type?.replace(/_/g, ' ') }}</td>
               <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 whitespace-nowrap">{{ formatDate(b.event_date) }}</td>
-              <td class="px-5 py-3 text-right text-sm font-semibold text-warm-800 dark:text-warm-200">PKR {{ Number(b.total_amount).toLocaleString() }}</td>
-              <td class="px-5 py-3"><span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span></td>
+              <td class="px-5 py-3 text-right text-sm font-semibold text-warm-800 dark:text-warm-200">{{ formatPKR(b.total_amount) }}</td>
+              <td class="px-5 py-3">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span :class="statusClass(b.status)" class="capitalize">{{ b.status }}</span>
+                  <span v-if="b.payment_status === 'paid'" class="badge-primary inline-flex items-center gap-1"><AppIcon icon="circle-check" class="w-3 h-3" />Paid</span>
+                  <span v-else-if="b.payment_status === 'refunded'" class="badge-warm">Refunded</span>
+                  <span v-else-if="b.status === 'confirmed'" class="badge-accent">Unpaid</span>
+                  <button
+                    v-if="b.status === 'confirmed' && b.payment_status === 'unpaid'"
+                    @click="markPaid(b)"
+                    :disabled="markingId === b.id"
+                    class="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-semibold bg-warm-50 dark:bg-warm-800 text-warm-600 dark:text-warm-300 hover:bg-warm-100 dark:hover:bg-warm-700 border border-warm-200 dark:border-warm-700 transition-colors"
+                    title="Demo only: record payment manually without PayFast"
+                  >Mark paid</button>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -74,7 +88,7 @@
 
     <!-- Pagination -->
     <div v-if="meta.last_page > 1" class="flex flex-wrap items-center justify-between mt-6">
-      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ (meta.current_page - 1) * perPage + 1 }}--{{ Math.min(meta.current_page * perPage, meta.total) }} of {{ meta.total }} bookings</p>
+      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ (meta.current_page - 1) * perPage + 1 }}–{{ Math.min(meta.current_page * perPage, meta.total) }} of {{ meta.total }} bookings</p>
       <nav class="flex items-center gap-1">
         <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === 1 ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === 1" @click="changePage(meta.current_page - 1)">
           <AppIcon icon="chevron-left" class="w-4 h-4" />
@@ -92,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatPKR } from '@/lib/format'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/lib/axios'
 import { useTopBarActionsStore } from '@/stores/topBarActions'
@@ -117,6 +132,18 @@ async function load() {
     bookings.value = data.data.data
     meta.value     = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total }
   } finally { loading.value = false }
+}
+
+const markingId = ref<number | null>(null)
+async function markPaid(b: any) {
+  if (!window.confirm(`Mark booking ${b.booking_number} as paid manually? (demo only — no PayFast charge)`)) return
+  markingId.value = b.id
+  try {
+    await api.post(`/admin/bookings/${b.id}/mark-paid`)
+    await load()
+  } catch (err: any) {
+    window.alert(err.response?.data?.message || 'Could not mark booking as paid.')
+  } finally { markingId.value = null }
 }
 
 function resetAndLoad() { page = 1; load() }
