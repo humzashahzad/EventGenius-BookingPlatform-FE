@@ -20,6 +20,15 @@
         <p class="hero-subtext mx-auto mb-8" style="max-width:38rem;">
           Weddings, corporate events, film shoots &amp; more — discover, compare and book venues across Pakistan in minutes.
         </p>
+        <div class="hero-search mx-auto mb-6">
+          <SmartSearchBox
+            v-model="heroQuery"
+            variant="hero"
+            aria-label="Search venues"
+            @submit="heroSearch"
+            @select="heroSelect"
+          />
+        </div>
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
           <RouterLink to="/venues" class="hero-btn-primary">
             <AppIcon icon="search" class="w-[1.125rem] h-[1.125rem]" />
@@ -197,11 +206,27 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import PixelCanvas from '@/components/ui/PixelCanvas.vue'
+import SmartSearchBox from '@/components/search/SmartSearchBox.vue'
+import type { Suggestion } from '@/components/search/types'
+
+// ─── Hero smart search → /venues?q=… ─────────────────────────────────────────
+const router = useRouter()
+const heroQuery = ref('')
+
+function heroSearch(q: string) {
+  router.push(q ? { path: '/venues', query: { q } } : { path: '/venues' })
+}
+
+function heroSelect(s: Suggestion) {
+  if (s.type === 'city') router.push({ path: '/venues', query: { city: s.city || s.value } })
+  else if (s.type === 'category') router.push({ path: '/venues', query: { event_type: s.value } })
+  else heroSearch(s.value)
+}
 
 const featuredVenues = ref<any[]>([])
 const loadingVenues = ref(false)
@@ -257,6 +282,12 @@ onMounted(fetchFeaturedVenues)
 
 <style scoped>
 /* ─── Hero ─────────────────────────────────────────────────────────────────── */
+.hero-search {
+  max-width: 40rem;
+  position: relative;
+  z-index: 2;
+}
+
 .hero-section {
   position: relative;
   padding: 7rem 1rem 6rem;
