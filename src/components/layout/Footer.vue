@@ -25,8 +25,8 @@
     <div class="content-container footer-main">
       <div class="footer-brand">
         <RouterLink to="/" class="inline-flex items-center gap-2.5 rounded-md" aria-label="EventGenius home">
-          <AppLogo tone="on-dark" class="w-9 h-9" />
-          <span class="font-display font-bold text-xl text-white tracking-tight">EventGenius</span>
+          <AppLogo class="w-9 h-9" />
+          <span class="footer-wordmark">EventGenius</span>
         </RouterLink>
         <p class="footer-about">
           Discover, compare and book event venues across Pakistan — weddings, mehndi and walima, birthdays, conferences and more — with secure online payment.
@@ -122,64 +122,64 @@ function toTop() {
 </script>
 
 <style scoped>
-/* The footer is always dark (public pages are light-only), so colours are fixed values
-   chosen for contrast on #1c1917: body text #d6d3d1 (12.6:1), muted #a8a29e (7.3:1). */
-.site-footer { background: #1c1917; color: #d6d3d1; border-top: 1px solid #292524; }
+/* Light footer built on the theme tokens (follows dark mode automatically where enabled). */
+.site-footer { background: var(--surface-sunken); color: var(--ink-secondary); border-top: 1px solid var(--line); }
 
 .footer-cta {
   display: flex; flex-direction: column; gap: 20px;
   margin-top: 48px; padding: 28px; border-radius: 16px;
-  background: #292524; border: 1px solid #3a3532;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-sm);
 }
-.footer-eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #6ee7b7; }
-.footer-cta-title { margin: 0; font-family: var(--font-display, inherit); font-size: 22px; line-height: 1.25; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
-.footer-cta-text { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: #a8a29e; max-width: 46ch; }
+.footer-eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--brand-text); }
+.footer-cta-title { margin: 0; font-family: var(--font-display, inherit); font-size: 22px; line-height: 1.25; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; }
+.footer-cta-text { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: var(--ink-muted); max-width: 46ch; }
 .footer-cta-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .footer-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   height: 44px; padding: 0 20px; border-radius: 10px;
   font-size: 15px; font-weight: 600; white-space: nowrap; transition: background-color .15s ease, border-color .15s ease;
 }
-.footer-btn-primary { background: #047857; color: #fff; border: 1px solid #047857; }
-.footer-btn-primary:hover { background: #065f46; border-color: #065f46; }
-.footer-btn-secondary { background: transparent; color: #fff; border: 1px solid #57534e; }
-.footer-btn-secondary:hover { background: #3a3532; border-color: #78716c; }
+.footer-btn-primary { background: var(--brand-strong); color: var(--on-brand); border: 1px solid var(--brand-strong); }
+.footer-btn-primary:hover { background: var(--brand-hover, var(--brand-strong)); border-color: var(--brand-hover, var(--brand-strong)); }
+.footer-btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); }
+.footer-btn-secondary:hover { background: var(--surface-hover); }
 
 .footer-main {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 24px;
   padding-top: 48px; padding-bottom: 40px;
 }
 .footer-brand { grid-column: 1 / -1; }
-.footer-about { margin: 16px 0 0; max-width: 40ch; font-size: 14px; line-height: 1.65; color: #a8a29e; }
-.footer-trust { margin: 20px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 14px; color: #d6d3d1; }
+.footer-wordmark { font-family: var(--font-display, inherit); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--ink); }
+.footer-about { margin: 16px 0 0; max-width: 40ch; font-size: 14px; line-height: 1.65; color: var(--ink-muted); }
+.footer-trust { margin: 20px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 14px; color: var(--ink-secondary); }
 .footer-trust li { display: flex; align-items: center; gap: 10px; }
-.footer-trust :deep(svg) { color: #34d399; flex-shrink: 0; }
+.footer-trust :deep(svg) { color: var(--brand-text); flex-shrink: 0; }
 
-.footer-heading { margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #fff; }
+.footer-heading { margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
 .footer-col ul { margin: 0; padding: 0; list-style: none; }
 .footer-heading-gap { margin-top: 24px; }
 .footer-link {
   display: inline-flex; align-items: center; min-height: 32px;
-  font-size: 14px; color: #d6d3d1; border-radius: 4px; transition: color .15s ease;
+  font-size: 14px; color: var(--ink-secondary); border-radius: 4px; transition: color .15s ease;
 }
-.footer-link:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.footer-link:hover { color: var(--brand-text); text-decoration: underline; text-underline-offset: 3px; }
 
-.footer-bottom { border-top: 1px solid #292524; }
+.footer-bottom { border-top: 1px solid var(--line); }
 .footer-bottom-inner {
   display: flex; flex-direction: column; gap: 12px; padding-top: 20px; padding-bottom: 24px;
-  font-size: 13px; color: #a8a29e;
+  font-size: 13px; color: var(--ink-muted);
 }
 .footer-bottom-inner p { margin: 0; }
 .footer-note { display: inline-flex; align-items: center; gap: 8px; }
-.footer-dot { width: 8px; height: 8px; border-radius: 9999px; background: #34d399; flex-shrink: 0; }
+.footer-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--brand); flex-shrink: 0; }
 .footer-top {
   display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
-  height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid #3a3532;
-  background: transparent; color: #d6d3d1; font-size: 13px; font-weight: 500; cursor: pointer;
+  height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-strong);
+  background: var(--surface); color: var(--ink-secondary); font-size: 13px; font-weight: 500; cursor: pointer;
 }
-.footer-top:hover { background: #292524; color: #fff; }
+.footer-top:hover { background: var(--surface-hover); color: var(--ink); }
 
-.site-footer a:focus-visible, .site-footer button:focus-visible { outline: 2px solid #34d399; outline-offset: 2px; }
+.site-footer a:focus-visible, .site-footer button:focus-visible { outline: 2px solid var(--brand-strong); outline-offset: 2px; }
 
 @media (min-width: 640px) {
   .footer-main { grid-template-columns: repeat(3, minmax(0, 1fr)); }
