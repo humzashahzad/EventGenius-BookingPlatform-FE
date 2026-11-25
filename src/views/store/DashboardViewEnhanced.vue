@@ -146,7 +146,7 @@
             <template v-else-if="actionTab === 'requests'">
               <ul v-if="pendingList.length" class="divide-y divide-line">
                 <li v-for="b in pendingList.slice(0, 5)" :key="b.id" class="px-4 py-3 flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2">
-                  <RouterLink :to="`/shop/bookings/${b.id}`" class="min-w-0 flex-1 group">
+                  <RouterLink :to="`/shop/bookings/${b.id}`" class="min-w-0 flex-1 basis-full sm:basis-auto group">
                     <p class="text-sm font-medium text-ink truncate group-hover:underline">{{ b.event_name || b.client?.name }}</p>
                     <p class="text-xs text-ink-muted truncate">{{ b.venue?.name }} · {{ formatDate(b.event_date) }} · <span class="num">{{ compactPKR(b.total_amount) }}</span></p>
                   </RouterLink>
