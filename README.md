@@ -56,7 +56,7 @@ Three separate portals, each with its own layout, sidebar, and navigation:
 ### Booking Flow
 - Interactive booking calendar
 - Full booking lifecycle management
-- PayFast payment integration (sandbox)
+- PayFast payment integration
 - Payment success/cancel handling
 
 ### Dashboard & Analytics

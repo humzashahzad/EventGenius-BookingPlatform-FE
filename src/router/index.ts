@@ -114,7 +114,7 @@ const router = createRouter({
       meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
 
-    // ── PayFast Payment (SANDBOX) ─────────────────────────────────────────
+    // ── PayFast Payment ────────────────────────────────────────────────────
     {
       path: '/customer/bookings/:id/pay',
       name: 'customer-payment',

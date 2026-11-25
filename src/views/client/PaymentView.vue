@@ -54,11 +54,6 @@
         </div>
       </header>
 
-      <div v-if="paymentData.sandbox" class="alert-warning max-w-5xl" role="note">
-        <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
-        <div><p class="alert-title">Sandbox mode</p><p class="text-sm">This is a test payment. No real money will be charged.</p></div>
-      </div>
-
       <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start max-w-5xl">
         <!-- Summary -->
         <section class="card overflow-hidden lg:col-span-3" aria-labelledby="summary-title">
@@ -93,7 +88,7 @@
               <p class="font-display text-3xl font-bold tracking-tight text-ink num">PKR {{ formatPkr(amount.app_amount) }}</p>
             </div>
             <div class="panel-sunken px-4 py-3 text-sm text-ink-secondary">
-              Charged as <strong class="text-ink num">R{{ formatZar(amount.gateway_amount) }}</strong> in PayFast{{ paymentData.sandbox ? ' sandbox' : '' }}
+              Charged as <strong class="text-ink num">R{{ formatZar(amount.gateway_amount) }}</strong> by PayFast
               <span class="block text-xs text-ink-muted mt-0.5">Rate: 1 PKR = {{ amount.exchange_rate }} ZAR</span>
             </div>
 
@@ -114,21 +109,6 @@
           </div>
         </section>
       </div>
-
-      <!-- Sandbox debug -->
-      <details v-if="paymentData.sandbox" class="card max-w-5xl group">
-        <summary class="cursor-pointer select-none px-5 py-3.5 text-sm font-medium text-ink-secondary flex items-center justify-between">
-          Sandbox details (for testing)
-          <AppIcon icon="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180" />
-        </summary>
-        <div class="px-5 pb-5 text-xs font-mono text-ink-muted space-y-1 break-all">
-          <p>Payment ID: {{ paymentData.fields.m_payment_id }}</p>
-          <p>Merchant ID: {{ paymentData.fields.merchant_id }}</p>
-          <p>Amount: {{ paymentData.fields.amount }} ZAR (PKR {{ amount.app_amount }} &times; {{ amount.exchange_rate }})</p>
-          <p>Signature: {{ paymentData.fields.signature }}</p>
-          <p>Action URL: {{ paymentData.action_url }}</p>
-        </div>
-      </details>
     </template>
   </div>
 </template>
