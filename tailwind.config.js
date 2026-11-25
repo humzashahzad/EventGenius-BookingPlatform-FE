@@ -1,4 +1,10 @@
 /** @type {import('tailwindcss').Config} */
+
+// Theme-aware colours backed by the CSS variables in src/assets/main.css.
+// They switch automatically with the `dark` class, so no `dark:` variant is
+// needed when you use them (bg-surface, text-ink, border-line, …).
+const v = (name) => `rgb(var(--c-${name}) / <alpha-value>)`
+
 export default {
   content: [
     './index.html',
@@ -8,6 +14,41 @@ export default {
   theme: {
     extend: {
       colors: {
+        // ── Semantic tokens (preferred for new work) ──
+        canvas: v('canvas'),
+        surface: {
+          DEFAULT: v('surface'),
+          raised: v('surface-raised'),
+          sunken: v('surface-sunken'),
+          hover: v('surface-hover'),
+          inverse: v('surface-inverse'),
+        },
+        line: {
+          DEFAULT: v('line'),
+          strong: v('line-strong'),
+        },
+        ink: {
+          DEFAULT: v('ink'),
+          secondary: v('ink-secondary'),
+          muted: v('ink-muted'),
+          inverse: v('ink-inverse'),
+        },
+        brand: {
+          DEFAULT: v('brand'),
+          strong: v('brand-strong'),
+          hover: v('brand-hover'),
+          soft: v('brand-soft'),
+          muted: v('brand-muted'),
+          text: v('brand-text'),
+          on: v('on-brand'),
+        },
+        success: { DEFAULT: v('success'), soft: v('success-soft'), text: v('success-text'), line: v('success-line') },
+        warning: { DEFAULT: v('warning'), soft: v('warning-soft'), text: v('warning-text'), line: v('warning-line') },
+        danger: { DEFAULT: v('danger'), soft: v('danger-soft'), text: v('danger-text'), line: v('danger-line') },
+        info: { DEFAULT: v('info'), soft: v('info-soft'), text: v('info-text'), line: v('info-line') },
+        neutral: { DEFAULT: v('neutral'), soft: v('neutral-soft'), text: v('neutral-text'), line: v('neutral-line') },
+
+        // ── Legacy scales (kept so existing classes keep working) ──
         primary: {
           DEFAULT: '#10B981',
           50: '#ECFDF5',
@@ -16,20 +57,23 @@ export default {
           300: '#6EE7B7',
           400: '#34D399',
           500: '#10B981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065F46',
-          900: '#064E3B',
+          // 600+ shifted one step darker so emerald text and white-on-emerald
+          // fills pass WCAG AA (600 = brand-strong #047857).
+          600: '#047857',
+          700: '#065F46',
+          800: '#064E3B',
+          900: '#022C22',
+          950: '#011812',
         },
         accent: {
-          DEFAULT: '#F59E0B',
+          DEFAULT: v('accent'),
           light: '#FCD34D',
-          dark: '#D97706',
+          dark: '#B45309',
         },
         coral: {
-          DEFAULT: '#F97066',
+          DEFAULT: v('coral'),
           light: '#FCA5A1',
-          dark: '#E5453A',
+          dark: '#B42318',
         },
         warm: {
           50: '#FAFAF9',
@@ -46,27 +90,33 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['DM Sans', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['Bricolage Grotesque', 'DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['DM Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'Consolas', 'monospace'],
       },
       boxShadow: {
-        'soft': '0 1px 3px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.04)',
-        'card': '0 4px 12px rgba(28, 25, 23, 0.05), 0 1px 3px rgba(28, 25, 23, 0.04)',
-        'elevated': '0 12px 32px rgba(28, 25, 23, 0.08), 0 4px 8px rgba(28, 25, 23, 0.04)',
-        'float': '0 20px 48px rgba(28, 25, 23, 0.1), 0 8px 16px rgba(28, 25, 23, 0.06)',
-        'glow': '0 0 24px rgba(16, 185, 129, 0.2)',
+        xs: 'var(--shadow-xs)',
+        // Legacy names, now neutral and theme-aware
+        soft: 'var(--shadow-sm)',
+        card: 'var(--shadow-xs)',
+        elevated: 'var(--shadow-lg)',
+        float: 'var(--shadow-xl)',
       },
       borderRadius: {
         '2xl': '1rem',
         '3xl': '1.25rem',
         '4xl': '1.5rem',
       },
+      zIndex: {
+        sticky: '20',
+        nav: '30',
+        drawer: '40',
+        modal: '50',
+        toast: '60',
+      },
       keyframes: {
-        gradientShift: {
-          '0%, 100%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-        },
         fadeInUp: {
-          '0%': { opacity: '0', transform: 'translateY(16px)' },
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         softPulse: {
@@ -75,8 +125,7 @@ export default {
         },
       },
       animation: {
-        'gradient-shift': 'gradientShift 8s ease infinite',
-        'fade-in-up': 'fadeInUp 0.5s ease forwards',
+        'fade-in-up': 'fadeInUp 0.35s ease forwards',
         'soft-pulse': 'softPulse 2s ease-in-out infinite',
       },
     },
