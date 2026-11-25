@@ -1,37 +1,29 @@
 <template>
-  <div class="content-container">
-    <div class="card max-w-xl mx-auto text-center py-10">
-      <div class="px-6">
-        <!-- X Icon -->
-        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-coral/10 flex items-center justify-center">
-          <AppIcon icon="x" class="w-10 h-10 text-coral" />
-        </div>
-
-        <h1 class="text-2xl font-bold text-warm-900 tracking-tight mb-2 dark:text-white">Payment Cancelled</h1>
-        <p class="text-sm text-warm-500 mb-8">
-          Your payment was cancelled. No charges were made and your booking remains unpaid.<br />
-          You can try again from your booking details page.
+  <div class="max-w-xl mx-auto">
+    <section class="card overflow-hidden">
+      <div class="px-6 pt-8 pb-6 text-center">
+        <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-neutral-soft text-neutral-text border border-neutral-line">
+          <AppIcon icon="x" class="w-7 h-7" />
+        </span>
+        <h1 class="mt-4 page-title">Payment cancelled</h1>
+        <p class="mt-1 text-sm text-ink-muted">
+          You left PayFast before paying. No money was taken and your booking is still unpaid.
+          You can pay any time from the booking page.
         </p>
 
-        <!-- Booking Reference -->
-        <div v-if="bookingId" class="card bg-warm-50 dark:bg-warm-800 max-w-sm mx-auto mb-8">
-          <div class="p-4">
-            <p class="text-sm text-warm-500">
-              Booking ID: <span class="font-mono font-medium text-warm-700 dark:text-warm-200">#{{ bookingId }}</span>
-            </p>
-          </div>
+        <div v-if="bookingId" class="mt-5 inline-flex items-center gap-2 panel-sunken px-3 py-1.5 text-sm text-ink-secondary">
+          Booking <span class="ref text-ink">#{{ bookingId }}</span>
         </div>
 
-        <p v-if="recording" class="text-xs text-warm-400 mb-6">Updating payment record&hellip;</p>
-        <p v-else-if="recordError" class="text-xs text-coral mb-6">{{ recordError }}</p>
-
-        <!-- Actions -->
-        <div class="flex gap-3 justify-center">
-          <RouterLink v-if="bookingId" :to="`/customer/bookings/${bookingId}`" class="btn-primary">Back to Booking</RouterLink>
-          <RouterLink to="/customer/bookings" class="btn-outline">All Bookings</RouterLink>
-        </div>
+        <p v-if="recording" class="mt-4 text-xs text-ink-muted" role="status">Updating payment record&hellip;</p>
+        <p v-else-if="recordError" class="mt-4 form-error" role="alert">{{ recordError }}</p>
       </div>
-    </div>
+
+      <div class="card-footer flex-wrap !justify-center">
+        <RouterLink v-if="bookingId" :to="`/customer/bookings/${bookingId}`" class="btn-primary">Back to booking</RouterLink>
+        <RouterLink to="/customer/bookings" class="btn-ghost">All bookings</RouterLink>
+      </div>
+    </section>
   </div>
 </template>
 
