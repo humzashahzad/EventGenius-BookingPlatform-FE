@@ -169,7 +169,7 @@ onMounted(load)
 <style scoped>
 .flag-chip {
   display: inline-flex; align-items: center; gap: 0.375rem;
-  padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.8125rem;
+  height: var(--control-h-sm); padding: 0 0.75rem; border-radius: 9999px; font-size: 0.8125rem;
   color: var(--ink-secondary); border: 1px solid var(--line); background: var(--surface);
 }
 .flag-chip:hover { background: var(--surface-hover); }

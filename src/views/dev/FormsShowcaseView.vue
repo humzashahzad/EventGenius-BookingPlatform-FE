@@ -134,6 +134,9 @@
             <FormField label="Amenities" group>
               <CheckboxGroup v-model="demo.amenities" :options="['Parking', 'Catering', 'Generator', 'Bridal room']" :columns="2" :disabled="allDisabled" />
             </FormField>
+            <FormField label="Paid amenities (cards with price)" group>
+              <CheckboxGroup v-model="demo.paid" variant="cards" :options="[{ value: 1, label: 'Valet parking', meta: '+ PKR 15,000' }, { value: 2, label: 'Stage lighting', description: 'LED wash + spots', meta: '+ PKR 40,000' }, { value: 3, label: 'Generator backup', meta: 'Included', disabled: true }]" :disabled="allDisabled" />
+            </FormField>
             <FormField label="Event types (cards)" group>
               <CheckboxGroup v-model="demo.multi" :options="eventTypes" variant="cards" :columns="3" :disabled="allDisabled" />
             </FormField>
@@ -158,6 +161,10 @@
             <FormField label="Event date" required hint="Fridays are unavailable · from today">
               <DatePicker v-model="demo.date" :min="todayIso" :disabled-dates="(_iso, d) => d.getDay() === 5" clearable :disabled="allDisabled" />
             </FormField>
+            <FormField label="Availability (inline, marked days)" group hint="Green: free · amber: few slots left · red: fully booked (disabled)">
+              <DatePicker v-model="demo.date" inline :min="todayIso" :day-meta="availability" @month-change="ym => (demo.month = ym)" />
+            </FormField>
+            <p class="text-xs text-ink-muted -mt-2">month-change: {{ demo.month }}</p>
             <FormField label="Booking dates">
               <DateRangePicker v-model:start="demo.from" v-model:end="demo.to" :presets="['today', 'last7', 'thisMonth', 'next30']" :disabled="allDisabled" />
             </FormField>
@@ -243,7 +250,7 @@ import {
   SelectInput, Combobox, MultiSelect, TagsInput, CheckboxInput, CheckboxGroup, RadioGroup, RadioCards,
   SwitchInput, SegmentedControl, DatePicker, DateRangePicker, TimePicker, SliderInput, RangeSlider,
   RatingInput, OtpInput, FileUpload, ImageUpload, LocationInput, FormActions, rules, useValidation, toISODate,
-  type ControlSize,
+  type ControlSize, type DayMeta,
 } from '@/components/forms'
 
 const route = useRoute()
@@ -266,6 +273,7 @@ const demo = reactive({
   agree: true, agree2: false, amenities: ['Parking'] as unknown[], pay: 'card', status: 'active', switch: true, period: 'week', view: 'grid',
   date: '', from: '', to: '', open: '10:00', close: '09:00', hourly: '23:59',
   weight: 40, budget: [1500, 4000] as [number, number], rating: null as number | null, half: 3.5, otp: '',
+  month: '', paid: [1] as unknown[],
   images: [] as File[], files: [] as File[], desc: '',
   location: { address: '', city: 'Lahore', latitude: 31.5204, longitude: 74.3587 } as { address: string; city?: string; latitude: number | null; longitude: number | null },
 })
@@ -274,6 +282,13 @@ const emailError = computed(() => (demo.email ? rules.email()(demo.email) === tr
 const phoneError = computed(() => v.error('phone') || (demo.phone && rules.pkMobile()(demo.phone) !== true ? 'Enter a mobile number like 0300-1234567.' : ''))
 const cnicError = computed(() => (demo.cnic && rules.cnic()(demo.cnic) !== true ? 'Enter 13 digits: 35202-1234567-1.' : ''))
 const otpDone = ref('')
+function availability(_iso: string, d: Date): DayMeta | null {
+  const n = d.getDate()
+  if (n % 9 === 0) return { tone: 'danger', label: 'Fully booked', disabled: true }
+  if (n % 5 === 0) return { tone: 'warning', label: 'Few slots left' }
+  if (n % 3 === 0) return { tone: 'success', label: 'Available' }
+  return null
+}
 const allDisabled = ref(false)
 
 const venues = ['Mughal Garden Marquee', 'Shalimar Banquets', 'Clifton Rooftop', 'Royal Palm Hall', 'Lake View Lawn', 'Margalla Hills Marquee', 'Grand Pearl Hall']

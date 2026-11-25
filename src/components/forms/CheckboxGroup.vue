@@ -4,10 +4,11 @@
       <label v-if="variant === 'cards'" class="choice-card" :class="[isOn(o.value) && 'is-checked', (o.disabled || ctl.disabled.value) && 'is-disabled']">
         <input type="checkbox" class="form-check mt-0.5 shrink-0" :checked="isOn(o.value)" :disabled="o.disabled || ctl.disabled.value" :aria-invalid="ctl.invalid.value || undefined" @change="toggle(o.value)" />
         <span v-if="o.icon" class="text-sm shrink-0" aria-hidden="true">{{ o.icon }}</span>
-        <span class="min-w-0">
+        <span class="min-w-0 flex-1">
           <span class="block text-sm text-ink" :class="o.description && 'font-medium'">{{ o.label }}</span>
           <span v-if="o.description" class="block text-xs text-ink-muted mt-0.5">{{ o.description }}</span>
         </span>
+        <span v-if="o.meta" class="ml-auto pl-2 text-sm font-semibold text-ink num shrink-0">{{ o.meta }}</span>
       </label>
       <CheckboxInput v-else :model-value="isOn(o.value)" :label="o.label" :description="o.description" :disabled="o.disabled || ctl.disabled.value" @update:model-value="toggle(o.value)" />
     </template>
@@ -20,7 +21,8 @@ import { computed } from 'vue'
 import CheckboxInput from './CheckboxInput.vue'
 import { useControl } from './useControl'
 
-export interface CheckOption { value: unknown; label: string; description?: string; icon?: string; disabled?: boolean }
+/** `meta` is right-aligned text such as a price (“+ PKR 15,000” or “Included”). */
+export interface CheckOption { value: unknown; label: string; description?: string; icon?: string; meta?: string; disabled?: boolean }
 
 const props = withDefaults(defineProps<{
   options: (CheckOption | string)[]

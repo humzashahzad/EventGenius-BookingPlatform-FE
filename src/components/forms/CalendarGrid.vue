@@ -16,20 +16,21 @@
               :ref="el => setRef(d.iso, el as HTMLButtonElement | null)"
               type="button"
               class="day"
-              :class="{
+              :class="[{
                 'is-out': d.out,
                 'is-today': d.today,
                 'is-selected': isSel(d.date),
-              }"
+              }, d.meta?.tone && `tone-day-${d.meta.tone}`]"
               :tabindex="sameDay(d.date, focus) ? 0 : -1"
               :disabled="d.disabled"
               :aria-pressed="isSel(d.date)"
               :aria-current="d.today ? 'date' : undefined"
-              :aria-label="label(d.date)"
+              :aria-label="label(d.date) + (d.meta?.label ? `, ${d.meta.label}` : '')"
+              :title="d.meta?.label"
               @click="pick(d.date)"
               @mouseenter="emit('hover', d.date)"
               @focus="focus = d.date"
-            >{{ d.date.getDate() }}</button>
+            >{{ d.date.getDate() }}<span v-if="d.meta?.tone" class="day-dot" aria-hidden="true" /></button>
           </td>
         </tr>
       </tbody>
@@ -45,7 +46,7 @@
  */
 import { computed, nextTick, ref, watch } from 'vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import { MONTHS_LONG, WEEKDAYS, addDays, addMonths, sameDay, toISODate } from './utils'
+import { MONTHS_LONG, WEEKDAYS, addDays, addMonths, sameDay, toISODate, type DayMeta } from './utils'
 
 const props = defineProps<{
   selected?: Date | null
@@ -54,9 +55,10 @@ const props = defineProps<{
   min?: Date | null
   max?: Date | null
   isDisabled?: (iso: string, d: Date) => boolean
+  dayMeta?: (iso: string, d: Date) => DayMeta | null | undefined
   initial?: Date | null
 }>()
-const emit = defineEmits<{ pick: [d: Date]; hover: [d: Date] }>()
+const emit = defineEmits<{ pick: [d: Date]; hover: [d: Date]; month: [ym: string] }>()
 
 const today = new Date(); today.setHours(0, 0, 0, 0)
 const focus = ref<Date>(props.initial ?? props.selected ?? props.rangeStart ?? clamp(today))
@@ -75,12 +77,14 @@ const weeks = computed(() => {
   const first = new Date(view.value)
   const offset = (first.getDay() + 6) % 7 // Monday first
   const start = addDays(first, -offset)
-  const rows: { date: Date; iso: string; out: boolean; today: boolean; disabled: boolean }[][] = []
+  const rows: { date: Date; iso: string; out: boolean; today: boolean; disabled: boolean; meta: DayMeta | null }[][] = []
   for (let w = 0; w < 6; w++) {
     const row = []
     for (let i = 0; i < 7; i++) {
       const date = addDays(start, w * 7 + i)
-      row.push({ date, iso: toISODate(date), out: date.getMonth() !== view.value.getMonth(), today: sameDay(date, today), disabled: disabled(date) })
+      const iso = toISODate(date)
+      const meta = props.dayMeta?.(iso, date) ?? null
+      row.push({ date, iso, out: date.getMonth() !== view.value.getMonth(), today: sameDay(date, today), disabled: disabled(date) || !!meta?.disabled, meta })
     }
     rows.push(row)
   }
@@ -107,6 +111,7 @@ function shiftMonth(n: number) {
 }
 function pick(d: Date) { if (!disabled(d)) emit('pick', d) }
 
+watch(view, v => emit('month', `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}`), { immediate: true })
 watch(focus, f => {
   if (f.getMonth() !== view.value.getMonth() || f.getFullYear() !== view.value.getFullYear()) view.value = new Date(f.getFullYear(), f.getMonth(), 1)
 })
@@ -144,6 +149,12 @@ defineExpose({ focusDay })
 .day.is-today { font-weight: 700; box-shadow: inset 0 0 0 1px var(--line-strong); }
 .day.is-selected { background: var(--brand-strong); color: var(--on-brand); font-weight: 600; }
 .day:disabled { color: var(--ink-muted); opacity: .4; text-decoration: line-through; cursor: not-allowed; }
+.day-dot { position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 9999px; background: currentColor; }
+.tone-day-success:not(.is-selected) { color: var(--success-text); }
+.tone-day-warning:not(.is-selected) { color: var(--warning-text); }
+.tone-day-danger:not(.is-selected) { color: var(--danger-text); }
+.tone-day-info:not(.is-selected) { color: var(--info-text); }
+.tone-day-neutral:not(.is-selected) { color: var(--ink-muted); }
 .day:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .in-range { background: var(--brand-soft); }
 .in-range .day { color: var(--brand-text); }

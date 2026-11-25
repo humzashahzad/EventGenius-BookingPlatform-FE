@@ -43,6 +43,7 @@
           :range-end="pending ? (hover ?? pending) : endDate"
           :min="minDate"
           :max="maxDate"
+          :day-meta="dayMeta"
           @pick="pick"
           @hover="d => (hover = d)"
         />
@@ -66,7 +67,7 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import CalendarGrid from './CalendarGrid.vue'
 import { splitAttrs, useControl, type ControlSize } from './useControl'
 import { usePopover } from './usePopover'
-import { addDays, formatDisplayDate, parseISODate, toISODate } from './utils'
+import { addDays, formatDisplayDate, parseISODate, toISODate, type DayMeta } from './utils'
 
 type Preset = 'today' | 'last7' | 'last30' | 'thisMonth' | 'next7' | 'next30' | 'nextMonth'
 defineOptions({ inheritAttrs: false })
@@ -74,6 +75,7 @@ const props = withDefaults(defineProps<{
   min?: string
   max?: string
   presets?: Preset[]
+  dayMeta?: (iso: string, d: Date) => DayMeta | null | undefined
   placeholder?: string
   clearable?: boolean
   ariaLabel?: string
@@ -82,7 +84,7 @@ const props = withDefaults(defineProps<{
   invalid?: boolean
   disabled?: boolean
   describedby?: string
-}>(), { min: undefined, max: undefined, presets: () => [], placeholder: 'Any dates', clearable: true, ariaLabel: 'Choose date range' })
+}>(), { min: undefined, max: undefined, presets: () => [], dayMeta: undefined, placeholder: 'Any dates', clearable: true, ariaLabel: 'Choose date range' })
 
 const start = defineModel<string | null>('start', { default: '' })
 const end = defineModel<string | null>('end', { default: '' })

@@ -48,6 +48,8 @@ const ctl = useControl(props)
 .switch-sm { --w: 28px; --h: 16px; }
 .switch.is-on { background: var(--brand-strong); }
 .switch:disabled { cursor: not-allowed; }
+/* 32px hit area around the 20px track */
+.switch::before { content: ''; position: absolute; inset: -6px -2px; }
 .switch-thumb {
   position: absolute; top: 2px; left: 2px; width: calc(var(--h) - 4px); height: calc(var(--h) - 4px);
   border-radius: 9999px; background: #fff; box-shadow: var(--shadow-xs); transition: transform .15s ease;

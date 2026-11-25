@@ -1,5 +1,9 @@
 <template>
-  <div ref="anchor" v-bind="split.wrapper" :class="[ctl.boxClass.value, open && 'is-focused']" data-control>
+  <!-- Inline: the calendar itself, always visible (no field / popover). -->
+  <div v-if="inline" :id="ctl.id.value" v-bind="split.wrapper" class="cal-inline" role="group" :aria-labelledby="ctl.labelledBy.value" :aria-label="ctl.labelledBy.value ? undefined : ariaLabel" :aria-describedby="ctl.describedBy.value">
+    <CalendarGrid :selected="selectedDate" :min="minDate" :max="maxDate" :is-disabled="isDisabled" :day-meta="dayMeta" @pick="d => setValue(toISODate(d))" @month="ym => emit('month-change', ym)" />
+  </div>
+  <div v-else ref="anchor" v-bind="split.wrapper" :class="[ctl.boxClass.value, open && 'is-focused']" data-control>
     <button
       ref="trigger"
       :id="ctl.id.value"
@@ -36,7 +40,7 @@
       :style="pop.style.value"
       @keydown.esc.prevent.stop="close(true)"
     >
-      <CalendarGrid ref="grid" :selected="selectedDate" :min="minDate" :max="maxDate" :is-disabled="isDisabled" @pick="d => setValue(toISODate(d), true)" />
+      <CalendarGrid ref="grid" :selected="selectedDate" :min="minDate" :max="maxDate" :is-disabled="isDisabled" :day-meta="dayMeta" @pick="d => setValue(toISODate(d), true)" @month="ym => emit('month-change', ym)" />
       <div class="flex items-center justify-between gap-2 pt-2 mt-1 border-t border-line">
         <button type="button" class="btn-ghost btn-sm" :disabled="todayDisabled" @click="setValue(toISODate(today), true)">Today</button>
         <button type="button" class="btn-ghost btn-sm" @click="close(true)">Close</button>
@@ -49,20 +53,27 @@
 /**
  * Date picker with a calendar popover. v-model is "YYYY-MM-DD" ('' when empty);
  * the field shows Pakistani day-first format ("28 Nov 2026").
- * `min`/`max` are ISO dates; `disabledDates` is a list of ISO dates or a function.
+ * `min`/`max` are ISO dates; `disabledDates` is a list of ISO dates or a function;
+ * `dayMeta(iso, date)` marks days (tone dot + label, or disabled) — e.g. availability.
+ * `month-change` fires with "YYYY-MM" whenever the visible month changes (load availability).
+ * `inline` renders just the calendar.
  */
 import { computed, nextTick, ref, useAttrs, useId } from 'vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import CalendarGrid from './CalendarGrid.vue'
 import { splitAttrs, useControl, type ControlSize } from './useControl'
 import { usePopover } from './usePopover'
-import { formatDisplayDate, parseISODate, toISODate } from './utils'
+import { formatDisplayDate, parseISODate, toISODate, type DayMeta } from './utils'
 
 defineOptions({ inheritAttrs: false })
 const props = withDefaults(defineProps<{
   min?: string
   max?: string
   disabledDates?: string[] | ((iso: string, d: Date) => boolean)
+  /** Per-day state: tone dot, label ("Fully booked"), or disabled. */
+  dayMeta?: (iso: string, d: Date) => DayMeta | null | undefined
+  /** Render the calendar inline instead of a field with a popover. */
+  inline?: boolean
   placeholder?: string
   clearable?: boolean
   /** Renders a hidden input so native form posts include the value. */
@@ -75,10 +86,10 @@ const props = withDefaults(defineProps<{
   readonly?: boolean
   required?: boolean
   describedby?: string
-}>(), { min: undefined, max: undefined, disabledDates: undefined, placeholder: 'Select date', name: undefined, ariaLabel: 'Choose date' })
+}>(), { min: undefined, max: undefined, disabledDates: undefined, dayMeta: undefined, placeholder: 'Select date', name: undefined, ariaLabel: 'Choose date' })
 
 const model = defineModel<string | null>({ default: '' })
-const emit = defineEmits<{ change: [value: string] }>()
+const emit = defineEmits<{ change: [value: string]; 'month-change': [yearMonth: string] }>()
 const ctl = useControl(props)
 const attrs = useAttrs()
 const split = computed(() => splitAttrs(attrs))

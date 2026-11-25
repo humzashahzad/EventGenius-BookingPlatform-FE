@@ -4,6 +4,16 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 export const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] // Pakistan: week starts Monday
 
+/** Per-day state for DatePicker / DateRangePicker calendars (`dayMeta` prop). */
+export interface DayMeta {
+  /** Colours the day number and adds a dot (e.g. warning = few slots left, danger = fully booked). */
+  tone?: 'success' | 'warning' | 'danger' | 'info' | 'neutral'
+  /** Read out to screen readers and shown as a tooltip, e.g. "Fully booked". */
+  label?: string
+  /** Block the day (same as disabledDates). */
+  disabled?: boolean
+}
+
 const pad = (n: number) => String(n).padStart(2, '0')
 
 /** Date → "2026-11-28" (local time, never UTC-shifted). */

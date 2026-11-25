@@ -14,7 +14,7 @@
       <span class="truncate" :title="chip.label">{{ chip.label }}</span>
       <button
         type="button"
-        class="chip-x ml-0.5 shrink-0 w-control-sm h-full inline-flex items-center justify-center rounded-r-md"
+        class="chip-x ml-0.5 -my-px -mr-px shrink-0 w-control-sm h-control-sm inline-flex items-center justify-center rounded-r-md"
         :aria-label="`Remove ${chip.label}`"
         @click="emit('remove', chip)"
       >

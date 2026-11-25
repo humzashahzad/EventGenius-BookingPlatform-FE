@@ -1,28 +1,30 @@
 <template>
   <!-- Amenity selection for the booking wizard. v-model = selected amenity ids. -->
-  <fieldset v-if="amenities.length">
-    <legend class="form-label">Amenities</legend>
+  <div v-if="amenities.length">
+    <label class="form-label-warm">Amenities</label>
     <div class="flex flex-col gap-2">
       <label
         v-for="a in amenities"
         :key="a.id"
-        class="choice-card items-center"
-        :class="isFree(a) ? 'opacity-80 !cursor-default' : modelValue.includes(a.id) && 'is-checked'"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors"
+        :class="isFree(a)
+          ? 'border-warm-200 dark:border-warm-700 opacity-80 cursor-default'
+          : modelValue.includes(a.id) ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20' : 'border-warm-200 dark:border-warm-700 hover:border-primary-300'"
       >
         <input
           type="checkbox"
-          class="form-check shrink-0"
+          class="rounded"
           :checked="isFree(a) || modelValue.includes(a.id)"
           :disabled="isFree(a)"
           @change="toggle(a.id)"
         />
-        <span class="flex-1 text-sm text-ink">{{ a.name }}</span>
-        <span class="text-sm font-medium num" :class="isFree(a) ? 'text-brand-text' : 'text-ink-secondary'">
+        <span class="flex-1 text-sm text-warm-800 dark:text-warm-100">{{ a.name }}</span>
+        <span class="text-sm font-medium" :class="isFree(a) ? 'text-primary-600' : 'text-warm-700 dark:text-warm-300'">
           {{ isFree(a) ? 'Included' : `+ PKR ${Number(a.price || 0).toLocaleString()}` }}
         </span>
       </label>
     </div>
-  </fieldset>
+  </div>
 </template>
 
 <script setup lang="ts">
