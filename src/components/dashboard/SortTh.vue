@@ -21,6 +21,8 @@ const active = computed(() => props.sortKey === props.field)
   display: inline-flex; align-items: center; gap: 0.25rem;
   font: inherit; text-transform: inherit; letter-spacing: inherit; color: inherit;
   border-radius: var(--radius-xs);
+  /* 32px hit area without making the header row taller */
+  min-height: var(--control-h-sm); margin: -0.5rem -0.375rem; padding: 0 0.375rem;
 }
 .sort-btn:hover { color: var(--ink); }
 .sort-btn:hover :deep(svg) { opacity: 0.6; }

@@ -15,13 +15,8 @@
 
     <!-- Toolbar -->
     <div v-if="!loading && venues.length" class="flex flex-col sm:flex-row gap-3">
-      <div class="relative flex-1 min-w-0 sm:max-w-sm">
-        <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
-        <input v-model="search" type="search" class="form-input !pl-9" placeholder="Search by name or city" aria-label="Search venues" />
-      </div>
-      <div class="segmented self-start" role="group" aria-label="Status">
-        <button v-for="s in statusFilters" :key="s.value" type="button" :aria-pressed="statusFilter === s.value" @click="statusFilter = s.value">{{ s.label }}</button>
-      </div>
+      <TextInput v-model="search" type="search" prefix-icon="search" clearable clear-label="Clear search" class="flex-1 min-w-0 sm:max-w-sm" placeholder="Search by name or city" aria-label="Search venues" />
+      <SegmentedControl v-model="statusFilter" class="self-start" aria-label="Status" :options="statusFilters.map(s => ({ value: s.value, label: s.label }))" />
     </div>
 
     <!-- Loading -->
@@ -139,6 +134,7 @@
 </template>
 
 <script setup lang="ts">
+import { TextInput, SegmentedControl } from '@/components/forms'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { toast } from 'vue-sonner'

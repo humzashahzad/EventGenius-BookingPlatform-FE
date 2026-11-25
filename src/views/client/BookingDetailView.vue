@@ -136,10 +136,9 @@
                   <h2 id="cancel-title" class="text-base font-semibold text-ink">Cancel this booking?</h2>
                   <p class="text-sm text-ink-muted">This can't be undone. The date will be released for other customers.</p>
                 </div>
-                <div>
-                  <label for="cancel-reason" class="form-label">Reason <span class="text-ink-muted font-normal">(optional)</span></label>
-                  <textarea id="cancel-reason" ref="cancelReasonRef" v-model="cancelReason" class="form-textarea" rows="2" maxlength="500" placeholder="For example: we changed the date"></textarea>
-                </div>
+                <FormField id="cancel-reason" label="Reason" optional :count="cancelReason.length" :maxlength="500">
+                  <TextareaInput ref="cancelReasonRef" v-model="cancelReason" :rows="2" :maxlength="500" auto-grow placeholder="For example: we changed the date" />
+                </FormField>
                 <p v-if="cancelError" class="form-error" role="alert">{{ cancelError }}</p>
                 <div class="flex flex-wrap gap-2">
                   <button type="submit" :disabled="cancelling" class="btn-danger">
@@ -232,6 +231,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextareaInput } from '@/components/forms'
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -254,7 +254,7 @@ const showCancel = ref(false)
 const cancelReason = ref('')
 const cancelError = ref('')
 const cancelling = ref(false)
-const cancelReasonRef = ref<HTMLTextAreaElement | null>(null)
+const cancelReasonRef = ref<{ focus: () => void } | null>(null)
 
 // Same rules as before: pay when confirmed + unpaid; cancel while pending/confirmed and not paid.
 const canPay = computed(() => booking.value?.status === 'confirmed' && booking.value?.payment_status === 'unpaid')
