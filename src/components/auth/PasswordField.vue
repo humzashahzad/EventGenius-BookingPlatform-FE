@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex items-center justify-between gap-2 mb-1.5">
-      <label :for="id" class="form-label !mb-0">{{ label }}<template v-if="markRequired"> <span class="req" aria-hidden="true">*</span></template></label>
+      <label :for="id" class="form-label !mb-0">{{ label }}<span v-if="markRequired" class="req !ml-1.5" aria-hidden="true">*</span></label>
       <slot name="label-extra" />
     </div>
     <div class="relative">
