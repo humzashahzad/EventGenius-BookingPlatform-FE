@@ -4,9 +4,7 @@
       <div class="grid grid-cols-2 md:grid-cols-12 gap-8">
         <div class="col-span-2 md:col-span-5">
           <RouterLink to="/" class="inline-flex items-center gap-2.5 mb-4">
-            <span class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-              <span class="text-white font-extrabold text-sm">EG</span>
-            </span>
+            <AppLogo tone="on-dark" class="w-9 h-9" />
             <span class="font-extrabold text-lg text-white tracking-tight">EventGenius</span>
           </RouterLink>
           <p class="text-sm text-warm-400 max-w-sm leading-relaxed">
@@ -53,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import AppLogo from '@/components/brand/AppLogo.vue'
 import { RouterLink } from 'vue-router'
 import AppIcon from '@/components/ui/AppIcon.vue'
 

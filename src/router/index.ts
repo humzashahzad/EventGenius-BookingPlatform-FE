@@ -291,6 +291,12 @@ const router = createRouter({
       component: () => import('@/views/admin/ReviewsView.vue'),
       meta: { layout: 'support', requiresAuth: true, role: 'admin' },
     },
+    {
+      path: '/support/search',
+      name: 'support-search',
+      component: () => import('@/views/admin/SearchRankingView.vue'),
+      meta: { layout: 'support', requiresAuth: true, role: 'admin' },
+    },
     // ── Catch-all ─────────────────────────────────────────────────────────
     {
       path: '/:pathMatch(.*)*',

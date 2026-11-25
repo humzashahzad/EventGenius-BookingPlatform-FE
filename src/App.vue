@@ -5,11 +5,7 @@
     class="flex items-center justify-center min-h-screen bg-warm-50 dark:bg-warm-900"
   >
     <div class="flex flex-col items-center gap-4">
-      <div
-        class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center shadow-lg shadow-primary-500/20"
-      >
-        <span class="text-white font-bold text-lg">EG</span>
-      </div>
+      <AppLogo class="w-12 h-12" title="EventGenius" />
       <div
         class="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"
         role="status"
@@ -84,6 +80,7 @@
 </template>
 
 <script setup lang="ts">
+import AppLogo from '@/components/brand/AppLogo.vue'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { Toaster } from 'vue-sonner'

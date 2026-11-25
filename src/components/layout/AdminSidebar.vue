@@ -34,6 +34,7 @@ const sections = computed<NavSection[]>(() => [
       { to: '/support/bookings', label: 'Bookings', icon: 'calendar-event', badge: notifStore.bookingUnreadCount || undefined },
       { to: '/support/reviews', label: 'Reviews', icon: 'star' },
       { to: '/support/categories', label: 'Categories', icon: 'tags' },
+      { to: '/support/search', label: 'Search & Ranking', icon: 'sliders' },
     ],
   },
   {
