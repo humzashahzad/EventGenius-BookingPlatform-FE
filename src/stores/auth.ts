@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { hostPortal, hrefFor } from '@/lib/portalHost'
 import { ref, computed, watch } from 'vue'
 import api from '@/lib/axios'
 import {
@@ -221,13 +222,9 @@ export const useAuthStore = defineStore('auth', () => {
   function redirectToSignInForCurrentPath() {
     const path = window.location.pathname
     if (path.includes('/sign-in')) return
-    if (path.startsWith('/support')) {
-      window.location.href = '/support/sign-in'
-    } else if (path.startsWith('/shop')) {
-      window.location.href = '/shop/sign-in'
-    } else {
-      window.location.href = '/customer/sign-in'
-    }
+    // On a portal subdomain the subdomain decides; elsewhere the path prefix does.
+    const portal = hostPortal ?? (path.startsWith('/support') ? 'support' : path.startsWith('/shop') ? 'shop' : 'customer')
+    window.location.href = hrefFor(`/${portal}/sign-in`)
   }
 
   // ── Listen for session-expired event from axios interceptor ───────────
