@@ -85,10 +85,6 @@
     <div class="footer-bottom">
       <div class="content-container footer-bottom-inner">
         <p>&copy; {{ year }} EventGenius. All rights reserved.</p>
-        <p class="footer-note">
-          <span class="footer-dot" aria-hidden="true"></span>
-          Final Year Project · payments run in PayFast sandbox mode
-        </p>
         <button type="button" class="footer-top" @click="toTop">
           <AppIcon icon="chevron-up" class="w-4 h-4" /> Back to top
         </button>
@@ -170,8 +166,6 @@ function toTop() {
   font-size: 13px; color: var(--ink-muted);
 }
 .footer-bottom-inner p { margin: 0; }
-.footer-note { display: inline-flex; align-items: center; gap: 8px; }
-.footer-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--brand); flex-shrink: 0; }
 .footer-top {
   display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
   height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-strong);
