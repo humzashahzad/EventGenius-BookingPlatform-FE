@@ -10,7 +10,7 @@
         <div class="relative z-10 max-w-[480px] px-8">
           <div class="flex items-center gap-3 mb-8">
             <div class="w-11 h-11 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
-              <AppIcon icon="calendar-event" class="w-5 h-5 text-white" />
+              <AppLogo tone="white" class="w-7 h-7" />
             </div>
             <div>
               <p class="text-primary-200 font-extrabold uppercase text-xs tracking-widest">EventGenius</p>
@@ -34,9 +34,7 @@
       <div class="flex-1 flex overflow-y-auto overscroll-contain p-4 sm:p-12">
         <div class="w-full max-w-[400px] m-auto">
         <div class="lg:hidden flex items-center gap-2 mb-8">
-          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-400 flex items-center justify-center">
-            <span class="text-white font-bold text-sm">EG</span>
-          </div>
+          <AppLogo class="w-9 h-9" />
           <span class="font-bold text-warm-800 dark:text-white">EventGenius</span>
         </div>
 
@@ -133,6 +131,7 @@
 </template>
 
 <script setup lang="ts">
+import AppLogo from '@/components/brand/AppLogo.vue'
 import { ref, reactive, computed } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
