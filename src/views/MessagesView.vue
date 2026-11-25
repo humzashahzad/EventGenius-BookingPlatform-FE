@@ -12,10 +12,28 @@
               Messages
             </h2>
           </div>
-          <span class="connection-badge" :class="'conn-' + chatStore.connectionStatus">
-            <span class="conn-dot"></span>
-            {{ chatStore.connectionStatus === 'connected' ? 'Live' : chatStore.connectionStatus === 'connecting' ? 'Connecting' : 'Offline' }}
-          </span>
+          <div class="sidebar-header-actions">
+            <button
+              v-if="notifStore.desktopPermission === 'default'"
+              type="button"
+              class="header-icon-btn"
+              title="Show message alerts on your desktop"
+              aria-label="Show message alerts on your desktop"
+              @click="enableDesktopAlerts"
+            >
+              <AppIcon icon="bell" class="w-[18px] h-[18px]" />
+            </button>
+            <button
+              type="button"
+              class="header-icon-btn"
+              :title="soundMuted ? 'Turn message sounds on' : 'Mute message sounds'"
+              :aria-label="soundMuted ? 'Turn message sounds on' : 'Mute message sounds'"
+              :aria-pressed="soundMuted"
+              @click="toggleSound"
+            >
+              <AppIcon :icon="soundMuted ? 'volume-off' : 'volume'" class="w-[18px] h-[18px]" />
+            </button>
+          </div>
         </div>
 
         <!-- Unified Search -->
@@ -188,7 +206,6 @@
             <h3>Select a conversation</h3>
             <p>Choose a chat on the left, or search for a venue, customer or support agent to start a new one.</p>
             <div class="no-chat-points">
-              <span class="no-chat-point"><AppIcon icon="bolt" class="w-3.5 h-3.5" />Live delivery</span>
               <span class="no-chat-point"><AppIcon icon="checks" class="w-3.5 h-3.5" />Read receipts</span>
               <span class="no-chat-point"><AppIcon icon="paperclip" class="w-3.5 h-3.5" />Photos and files</span>
             </div>
@@ -730,9 +747,24 @@ import { getStorageUrl } from '@/lib/storageUrl'
 import { formatDistanceToNow, format, isToday, isYesterday, isSameDay } from 'date-fns'
 import { toast } from 'vue-sonner'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import { useNotificationStore } from '@/stores/notifications'
+import { soundService } from '@/services/soundService'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const notifStore = useNotificationStore()
+
+// ── Alert settings (sound + desktop notifications) ─────────────────────
+const soundMuted = computed(() => soundService.muted.value)
+function toggleSound() {
+  soundService.setMuted(!soundService.isMuted())
+  toast.success(soundService.isMuted() ? 'Message sounds muted.' : 'Message sounds on.')
+}
+async function enableDesktopAlerts() {
+  const result = await notifStore.requestBrowserPermission()
+  if (result === 'granted') toast.success('You will get a desktop alert for new messages while this tab is in the background.')
+  else if (result === 'denied') toast.error('Desktop alerts are blocked in your browser settings.')
+}
 const route = useRoute()
 const router = useRouter()
 
@@ -1265,10 +1297,17 @@ function formatRole(role?: string): string {
 
 // ── Lifecycle ───────────────────────────────────────────────────────────
 onMounted(async () => {
-  chatStore.requestNotificationPermission()
+  chatStore.setViewActive(true)
   chatStore.connect()
-  await chatStore.fetchChats()
-  await fetchEligibleContacts()
+  await chatStore.fetchChats({ silent: chatStore.chats.length > 0 })
+  // Coming back to the page with a conversation still open: bring it up to date.
+  if (chatStore.currentChatId && !route.query.chat) {
+    await chatStore.fetchMessages(chatStore.currentChatId, undefined, { silent: true })
+    chatStore.setViewActive(true)
+    nextTick(() => scrollToBottom())
+  }
+  void fetchEligibleContacts()
+  await openChatFromQuery()
   // Deep link: /…/messages?with=<userId> opens (or creates) the chat with that user,
   // e.g. "Message customer" on a booking page.
   const withId = Number(route.query.with)
@@ -1280,7 +1319,19 @@ onMounted(async () => {
   }
 })
 
+// Opening a chat from a new-message alert: /…/messages?chat=<chatId>
+async function openChatFromQuery() {
+  const chatId = Number(route.query.chat)
+  if (!chatId) return
+  if (!chatStore.chats.some(c => c.id === chatId)) await chatStore.fetchChats({ silent: true })
+  if (chatStore.chats.some(c => c.id === chatId)) await openChat(chatId)
+  router.replace({ query: {} })
+}
+watch(() => route.query.chat, (value) => { if (value) void openChatFromQuery() })
+
 onBeforeUnmount(() => {
+  chatStore.setViewActive(false)
+  if (chatStore.currentChatId) chatStore.stopTyping(chatStore.currentChatId)
   if (searchTimeout) clearTimeout(searchTimeout)
   if (recordingTimerInterval) clearInterval(recordingTimerInterval)
   if (currentAudio) { currentAudio.pause(); currentAudio = null }
@@ -1365,47 +1416,26 @@ onBeforeUnmount(() => {
 
 .title-icon { color: var(--brand-text); }
 
-.connection-badge {
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.header-icon-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 1.5rem;
-  padding: 0 0.5rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgb(var(--c-neutral-line));
-  background: rgb(var(--c-neutral-soft));
-  color: rgb(var(--c-neutral-text));
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  color: var(--ink-secondary);
+  transition: background-color .12s ease, color .12s ease;
 }
 
-.conn-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: currentColor;
-}
-
-.conn-connected {
-  border-color: rgb(var(--c-success-line));
-  background: rgb(var(--c-success-soft));
-  color: rgb(var(--c-success-text));
-}
-
-.conn-connecting {
-  border-color: rgb(var(--c-warning-line));
-  background: rgb(var(--c-warning-soft));
-  color: rgb(var(--c-warning-text));
-}
-
-.conn-connecting .conn-dot { animation: pulse 1.2s ease-in-out infinite; }
-
-.conn-disconnected {
-  border-color: rgb(var(--c-danger-line));
-  background: rgb(var(--c-danger-soft));
-  color: rgb(var(--c-danger-text));
-}
+.header-icon-btn:hover { background: var(--surface-hover); color: var(--ink); }
+.header-icon-btn:focus-visible { outline: 2px solid var(--brand-strong); outline-offset: 1px; }
 
 /* Search */
 .sidebar-search {
@@ -3047,7 +3077,6 @@ onBeforeUnmount(() => {
   .typing-animation span,
   .typing-dots span,
   .recording-dot,
-  .conn-connecting .conn-dot,
   .context-menu { animation: none; }
 }
 

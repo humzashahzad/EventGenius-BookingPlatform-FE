@@ -92,6 +92,7 @@ import { Toaster } from 'vue-sonner'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notifications'
+import { soundService } from '@/services/soundService'
 import PublicNavbar from '@/components/layout/PublicNavbar.vue'
 import CustomerSidebar from '@/components/layout/CustomerSidebar.vue'
 import Footer from '@/components/layout/Footer.vue'
@@ -171,7 +172,7 @@ watch(
   () => authStore.user,
   async (user) => {
     if (user && authStore.token) {
-      notifStore.requestBrowserPermission()
+      // System notification permission is only requested from a click (messages page).
       chatStore.connect()
       await Promise.all([
         notifStore.fetchUnread(),
@@ -187,6 +188,7 @@ watch(
 )
 
 onMounted(() => {
+  soundService.installUnlock()
   window.addEventListener('keydown', handleGlobalKeydown)
   const sync = () => { toastTheme.value = document.documentElement.classList.contains('dark') ? 'dark' : 'light' }
   sync()

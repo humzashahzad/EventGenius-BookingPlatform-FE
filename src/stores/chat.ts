@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/lib/axios'
-import { getEcho, updateEchoAuth, disconnectEcho, isEchoConnected } from '@/lib/echo'
+import { getEcho, disconnectEcho, onEchoStateChange, echoState, reconnectEcho } from '@/lib/echo'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
 import type { Channel } from 'laravel-echo'
@@ -103,6 +103,11 @@ export const useChatStore = defineStore('chat', () => {
 
   // Deduplication
   const processedMessageIds = ref<Set<number>>(new Set())
+  // Messages we already alerted about (toast/sound/unread), whichever event arrived first.
+  const alertedMessageIds = new Set<number>()
+
+  /** True while the messages page is mounted (set by MessagesView). */
+  const viewActive = ref(false)
 
   // Echo channel references
   const subscribedChatChannels = ref<Set<number>>(new Set())
@@ -110,6 +115,13 @@ export const useChatStore = defineStore('chat', () => {
   let userChannel: Channel | null = null
   let onlineChannel: Channel | null = null
   let connectionWatchdog: ReturnType<typeof setTimeout> | null = null
+  let boundEcho: unknown = null
+  let stopStateWatch: (() => void) | null = null
+  let hasConnectedOnce = false
+  let fallbackPoll: ReturnType<typeof setInterval> | null = null
+  let hiddenSince = 0
+  let lifecycleInstalled = false
+  let syncing: Promise<void> | null = null
 
   // ── Computed ─────────────────────────────────────────────────────────
   const currentChat = computed(() => chats.value.find(c => c.id === currentChatId.value) || null)
@@ -142,63 +154,64 @@ export const useChatStore = defineStore('chat', () => {
 
   // ── Echo Connection ──────────────────────────────────────────────────
 
+  function setConnectionState(state: string) {
+    if (state === 'connected') {
+      connectionStatus.value = 'connected'
+      if (connectionWatchdog) {
+        clearTimeout(connectionWatchdog)
+        connectionWatchdog = null
+      }
+    } else if (state === 'connecting' || state === 'initialized') {
+      connectionStatus.value = 'connecting'
+    } else {
+      connectionStatus.value = 'disconnected'
+    }
+  }
+
   function connect() {
     const auth = useAuthStore()
     if (!auth.user || !auth.token) return
-
-    // Avoid duplicate listeners and channel subscriptions for the same user session.
-    if (connectedUserId.value === auth.user.id && userChannel && (connectionStatus.value === 'connected' || connectionStatus.value === 'connecting')) {
-      return
-    }
 
     // If user changed, reset old connection fully first.
     if (connectedUserId.value && connectedUserId.value !== auth.user.id) {
       disconnect()
     }
 
-    connectionStatus.value = 'connecting'
-    connectedUserId.value = auth.user.id
-    updateEchoAuth()
-
     const echo = getEcho()
+    connectedUserId.value = auth.user.id
+    installLifecycleHandlers()
+
+    // Listeners are bound once per Echo instance; calling connect() again is a no-op.
+    if (boundEcho === echo && userChannel) {
+      reconnectEcho()
+      return
+    }
+    boundEcho = echo
+    setConnectionState(echoState())
 
     if (connectionWatchdog) clearTimeout(connectionWatchdog)
     connectionWatchdog = setTimeout(() => {
-      if (connectionStatus.value === 'connecting') {
-        connectionStatus.value = 'disconnected'
-      }
+      if (connectionStatus.value === 'connecting') connectionStatus.value = 'disconnected'
     }, 10000)
 
-    // Monitor connection state via Pusher
-    const pusher = (echo.connector as any).pusher
-    if (pusher) {
-      // Use state_change to catch ALL transitions including ones already fired
-      pusher.connection.bind('state_change', (states: { current: string; previous: string }) => {
-        if (states.current === 'connected') {
-          connectionStatus.value = 'connected'
-          if (connectionWatchdog) {
-            clearTimeout(connectionWatchdog)
-            connectionWatchdog = null
-          }
-        } else if (states.current === 'disconnected' || states.current === 'failed' || states.current === 'unavailable') {
-          connectionStatus.value = 'disconnected'
-        } else if (states.current === 'connecting') {
-          connectionStatus.value = 'connecting'
-        }
-      })
-
-      // Check if ALREADY connected (event may have fired before bind)
-      if (pusher.connection?.state === 'connected') {
-        connectionStatus.value = 'connected'
-        if (connectionWatchdog) {
-          clearTimeout(connectionWatchdog)
-          connectionWatchdog = null
-        }
+    stopStateWatch?.()
+    stopStateWatch = onEchoStateChange((current) => {
+      setConnectionState(current)
+      if (current === 'connected') {
+        stopFallbackPoll()
+        // Pusher re-subscribes channels itself; fetch whatever arrived while we were away.
+        if (hasConnectedOnce) void syncNow()
+        hasConnectedOnce = true
+      } else if (current === 'unavailable' || current === 'failed') {
+        startFallbackPoll()
       }
-    }
+    })
+    if (echoState() === 'connected') hasConnectedOnce = true
 
-    // Subscribe to user's private channel (for personal notifications)
+    // Personal channel: new-message signals for every chat (shared with the notifications store,
+    // which listens for a different event on the same channel).
     userChannel = echo.private(`user.${auth.user.id}`)
+    userChannel.stopListening('.chat.notification')
     userChannel.listen('.chat.notification', (e: any) => {
       handleChatNotification(e)
     })
@@ -217,10 +230,18 @@ export const useChatStore = defineStore('chat', () => {
         onlineUserIds.value.delete(user.id)
         updateOnlineStatus()
       })
+
+    // Chats loaded before the socket existed still need their channels.
+    chats.value.forEach(chat => subscribeToChatChannel(chat.id))
   }
 
   function disconnect() {
+    stopStateWatch?.()
+    stopStateWatch = null
+    stopFallbackPoll()
     disconnectEcho()
+    boundEcho = null
+    hasConnectedOnce = false
     subscribedChatChannels.value.clear()
     chatChannels.value.clear()
     userChannel = null
@@ -230,6 +251,124 @@ export const useChatStore = defineStore('chat', () => {
     if (connectionWatchdog) {
       clearTimeout(connectionWatchdog)
       connectionWatchdog = null
+    }
+  }
+
+  // ── Keeping up after sleep / network loss ───────────────────────────
+
+  function startFallbackPoll() {
+    if (fallbackPoll) return
+    // The socket is unreachable: keep the inbox fresh by polling until it comes back.
+    fallbackPoll = setInterval(() => {
+      if (echoState() === 'connected') { stopFallbackPoll(); return }
+      if (document.visibilityState === 'visible') void syncNow()
+    }, 15000)
+  }
+
+  function stopFallbackPoll() {
+    if (fallbackPoll) {
+      clearInterval(fallbackPoll)
+      fallbackPoll = null
+    }
+  }
+
+  function installLifecycleHandlers() {
+    if (lifecycleInstalled || typeof window === 'undefined') return
+    lifecycleInstalled = true
+
+    document.addEventListener('visibilitychange', () => {
+      if (!connectedUserId.value) return
+      if (document.visibilityState === 'hidden') {
+        hiddenSince = Date.now()
+        return
+      }
+      const wasAwayLong = hiddenSince > 0 && Date.now() - hiddenSince > 20000
+      hiddenSince = 0
+      if (echoState() !== 'connected') {
+        reconnectEcho()
+        void syncNow()
+      } else if (wasAwayLong) {
+        void syncNow()
+      }
+      markCurrentReadIfViewing()
+    })
+
+    window.addEventListener('focus', () => markCurrentReadIfViewing())
+
+    window.addEventListener('online', () => {
+      if (!connectedUserId.value) return
+      reconnectEcho()
+      void syncNow()
+    })
+  }
+
+  /** Is the user looking at this conversation right now (messages page, chat open, tab visible)? */
+  function isViewingChat(chatId: number): boolean {
+    return viewActive.value
+      && currentChatId.value === chatId
+      && typeof document !== 'undefined'
+      && document.visibilityState === 'visible'
+  }
+
+  function markCurrentReadIfViewing() {
+    const id = currentChatId.value
+    if (id == null || !isViewingChat(id)) return
+    const chat = chats.value.find(c => c.id === id)
+    if (chat && chat.unread_count > 0) void markAsRead(id)
+  }
+
+  function setViewActive(active: boolean) {
+    viewActive.value = active
+    if (active) markCurrentReadIfViewing()
+  }
+
+  /**
+   * Re-fetch the chat list (and the open conversation) from the API. Used after reconnecting,
+   * waking from sleep, or while the socket is unreachable. Alerts once for messages that
+   * arrived in the meantime.
+   */
+  function syncNow(): Promise<void> {
+    if (syncing) return syncing
+    syncing = (async () => {
+      const auth = useAuthStore()
+      if (!auth.user) return
+      const before = new Map(chats.value.map(c => [c.id, c.latest_message?.id ?? 0]))
+      await fetchChats({ silent: true })
+      for (const chat of chats.value) {
+        const latest = chat.latest_message
+        if (!latest || latest.sender_id === auth.user.id || latest.is_deleted) continue
+        if ((before.get(chat.id) ?? 0) >= latest.id || chat.unread_count <= 0) continue
+        if (!before.has(chat.id) && before.size === 0) continue
+        if (isViewingChat(chat.id)) continue
+        alertNewMessage(chat, {
+          message_id: latest.id,
+          sender_id: latest.sender_id,
+          sender_name: latest.sender_name,
+          sender_avatar: chat.type === 'private' ? chat.other_user?.avatar : null,
+          body: latest.body,
+        }, true)
+      }
+      if (currentChatId.value) await mergeLatestMessages(currentChatId.value)
+      markCurrentReadIfViewing()
+    })().finally(() => { syncing = null })
+    return syncing
+  }
+
+  /** Merge the newest page of messages into the open conversation without losing older pages. */
+  async function mergeLatestMessages(chatId: number) {
+    try {
+      const { data } = await api.get(`/nexus/chats/${chatId}/messages`, { params: { limit: 50 } })
+      if (currentChatId.value !== chatId) return
+      const fresh: ChatMessage[] = data.data || []
+      const byId = new Map(messages.value.filter(m => m.id > 0).map(m => [m.id, m]))
+      for (const m of fresh) {
+        processedMessageIds.value.add(m.id)
+        byId.set(m.id, m)
+      }
+      const pending = messages.value.filter(m => m.id < 0)
+      messages.value = [...[...byId.values()].sort((a, b) => a.id - b.id), ...pending]
+    } catch (err) {
+      console.error('Failed to refresh messages:', err)
     }
   }
 
@@ -352,8 +491,9 @@ export const useChatStore = defineStore('chat', () => {
     // Mark as read
     const chat = chats.value.find(c => c.id === chatId)
     if (chat && chat.unread_count > 0) {
-      markAsRead(chatId)
+      void markAsRead(chatId)
     }
+    useNotificationStore().dismissChatToast(chatId)
   }
 
   function deselectChat() {
@@ -376,10 +516,16 @@ export const useChatStore = defineStore('chat', () => {
       const newMessages: ChatMessage[] = data.data
       newMessages.forEach(m => processedMessageIds.value.add(m.id))
 
+      if (currentChatId.value !== chatId) return
       if (before) {
         messages.value = [...newMessages, ...messages.value]
       } else {
-        messages.value = newMessages
+        // Keep anything that arrived over the socket (or is still sending) while this
+        // request was in flight.
+        const fetchedIds = new Set(newMessages.map(m => m.id))
+        const newest = newMessages.length ? newMessages[newMessages.length - 1].id : 0
+        const arrived = messages.value.filter(m => m.id < 0 || (m.id > newest && !fetchedIds.has(m.id)))
+        messages.value = [...newMessages, ...arrived]
       }
 
       hasMoreMessages.value = data.has_more
@@ -469,13 +615,18 @@ export const useChatStore = defineStore('chat', () => {
 
       const realMessage: ChatMessage = response.data.data
 
-      // Replace optimistic message with real one
+      // Replace optimistic message with real one (another tab's echo may have added it already)
+      processedMessageIds.value.add(realMessage.id)
       if (chatId === currentChatId.value) {
         const idx = messages.value.findIndex(m => m.id === tempId)
-        if (idx !== -1) {
+        const already = messages.value.some(m => m.id === realMessage.id)
+        if (idx !== -1 && already) {
+          messages.value.splice(idx, 1)
+        } else if (idx !== -1) {
           messages.value[idx] = realMessage
+        } else if (!already) {
+          messages.value.push(realMessage)
         }
-        processedMessageIds.value.add(realMessage.id)
       }
 
       // Update chat's latest message
@@ -503,6 +654,7 @@ export const useChatStore = defineStore('chat', () => {
       if (idx !== -1) {
         messages.value[idx] = updated
       }
+      refreshPreviewIfLatest(updated)
       return true
     } catch (err) {
       console.error('Failed to edit message:', err)
@@ -524,6 +676,7 @@ export const useChatStore = defineStore('chat', () => {
           body: null,
           attachments: [],
         }
+        refreshPreviewIfLatest(messages.value[idx])
       }
       return true
     } catch (err) {
@@ -535,14 +688,10 @@ export const useChatStore = defineStore('chat', () => {
   // ── Mark as Read ─────────────────────────────────────────────────────
 
   async function markAsRead(chatId: number) {
+    const chat = chats.value.find(c => c.id === chatId)
+    if (chat) chat.unread_count = 0
     try {
       await api.post(`/nexus/chats/${chatId}/read`)
-
-      // Update local unread count
-      const chat = chats.value.find(c => c.id === chatId)
-      if (chat) {
-        chat.unread_count = 0
-      }
     } catch (err) {
       console.error('Failed to mark as read:', err)
     }
@@ -553,6 +702,11 @@ export const useChatStore = defineStore('chat', () => {
   async function toggleReaction(messageId: number, emoji: string) {
     try {
       const { data } = await api.post(`/nexus/messages/${messageId}/reactions`, { emoji })
+      // Our own socket is left out of the broadcast, so apply the change locally.
+      const auth = useAuthStore()
+      if (auth.user && (data.action === 'added' || data.action === 'removed')) {
+        handleReaction({ message_id: messageId, user_id: auth.user.id, user_name: auth.user.name, emoji, action: data.action })
+      }
       return data.action
     } catch (err) {
       console.error('Failed to toggle reaction:', err)
@@ -612,64 +766,162 @@ export const useChatStore = defineStore('chat', () => {
   // ── Event Handlers ───────────────────────────────────────────────────
 
   function handleIncomingMessage(msg: ChatMessage) {
+    if (!msg || typeof msg.id !== 'number') return
     // Dedup
     if (processedMessageIds.value.has(msg.id)) return
     processedMessageIds.value.add(msg.id)
+    const auth = useAuthStore()
+    const mine = msg.sender_id === auth.user?.id
 
-    // Add to current chat's messages if viewing that chat
-    if (msg.chat_id === currentChatId.value) {
-      messages.value.push(msg)
-      // Auto-read since user is viewing this chat
-      markAsRead(msg.chat_id)
+    if (msg.chat_id === currentChatId.value && !messages.value.some(m => m.id === msg.id)) {
+      // Our own message from this tab may still be the optimistic copy: replace it.
+      const tempIdx = mine
+        ? messages.value.findIndex(m => m.id < 0 && (m.body || '') === (msg.body || ''))
+        : -1
+      if (tempIdx !== -1) messages.value[tempIdx] = msg
+      else messages.value.push(msg)
     }
 
-    // Update chat preview
     updateChatPreview(msg.chat_id, msg)
 
+    if (!mine) {
+      const chat = chats.value.find(c => c.id === msg.chat_id)
+      if (!chat) {
+        void fetchChats({ silent: true })
+      } else {
+        alertNewMessage(chat, {
+          message_id: msg.id,
+          sender_id: msg.sender_id,
+          sender_name: msg.sender?.name || '',
+          sender_avatar: msg.sender?.avatar,
+          body: msg.body,
+          type: msg.type,
+        })
+      }
+    }
+
     // Clear typing for this user
+    const typing = typingUsers.value.get(msg.sender_id)
+    if (typing?.timeout) clearTimeout(typing.timeout)
     typingUsers.value.delete(msg.sender_id)
+  }
+
+  interface NewMessageInfo {
+    message_id: number
+    sender_id: number
+    sender_name: string
+    sender_avatar?: string | null
+    body: string | null
+    type?: string
+    created_at?: string
+  }
+
+  /**
+   * One alert per message, however many events announce it (chat channel, personal channel,
+   * stored notification or a catch-up sync): unread count + toast/sound/system notification.
+   */
+  function alertNewMessage(chat: Chat, info: NewMessageInfo, fromSync = false) {
+    if (alertedMessageIds.has(info.message_id)) return
+    alertedMessageIds.add(info.message_id)
+
+    if (isViewingChat(chat.id)) {
+      void markAsRead(chat.id)
+      useNotificationStore().notifyChatMessage({
+        chatId: chat.id,
+        senderName: info.sender_name,
+        senderAvatar: info.sender_avatar,
+        body: info.body,
+        type: info.type,
+        viewing: true,
+      })
+      return
+    }
+
+    // A catch-up sync already carries the server's unread count.
+    if (!fromSync) chat.unread_count = (chat.unread_count || 0) + 1
+    if (chat.is_muted) return
+    useNotificationStore().notifyChatMessage({
+      chatId: chat.id,
+      senderName: chat.type === 'group' && chat.name ? `${info.sender_name} · ${chat.name}` : info.sender_name,
+      senderAvatar: info.sender_avatar,
+      body: info.body,
+      type: info.type,
+      viewing: false,
+    })
+  }
+
+  /**
+   * A message was announced on the personal channel (or as a stored notification). The full
+   * message normally arrives on the chat channel too; if it does not (channel not subscribed
+   * yet, missed while reconnecting) fetch it.
+   */
+  function handleNewMessageSignal(data: any) {
+    const chatId = Number(data?.chat_id)
+    const messageId = Number(data?.message_id)
+    if (!chatId || !messageId) return
+    const auth = useAuthStore()
+    if (Number(data.sender_id) === auth.user?.id) return
+
+    const chat = chats.value.find(c => c.id === chatId)
+    if (!chat) {
+      // A chat we have not loaded yet (e.g. just created by the other person).
+      void fetchChats({ silent: true }).then(() => {
+        const loaded = chats.value.find(c => c.id === chatId)
+        if (loaded) {
+          // The list already contains the server's unread count for this chat.
+          alertedMessageIds.add(messageId)
+          useNotificationStore().notifyChatMessage({
+            chatId,
+            senderName: data.sender_name || 'New message',
+            senderAvatar: data.sender_avatar,
+            body: data.body ?? null,
+            type: data.type,
+            viewing: isViewingChat(chatId),
+          })
+        }
+      })
+      return
+    }
+
+    if (!processedMessageIds.value.has(messageId) && (chat.latest_message?.id ?? 0) < messageId) {
+      chat.last_message_at = data.created_at || new Date().toISOString()
+      chat.latest_message = {
+        id: messageId,
+        body: data.body ?? null,
+        type: data.type || 'text',
+        sender_id: Number(data.sender_id),
+        sender_name: data.sender_name || '',
+        is_deleted: false,
+        created_at: chat.last_message_at!,
+      }
+    }
+
+    alertNewMessage(chat, {
+      message_id: messageId,
+      sender_id: Number(data.sender_id),
+      sender_name: data.sender_name || '',
+      sender_avatar: data.sender_avatar,
+      body: data.body ?? null,
+      type: data.type,
+    })
+
+    // The open conversation should show it even if the chat-channel event never comes.
+    if (chatId === currentChatId.value) {
+      setTimeout(() => {
+        if (currentChatId.value === chatId && !messages.value.some(m => m.id === messageId)) {
+          void mergeLatestMessages(chatId)
+        }
+      }, 400)
+    }
   }
 
   function handleChatNotification(event: any) {
     if (event.type === 'new_message') {
-      const data = event.data
-      const notificationStore = useNotificationStore()
-
-      // Update unread count (if not viewing that chat)
-      if (data.chat_id !== currentChatId.value) {
-        const chat = chats.value.find(c => c.id === data.chat_id)
-        if (chat) {
-          chat.unread_count = (chat.unread_count || 0) + 1
-          chat.last_message_at = data.created_at
-          chat.latest_message = {
-            id: data.message_id,
-            body: data.body,
-            type: data.type,
-            sender_id: data.sender_id,
-            sender_name: data.sender_name,
-            is_deleted: false,
-            created_at: data.created_at,
-          }
-        }
-
-        // Play sound + browser notification
-        if (!chat?.is_muted) {
-          notificationStore.showChatMessageNotification(
-            data.sender_name,
-            data.body || '[Attachment]',
-            data.chat_id,
-          )
-        }
-
-        // If this chat is not in memory yet, refresh list in background.
-        if (!chat) {
-          void fetchChats({ silent: true })
-        }
-      }
+      handleNewMessageSignal(event.data)
     } else if (event.type === 'chat_created') {
       // New chat was created with this user
       const chatData = event.data.chat
-      if (!chats.value.find(c => c.id === chatData.id)) {
+      if (chatData && !chats.value.find(c => c.id === chatData.id)) {
         chats.value.unshift(chatData)
         subscribeToChatChannel(chatData.id)
       }
@@ -677,7 +929,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function handleReadReceipt(event: any) {
-    const { message_ids, user_id, read_at } = event
+    const { message_ids } = event
+    if (!Array.isArray(message_ids)) return
 
     // Update message status in current view
     messages.value.forEach(msg => {
@@ -693,8 +946,10 @@ export const useChatStore = defineStore('chat', () => {
     const msg = messages.value.find(m => m.id === message_id)
     if (!msg) return
 
+    if (!Array.isArray(msg.reactions)) msg.reactions = []
     if (action === 'added') {
       const existing = msg.reactions.find(r => r.emoji === emoji)
+      if (existing?.users.some(u => u.id === user_id)) return
       if (existing) {
         existing.count++
         existing.users.push({ id: user_id, name: user_name })
@@ -707,7 +962,7 @@ export const useChatStore = defineStore('chat', () => {
       }
     } else {
       const existing = msg.reactions.find(r => r.emoji === emoji)
-      if (existing) {
+      if (existing && existing.users.some(u => u.id === user_id)) {
         existing.count--
         existing.users = existing.users.filter(u => u.id !== user_id)
         if (existing.count <= 0) {
@@ -718,11 +973,13 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function handleMessageUpdate(event: any) {
-    const { message, action } = event
+    const { message } = event
+    if (!message) return
     const idx = messages.value.findIndex(m => m.id === message.id)
     if (idx !== -1) {
       messages.value[idx] = message
     }
+    refreshPreviewIfLatest(message)
   }
 
   function handleTypingEvent(event: any) {
@@ -767,6 +1024,18 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /** Keep the conversation list preview in sync when its latest message is edited or deleted. */
+  function refreshPreviewIfLatest(msg: ChatMessage) {
+    const chat = chats.value.find(c => c.id === msg.chat_id)
+    if (chat?.latest_message && chat.latest_message.id === msg.id) {
+      chat.latest_message = {
+        ...chat.latest_message,
+        body: msg.is_deleted ? null : msg.body,
+        is_deleted: msg.is_deleted,
+      }
+    }
+  }
+
   function requestNotificationPermission() {
     useNotificationStore().requestBrowserPermission()
   }
@@ -784,6 +1053,7 @@ export const useChatStore = defineStore('chat', () => {
     typingUsers.value.clear()
     onlineUserIds.value.clear()
     processedMessageIds.value.clear()
+    alertedMessageIds.clear()
   }
 
   return {
@@ -795,6 +1065,7 @@ export const useChatStore = defineStore('chat', () => {
     messagesLoading,
     hasMoreMessages,
     connectionStatus,
+    viewActive,
     typingUsers,
     onlineUserIds,
 
@@ -830,6 +1101,9 @@ export const useChatStore = defineStore('chat', () => {
     searchUsers,
     isUserOnline,
     requestNotificationPermission,
+    setViewActive,
+    syncNow,
+    handleNewMessageSignal,
     $reset,
   }
 })
