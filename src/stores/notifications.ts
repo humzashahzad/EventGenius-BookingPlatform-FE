@@ -204,7 +204,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       try {
         new Notification(notification.title, {
           body: notification.body,
-          icon: '/favicon.svg',
+          icon: '/notification-icon.png',
           tag: `notif-${notification.id}`,
         })
       } catch (error) {
@@ -219,7 +219,7 @@ export const useNotificationStore = defineStore('notifications', () => {
           try {
             new Notification(notification.title, {
               body: notification.body,
-              icon: '/favicon.svg',
+              icon: '/notification-icon.png',
               tag: `notif-${notification.id}`,
             })
           } catch (error) {
@@ -240,7 +240,7 @@ export const useNotificationStore = defineStore('notifications', () => {
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification(title, {
           body,
-          icon: '/favicon.svg',
+          icon: '/notification-icon.png',
           tag: `chat-${conversationId}-${Date.now()}`,
         })
       }

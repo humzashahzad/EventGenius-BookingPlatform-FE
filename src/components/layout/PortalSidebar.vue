@@ -10,9 +10,7 @@
     <!-- Brand -->
     <div class="flex items-center h-14 px-3 border-b border-warm-200 dark:border-warm-700 shrink-0">
       <RouterLink :to="homeTo" class="flex items-center gap-2.5 min-w-0 flex-1" :title="collapsed ? 'EventGenius' : undefined">
-        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md shadow-primary-500/20 shrink-0">
-          <span class="text-white font-extrabold text-xs">EG</span>
-        </span>
+        <AppLogo class="w-8 h-8" />
         <span v-show="!collapsed" class="min-w-0">
           <span class="block font-bold text-sm text-warm-900 dark:text-white leading-tight truncate">EventGenius</span>
           <span class="block text-[11px] font-medium uppercase tracking-wider text-primary-600 dark:text-primary-400 leading-tight">{{ portalLabel }}</span>
@@ -92,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import AppLogo from '@/components/brand/AppLogo.vue'
 import { computed } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
