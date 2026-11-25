@@ -20,21 +20,17 @@
 
         <!-- Unified Search -->
         <div class="sidebar-search">
-          <div class="search-box">
-            <AppIcon icon="search" class="w-4 h-4 search-icon" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search or start a new chat"
-              aria-label="Search conversations and people"
-              class="search-input"
-              autocomplete="off"
-              @input="onSearchInput"
-            />
-            <button v-if="searchQuery" type="button" @click="clearSearch" class="search-clear" aria-label="Clear search">
-              <AppIcon icon="x" class="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <TextInput
+            v-model="searchQuery"
+            prefix-icon="search"
+            clearable
+            clear-label="Clear search"
+            placeholder="Search or start a new chat"
+            aria-label="Search conversations and people"
+            autocomplete="off"
+            @input="onSearchInput"
+            @clear="clearSearch"
+          />
           <!-- Search Results Dropdown -->
           <div v-if="searchQuery && (searchResultConversations.length > 0 || searchResults.length > 0 || searchLoading)" class="search-dropdown">
             <div v-if="searchLoading" class="search-loading">
@@ -724,6 +720,7 @@
 </template>
 
 <script setup lang="ts">
+import { TextInput } from '@/components/forms'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useChatStore, type Chat, type ChatMessage, type ChatUser } from '@/stores/chat'
@@ -1415,50 +1412,6 @@ onBeforeUnmount(() => {
   position: relative;
   padding: 0 16px 12px;
 }
-
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 10px 0 12px;
-  border: 1px solid rgb(var(--c-line-strong) / 0.55);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-
-.search-box:focus-within {
-  border-color: var(--brand-strong);
-  box-shadow: 0 0 0 3px rgb(var(--c-brand) / 0.18);
-}
-
-.search-icon { color: var(--ink-muted); flex-shrink: 0; }
-
-.search-input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--ink);
-  font-size: 0.875rem;
-}
-
-.search-input::placeholder { color: var(--ink-muted); }
-
-.search-clear {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  color: var(--ink-muted);
-}
-
-.search-clear:hover { background: var(--surface-hover); color: var(--ink); }
 
 .search-dropdown {
   position: absolute;
