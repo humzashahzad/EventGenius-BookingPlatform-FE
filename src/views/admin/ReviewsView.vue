@@ -23,18 +23,10 @@
         <button role="tab" class="tab" :aria-selected="approved === '0'" @click="approved = '0'; load(1)">Hidden</button>
       </nav>
       <DataToolbar v-model:search="search" placeholder="Search venue, customer or text" :count="loading ? undefined : total" noun="reviews" @update:search="load(1)">
-        <select v-model="rating" class="form-select" aria-label="Rating" @change="load(1)">
-          <option value="">Any rating</option>
-          <option v-for="n in [5, 4, 3, 2, 1]" :key="n" :value="String(n)">{{ n }} star{{ n === 1 ? '' : 's' }}</option>
-        </select>
+        <SelectInput v-model="rating" :options="[{ value: '', label: 'Any rating' }, ...[5, 4, 3, 2, 1].map(n => ({ value: String(n), label: `${n} star${n === 1 ? '' : 's'}` }))]" aria-label="Rating" @change="load(1)" />
         <template v-if="insightsAvailable">
-          <select v-model="sentiment" class="form-select" aria-label="Sentiment" @change="load(1)">
-            <option value="">Any sentiment</option>
-            <option value="positive">Positive</option>
-            <option value="neutral">Neutral</option>
-            <option value="negative">Negative</option>
-          </select>
-          <button v-if="flag" type="button" class="btn-secondary btn-sm" @click="setFlag('')">{{ humanFlag(flag) }} <AppIcon icon="x" class="w-3.5 h-3.5" /></button>
+          <SelectInput v-model="sentiment" :options="[{ value: '', label: 'Any sentiment' }, { value: 'positive', label: 'Positive' }, { value: 'neutral', label: 'Neutral' }, { value: 'negative', label: 'Negative' }]" aria-label="Sentiment" @change="load(1)" />
+          <button v-if="flag" type="button" class="btn-secondary" @click="setFlag('')">{{ humanFlag(flag) }} <AppIcon icon="x" class="w-3.5 h-3.5" /></button>
         </template>
       </DataToolbar>
 
@@ -128,6 +120,7 @@
 </template>
 
 <script setup lang="ts">
+import { SelectInput } from '@/components/forms'
 import { ref, computed, onMounted } from 'vue'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'

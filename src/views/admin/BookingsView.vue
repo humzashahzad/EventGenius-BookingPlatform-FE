@@ -12,12 +12,16 @@
         <button v-for="s in statusTabs" :key="s.value" role="tab" class="tab" :aria-selected="statusFilter === s.value" @click="setStatus(s.value)">{{ s.label }}</button>
       </nav>
       <DataToolbar v-model:search="search" placeholder="Booking # or event name" :count="loading ? undefined : meta.total" noun="bookings" @update:search="resetAndLoad">
-        <label class="sr-only" for="ab-from">Event from</label>
-        <input id="ab-from" v-model="dateFrom" type="date" class="form-input sm:!w-40" title="Event date from" @change="resetAndLoad" />
-        <span class="text-ink-muted text-sm hidden sm:inline">to</span>
-        <label class="sr-only" for="ab-to">Event to</label>
-        <input id="ab-to" v-model="dateTo" type="date" class="form-input sm:!w-40" title="Event date to" @change="resetAndLoad" />
-        <button v-if="dateFrom || dateTo" class="btn-ghost btn-sm" @click="dateFrom = ''; dateTo = ''; resetAndLoad()"><AppIcon icon="x" class="w-4 h-4" />Dates</button>
+        <DateRangePicker
+          id="ab-dates"
+          v-model:start="dateFrom"
+          v-model:end="dateTo"
+          class="sm:!w-72"
+          placeholder="Any event date"
+          aria-label="Event date range"
+          :presets="['today', 'next7', 'next30', 'thisMonth', 'last30']"
+          @change="resetAndLoad"
+        />
       </DataToolbar>
 
       <div v-if="loading" class="p-4 space-y-3" aria-busy="true"><div v-for="i in 8" :key="i" class="skeleton h-10 w-full" /></div>
@@ -114,6 +118,7 @@
 </template>
 
 <script setup lang="ts">
+import { DateRangePicker } from '@/components/forms'
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
