@@ -45,6 +45,7 @@
         placeholder="At least 8 characters"
         autocomplete="new-password"
         required
+        mark-required
         :error="fieldError('password')"
         @blur="touched.password = true"
       >
@@ -58,6 +59,7 @@
         placeholder="Repeat your password"
         autocomplete="new-password"
         required
+        mark-required
         :error="fieldError('password_confirmation')"
         @blur="touched.password_confirmation = true"
       />

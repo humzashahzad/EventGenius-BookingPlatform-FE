@@ -333,7 +333,7 @@ const banner = computed(() => {
 
 function formatDateTime(d?: string | null) {
   if (!d) return ''
-  return new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return new Date(d).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
 }
 function formatZar(n: number | string) {
   return Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

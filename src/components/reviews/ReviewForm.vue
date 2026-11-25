@@ -23,7 +23,9 @@
     <!-- Existing review -->
     <div v-if="state.review" class="card-body space-y-3">
       <div class="flex flex-wrap items-center gap-2">
-        <StarRating :model-value="state.review.rating" readonly />
+        <span class="inline-flex gap-0.5" role="img" :aria-label="`${state.review.rating} out of 5 stars`">
+          <AppIcon v-for="i in 5" :key="i" icon="star" :class="i <= state.review.rating ? 'w-5 h-5 text-[#F59E0B] fill-current' : 'w-5 h-5 text-ink-muted/50'" />
+        </span>
         <span class="text-sm font-semibold text-ink num">{{ state.review.rating }}.0</span>
         <span class="text-sm text-ink-muted">{{ ratingWords[state.review.rating - 1] }}</span>
       </div>
@@ -118,7 +120,6 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import StarRating from '@/components/reviews/StarRating.vue'
 import StarInput from '@/components/client/StarInput.vue'
 
 const props = defineProps<{ bookingId: number | string; venueName?: string }>()

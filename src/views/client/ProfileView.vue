@@ -82,7 +82,7 @@
                   @blur="touched.phone = true"
                 />
                 <p v-if="personalErrors.phone" id="profile-phone-error" class="form-error">{{ personalErrors.phone }}</p>
-                <p v-else id="profile-phone-hint" class="form-hint">Mobile or landline, e.g. 0300 1234567 or +92 300 1234567.</p>
+                <p v-else id="profile-phone-hint" class="form-hint">For example 0300 1234567 or +92 300 1234567.</p>
               </div>
               <div class="sm:col-span-2">
                 <label for="profile-email" class="form-label">Email address</label>
@@ -118,7 +118,7 @@
           </div>
           <form class="card-body space-y-5" novalidate @submit.prevent="savePassword">
             <!-- Hidden username helps password managers pair the new password with this account. -->
-            <input type="text" name="username" :value="form.email" autocomplete="username" class="hidden" readonly tabindex="-1" aria-hidden="true" />
+            <input type="text" name="username" :value="form.email" autocomplete="username" hidden readonly tabindex="-1" aria-hidden="true" />
             <PasswordField
               id="current-password"
               v-model="pw.current_password"

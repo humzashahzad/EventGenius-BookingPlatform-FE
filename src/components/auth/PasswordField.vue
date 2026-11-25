@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex items-center justify-between gap-2 mb-1.5">
-      <label :for="id" class="form-label !mb-0">{{ label }}<span v-if="required" class="req" aria-hidden="true">*</span></label>
+      <label :for="id" class="form-label !mb-0">{{ label }}<template v-if="markRequired"> <span class="req" aria-hidden="true">*</span></template></label>
       <slot name="label-extra" />
     </div>
     <div class="relative">
@@ -47,6 +47,8 @@ const props = withDefaults(defineProps<{
   placeholder?: string
   autocomplete?: string
   required?: boolean
+  /** Show the red asterisk next to the label (forms that mark required fields). */
+  markRequired?: boolean
   minlength?: number
   error?: string
   hint?: string
@@ -54,6 +56,7 @@ const props = withDefaults(defineProps<{
   placeholder: '',
   autocomplete: 'current-password',
   required: false,
+  markRequired: false,
   minlength: undefined,
   error: '',
   hint: '',

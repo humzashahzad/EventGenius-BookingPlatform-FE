@@ -25,8 +25,8 @@
         @change="emit('update:modelValue', i)"
       />
       <AppIcon
-        :icon="i <= shown ? 'star-filled' : 'star'"
-        :class="`${sizeIcon} ${i <= shown ? 'text-[#F59E0B]' : 'text-ink-muted/60'}`"
+        icon="star"
+        :class="`${sizeIcon} ${i <= shown ? 'text-[#F59E0B] fill-current' : 'text-ink-muted/60'}`"
       />
       <span class="sr-only">{{ i }} star{{ i > 1 ? 's' : '' }}<template v-if="labels[i - 1]">, {{ labels[i - 1] }}</template></span>
     </label>

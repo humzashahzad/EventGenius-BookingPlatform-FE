@@ -22,7 +22,7 @@
 
         <div class="flex-1 flex px-5 pb-6 pt-4 sm:px-10 sm:pb-10">
           <main class="w-full max-w-[400px] m-auto">
-            <span v-if="badge" class="badge-confirmed mb-3">
+            <span v-if="badge" class="badge-primary mb-3">
               <AppIcon v-if="badgeIcon" :icon="badgeIcon" class="w-3.5 h-3.5 -ml-0.5" />{{ badge }}
             </span>
             <h1 class="font-display text-2xl sm:text-[1.75rem] font-bold tracking-tight text-ink leading-tight">{{ heading }}</h1>
