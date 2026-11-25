@@ -1,69 +1,51 @@
 <template>
-  <div class="max-w-[500px]">
-    <div class="flex items-center gap-4 mb-5">
-      <div class="relative w-[100px] h-[100px] rounded-full overflow-hidden flex-shrink-0 border-2 border-warm-200 dark:border-warm-700 shadow-card">
-        <img v-if="displayAvatarUrl" :src="displayAvatarUrl" alt="Avatar preview" class="w-full h-full object-cover" />
-        <div v-else class="w-full h-full flex items-center justify-center bg-warm-100 dark:bg-warm-800">
-          <AppIcon icon="user" class="w-8 h-8 text-warm-400 dark:text-warm-500" />
+  <div
+    class="rounded-xl border border-dashed p-4 transition-colors"
+    :class="dragover ? 'border-brand bg-brand-soft' : 'border-line-strong/50 bg-surface-sunken/50'"
+    @dragover.prevent="dragover = true"
+    @dragleave.prevent="dragover = false"
+    @drop.prevent="handleDrop"
+  >
+    <div class="flex flex-col min-[420px]:flex-row items-center gap-4 text-center min-[420px]:text-left">
+      <div class="relative w-20 h-20 rounded-full overflow-hidden shrink-0 border border-line bg-surface-sunken">
+        <img v-if="displayAvatarUrl" :src="displayAvatarUrl" alt="Profile photo" class="w-full h-full object-cover" />
+        <div v-else class="w-full h-full flex items-center justify-center text-ink-muted">
+          <AppIcon icon="user" class="w-8 h-8" />
         </div>
-
-        <!-- Loading overlay -->
         <div v-if="uploading" class="absolute inset-0 flex items-center justify-center bg-warm-900/60">
-          <div class="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          <span class="spinner-border text-white" aria-hidden="true"></span>
         </div>
       </div>
 
-      <div>
-        <p class="font-semibold text-warm-900 dark:text-warm-50 mb-1">Profile Picture</p>
-        <p class="text-warm-500 dark:text-warm-400 text-sm">JPG, PNG or GIF. Max size 2MB.</p>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold text-ink">Profile photo</p>
+        <p class="text-xs text-ink-muted">JPG, PNG, GIF or WebP, up to 2 MB. Drag an image here or choose a file.</p>
+        <div class="mt-3 flex flex-wrap justify-center min-[420px]:justify-start gap-2">
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            class="hidden"
+            @change="handleFileSelect"
+          />
+          <button type="button" :disabled="uploading" class="btn-secondary btn-sm" @click="triggerFileInput">
+            <AppIcon icon="upload" class="w-4 h-4" />
+            {{ uploading ? 'Uploading…' : currentAvatar ? 'Change photo' : 'Upload photo' }}
+          </button>
+          <button v-if="currentAvatar && !uploading" type="button" class="btn-danger-ghost btn-sm" @click="handleRemove">
+            <AppIcon icon="trash" class="w-4 h-4" />
+            Remove
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="flex gap-3 mb-5">
-      <!-- File input (hidden) -->
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/jpeg,image/png,image/gif,image/webp"
-        @change="handleFileSelect"
-        class="hidden"
-      />
-
-      <button @click="triggerFileInput" :disabled="uploading" class="btn-primary">
-        <AppIcon icon="upload" class="w-4 h-4" />
-        {{ uploading ? 'Uploading...' : 'Upload Photo' }}
-      </button>
-
-      <button v-if="currentAvatar && !uploading" @click="handleRemove" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-coral/30 text-coral font-semibold text-sm hover:bg-coral/10 transition-colors">
-        <AppIcon icon="trash" class="w-4 h-4" />
-        Remove
-      </button>
-    </div>
-
-    <!-- Drag & Drop Area -->
-    <div
-      @dragover.prevent="dragover = true"
-      @dragleave.prevent="dragover = false"
-      @drop.prevent="handleDrop"
-      class="border-2 border-dashed rounded-2xl text-center p-8 transition-colors"
-      :class="dragover ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20' : 'border-warm-300 dark:border-warm-600 bg-warm-50 dark:bg-warm-800/50'"
-    >
-      <AppIcon icon="cloud-upload" class="w-10 h-10 text-warm-400 dark:text-warm-500 mb-3 block" />
-      <p class="font-medium text-warm-700 dark:text-warm-300 mb-1">Drop your image here</p>
-      <p class="text-warm-400 dark:text-warm-500 text-sm">or click "Upload Photo" above</p>
-    </div>
-
-    <!-- Error message -->
-    <div v-if="error" class="flex items-center gap-3 mt-4 p-4 rounded-2xl bg-coral/10 text-coral border border-coral/20">
-      <AppIcon icon="alert-circle" class="w-[18px] h-[18px]" />
-      <span class="text-sm font-medium">{{ error }}</span>
-    </div>
-
-    <!-- Success message -->
-    <div v-if="success" class="flex items-center gap-3 mt-4 p-4 rounded-2xl bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 border border-primary-200 dark:border-primary-800">
-      <AppIcon icon="check" class="w-[18px] h-[18px]" />
-      <span class="text-sm font-medium">{{ success }}</span>
-    </div>
+    <p v-if="error" class="form-error mt-3 flex items-center gap-1.5" role="alert">
+      <AppIcon icon="alert-circle" class="w-4 h-4 shrink-0" />{{ error }}
+    </p>
+    <p v-if="success" class="mt-3 text-sm font-medium text-success-text flex items-center gap-1.5" role="status">
+      <AppIcon icon="check" class="w-4 h-4 shrink-0" />{{ success }}
+    </p>
   </div>
 </template>
 
@@ -125,6 +107,7 @@ function handleFileSelect(event: Event) {
   if (file) {
     processFile(file)
   }
+  target.value = ''
 }
 
 function handleDrop(event: DragEvent) {
@@ -169,7 +152,7 @@ async function uploadFile(file: File) {
     })
 
     if (response.data.success) {
-      success.value = 'Avatar uploaded successfully!'
+      success.value = 'Photo updated.'
       const avatarUrl = response.data.avatar_url
       const path = (avatarUrl || '').replace(/^\/storage\//, '') || null
       emit('update', path || avatarUrl)
@@ -203,7 +186,7 @@ async function handleRemove() {
     const response = await api.delete('/profile/avatar')
 
     if (response.data.success) {
-      success.value = 'Avatar removed successfully!'
+      success.value = 'Photo removed.'
       emit('update', null)
       previewUrl.value = null
 
