@@ -1,238 +1,207 @@
 <template>
-  <div v-if="loading" class="flex items-center justify-center py-24">
-    <div class="flex flex-col items-center gap-3">
-      <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin"></div>
-      <span class="text-sm text-warm-500">Loading venue...</span>
+  <!-- Loading -->
+  <div v-if="loading" class="vd-page" aria-busy="true">
+    <div class="vd-inner">
+      <div class="skeleton h-4 w-64 mb-5"></div>
+      <div class="skeleton vd-mosaic-skel"></div>
+      <div class="skeleton h-10 w-2/3 mt-8"></div>
+      <div class="skeleton h-5 w-1/2 mt-3"></div>
     </div>
   </div>
 
-  <div v-else-if="venue" class="max-w-7xl mx-auto flex-grow px-4 py-8 font-['DM_Sans']">
-    <!-- Gallery -->
-    <div class="detail-gallery mb-10">
-      <div class="gallery-main">
-        <img
-          v-if="mainImage"
-          :src="getImageUrl(mainImage)"
-          class="gallery-main-img cursor-pointer"
-          :alt="venue.name"
-          @error="onImageError"
-          @click="openLightbox(galleryIndex)"
-        />
-        <div v-else class="gallery-placeholder">
-          <AppIcon icon="building" class="w-16 h-16 text-[var(--color-text-muted)]" />
-          <p class="text-warm-400 mt-2">No photos available</p>
-        </div>
+  <div v-else-if="venue" class="vd-page">
+    <div class="vd-inner">
+      <!-- Breadcrumb -->
+      <nav class="vd-crumbs" aria-label="Breadcrumb">
+        <RouterLink to="/venues">Venues</RouterLink>
+        <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
+        <RouterLink :to="{ path: '/venues', query: { city: venue.city } }">{{ venue.city }}</RouterLink>
+        <AppIcon icon="chevron-right" class="w-3.5 h-3.5" />
+        <span aria-current="page">{{ venue.name }}</span>
+      </nav>
+
+      <!-- Photo mosaic -->
+      <div v-if="allImages.length" class="vd-mosaic" :class="`vd-mosaic-${Math.min(allImages.length, 5)}`">
         <button
-          v-if="allImages.length > 1"
+          v-for="(img, i) in allImages.slice(0, 5)"
+          :key="img.id ?? i"
           type="button"
-          class="gallery-photos-btn"
-          @click="openLightbox(0)"
+          class="vd-tile"
+          :aria-label="`Open photo ${i + 1} of ${allImages.length}`"
+          @click="openLightbox(i)"
         >
-          <AppIcon icon="image" class="w-4 h-4" />
-          {{ allImages.length }} Photos
+          <img :src="getStorageUrl(img.path)" :alt="img.alt_text || venue.name" @error="onImageError" />
         </button>
-        <button
-          v-if="allImages.length > 1 && galleryIndex > 0"
-          type="button"
-          class="gallery-nav gallery-prev"
-          @click="galleryIndex = Math.max(0, galleryIndex - 1)"
-        >
-          <AppIcon icon="chevron-left" class="w-5 h-5" />
-        </button>
-        <button
-          v-if="allImages.length > 1 && galleryIndex < allImages.length - 1"
-          type="button"
-          class="gallery-nav gallery-next"
-          @click="galleryIndex = Math.min(allImages.length - 1, galleryIndex + 1)"
-        >
-          <AppIcon icon="chevron-right" class="w-5 h-5" />
+        <button v-if="allImages.length > 1" type="button" class="vd-all-photos" @click="openLightbox(0)">
+          <AppIcon icon="photo" class="w-4 h-4" />
+          Show all {{ allImages.length }} photos
         </button>
       </div>
-      <div v-if="allImages.length > 1" class="gallery-thumbs">
-        <button
-          v-for="(img, i) in allImages"
-          :key="i"
-          type="button"
-          class="gallery-thumb"
-          :class="{ active: i === galleryIndex }"
-          @click="galleryIndex = i; setMainImage(img.path)"
-        >
-          <img :src="getImageUrl(img.path)" :alt="venue.name" @error="onImageError" />
-        </button>
+      <div v-else class="vd-no-photo">
+        <AppIcon icon="building" class="w-12 h-12" />
+        <span>No photos yet</span>
       </div>
-    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-      <!-- Main Info -->
-      <div class="lg:col-span-2">
-        <!-- Title & Rating -->
-        <div class="flex items-start justify-between mb-6">
-          <div>
-            <h2 class="detail-title">{{ venue.name }}</h2>
-            <p class="detail-location">
-              <AppIcon icon="map-pin" class="w-3.5 h-3.5" />
-              {{ formatAddress(venue) }}
-            </p>
-            <RouterLink
-              v-if="venue.store?.id"
-              :to="{ name: 'store-profile', params: { id: venue.store.id } }"
-              class="inline-flex items-center gap-1.5 mt-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
-            >
-              <AppIcon icon="building-store" class="w-3.5 h-3.5" />
-              {{ venue.store.name }}
-            </RouterLink>
-          </div>
-          <div class="detail-rating">
-            <div class="detail-rating-score">
-              <AppIcon icon="star-filled" class="w-4 h-4 text-[#F59E0B]" />
-              {{ venue.total_reviews ? Number(venue.avg_rating).toFixed(1) : 'New' }}
+      <div class="vd-layout">
+        <!-- Details -->
+        <div class="vd-main">
+          <header class="vd-head">
+            <div class="vd-badges">
+              <span v-if="venue.is_featured" class="vd-featured">Featured</span>
+              <span v-if="Number(venue.total_reviews) > 0" class="vd-rating">
+                <AppIcon icon="star-filled" class="w-4 h-4 vd-star" />
+                {{ Number(venue.avg_rating).toFixed(1) }}
+                <a href="#reviews" class="vd-rating-link">{{ venue.total_reviews }} {{ venue.total_reviews === 1 ? 'review' : 'reviews' }}</a>
+              </span>
+              <span v-else class="badge">New venue</span>
             </div>
-            <span class="detail-rating-count">{{ venue.total_reviews || 0 }} review{{ venue.total_reviews === 1 ? '' : 's' }}</span>
-          </div>
-        </div>
+            <h1 class="vd-title">{{ venue.name }}</h1>
+            <div class="vd-facts">
+              <span><AppIcon icon="map-pin" class="w-4 h-4" />{{ venue.address || venue.city }}</span>
+              <span><AppIcon icon="users" class="w-4 h-4" />{{ Number(venue.capacity_min).toLocaleString() }} to {{ Number(venue.capacity_max).toLocaleString() }} guests</span>
+              <span v-if="venue.operating_start"><AppIcon icon="calendar-event" class="w-4 h-4" />Open {{ formatTimeRange(venue.operating_start, venue.operating_end) }}</span>
+            </div>
+          </header>
 
-        <!-- Event Type Tags -->
-        <div class="flex flex-wrap gap-2 mb-10">
-          <span v-for="type in (venue.event_types || [])" :key="type" class="detail-tag">
-            {{ type.replace('_', ' ') }}
-          </span>
-        </div>
+          <section class="vd-section">
+            <h2 class="vd-h2">About this venue</h2>
+            <p class="vd-text">{{ venue.description || 'The venue has not added a description yet.' }}</p>
+            <dl class="vd-specs">
+              <div><dt>Capacity</dt><dd>{{ Number(venue.capacity_max).toLocaleString() }} guests</dd></div>
+              <div v-if="venue.area_sqft"><dt>Area</dt><dd>{{ Number(venue.area_sqft).toLocaleString() }} sq ft</dd></div>
+              <div><dt>Floors</dt><dd>{{ venue.floors }}</dd></div>
+              <div><dt>Events hosted</dt><dd>{{ venue.total_bookings }}</dd></div>
+            </dl>
+          </section>
 
-        <!-- About -->
-        <div class="detail-section">
-          <h3 class="detail-section-title">
-            <AppIcon icon="info-circle" class="w-[18px] h-[18px] text-[#10B981]" />
-            About this venue
-          </h3>
-          <p class="detail-section-text">{{ venue.description || 'No description provided.' }}</p>
-        </div>
+          <section v-if="eventTypeNames.length" class="vd-section">
+            <h2 class="vd-h2">Good for</h2>
+            <div class="vd-chips">
+              <RouterLink
+                v-for="t in eventTypeNames"
+                :key="t.slug"
+                :to="{ path: '/venues', query: { event_type: t.slug } }"
+                class="vd-chip"
+              >{{ t.name }}</RouterLink>
+            </div>
+          </section>
 
-        <!-- Venue Details -->
-        <div class="detail-section">
-          <h3 class="detail-section-title">
-            <AppIcon icon="building" class="w-[18px] h-[18px] text-[#10B981]" />
-            Venue Details
-          </h3>
-          <div class="detail-stats-grid">
-            <div class="detail-stat-item">
-              <div class="detail-stat-icon" style="--accent: #10B981;">
-                <AppIcon icon="users" class="w-5 h-5" />
+          <section v-if="venue.amenities?.length" class="vd-section">
+            <h2 class="vd-h2">Amenities</h2>
+            <div class="vd-amenities">
+              <div v-for="a in venue.amenities" :key="a.id" class="vd-amenity">
+                <span class="vd-amenity-icon"><AppIcon icon="check" class="w-4 h-4" /></span>
+                <span class="vd-amenity-name">{{ a.name }}</span>
+                <span class="vd-amenity-price">{{ a.is_paid ? `+ ${Number(a.price).toLocaleString()}` : 'Included' }}</span>
               </div>
-              <div class="detail-stat-value">{{ venue.capacity_min }}-{{ venue.capacity_max }}</div>
-              <div class="detail-stat-label">Guests</div>
             </div>
-            <div class="detail-stat-item">
-              <div class="detail-stat-icon" style="--accent: #F59E0B;">
-                <AppIcon icon="ruler" class="w-5 h-5" />
-              </div>
-              <div class="detail-stat-value">{{ venue.area_sqft || 'N/A' }}</div>
-              <div class="detail-stat-label">Sq. Ft.</div>
-            </div>
-            <div class="detail-stat-item">
-              <div class="detail-stat-icon" style="--accent: #34D399;">
-                <AppIcon icon="building" class="w-5 h-5" />
-              </div>
-              <div class="detail-stat-value">{{ venue.floors }}</div>
-              <div class="detail-stat-label">Floors</div>
-            </div>
-            <div class="detail-stat-item">
-              <div class="detail-stat-icon" style="--accent: #F59E0B;">
-                <AppIcon icon="calendar-event" class="w-5 h-5" />
-              </div>
-              <div class="detail-stat-value">{{ venue.total_bookings }}</div>
-              <div class="detail-stat-label">Bookings</div>
-            </div>
-          </div>
-        </div>
+            <p class="vd-note">Paid amenities are optional. You choose them when you book.</p>
+          </section>
 
-        <!-- Amenities -->
-        <div v-if="venue.amenities?.length" class="detail-section">
-          <h3 class="detail-section-title">
-            <AppIcon icon="sparkles" class="w-[18px] h-[18px] text-[#10B981]" />
-            Amenities
-          </h3>
-          <div class="amenities-grid">
-            <div v-for="amenity in venue.amenities" :key="amenity.id" class="amenity-item">
-              <AppIcon icon="circle-check" class="w-4 h-4 text-[#10B981]" />
-              <span class="amenity-name">{{ amenity.name }}</span>
-              <span v-if="amenity.is_paid" class="amenity-price">{{ formatPKR(amenity.price) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Reviews -->
-        <div class="detail-section">
-          <h3 class="detail-section-title">
-            <AppIcon icon="message-star" class="w-[18px] h-[18px] text-[#10B981]" />
-            Reviews
-          </h3>
-          <VenueReviews :venue-id="venue.id">
-            <template #empty>
-              <div class="empty-state" style="padding:2rem;">
-                <div class="empty-state-icon" style="width:3.5rem;height:3.5rem;">
-                  <AppIcon icon="message-off" class="w-5 h-5" />
+          <section id="reviews" class="vd-section">
+            <h2 class="vd-h2">Reviews</h2>
+            <VenueReviews :venue-id="venue.id">
+              <template #empty>
+                <div class="empty-state" style="padding: 2rem 1rem">
+                  <div class="empty-state-icon"><AppIcon icon="message-star" class="w-5 h-5" /></div>
+                  <p class="empty-state-title">No reviews yet</p>
+                  <p class="empty-state-desc">Guests can review this venue after their event.</p>
                 </div>
-                <p class="empty-state-title" style="font-size:0.9375rem;">No reviews yet</p>
-                <p class="empty-state-desc" style="font-size:0.8125rem;">Be the first to review this venue after your booking!</p>
+              </template>
+            </VenueReviews>
+          </section>
+
+          <section class="vd-section">
+            <h2 class="vd-h2">Location and host</h2>
+            <div class="vd-host">
+              <div class="vd-host-avatar">{{ initials(venue.store?.name || venue.name) }}</div>
+              <div class="vd-host-text">
+                <RouterLink
+                  v-if="venue.store?.id"
+                  :to="{ name: 'store-profile', params: { id: venue.store.id } }"
+                  class="vd-host-name"
+                >{{ venue.store.name }}</RouterLink>
+                <span>{{ formatAddress(venue) }}</span>
               </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Booking panel -->
+        <aside class="vd-panel" aria-label="Book this venue">
+          <div class="vd-panel-card">
+            <div class="vd-price">
+              <strong>PKR {{ Number(venue.price_per_head || 0).toLocaleString() }}</strong>
+              <span>per head</span>
+            </div>
+
+            <label class="vd-guests" for="vd-guests">
+              <span class="form-label">Expected guests</span>
+              <input
+                id="vd-guests"
+                v-model.number="guests"
+                type="number"
+                class="form-input"
+                :min="venue.capacity_min || 1"
+                :max="venue.capacity_max"
+                :aria-invalid="guestError ? 'true' : undefined"
+                aria-describedby="vd-guest-help"
+              />
+              <span id="vd-guest-help" :class="guestError ? 'vd-error' : 'vd-help'">
+                {{ guestError || `${Number(venue.capacity_min).toLocaleString()} to ${Number(venue.capacity_max).toLocaleString()} guests` }}
+              </span>
+            </label>
+
+            <div v-if="!guestError && venue.price_per_head" class="vd-breakdown">
+              <div class="vd-row"><span>PKR {{ Number(venue.price_per_head).toLocaleString() }} × {{ guests.toLocaleString() }} guests</span><b>{{ base.toLocaleString() }}</b></div>
+              <div class="vd-row"><span>Tax (5%)</span><b>{{ tax.toLocaleString() }}</b></div>
+              <div class="vd-total"><span>Estimated total</span><b>PKR {{ total.toLocaleString() }}</b></div>
+            </div>
+
+            <template v-if="authStore.isLoggedIn && authStore.user?.role === 'client'">
+              <RouterLink :to="bookLink" class="btn-primary vd-cta">Request to book</RouterLink>
             </template>
-          </VenueReviews>
-        </div>
+            <p v-else-if="authStore.isLoggedIn" class="vd-help vd-center">Only customer accounts can book venues.</p>
+            <template v-else>
+              <RouterLink :to="{ path: '/customer/sign-in', query: { redirect: bookLink } }" class="btn-primary vd-cta">Sign in to book</RouterLink>
+            </template>
+            <p class="vd-help vd-center">You won’t pay until the venue confirms your date.</p>
+          </div>
+        </aside>
       </div>
+    </div>
 
-      <!-- Booking Sidebar -->
-      <div class="lg:col-span-1">
-        <div class="booking-sidebar">
-          <div class="booking-price-section">
-            <div class="booking-price">PKR {{ formatPrice(venue) }}</div>
-            <div class="booking-price-label">per head</div>
-          </div>
+    <!-- Phone booking bar -->
+    <div class="vd-mobile-bar">
+      <div>
+        <strong>PKR {{ Number(venue.price_per_head || 0).toLocaleString() }}</strong>
+        <span>per head</span>
+      </div>
+      <RouterLink
+        :to="authStore.isLoggedIn ? bookLink : { path: '/customer/sign-in', query: { redirect: bookLink } }"
+        class="btn-primary"
+      >Request to book</RouterLink>
+    </div>
+  </div>
 
-          <div class="booking-divider"></div>
-
-          <div v-if="authStore.isLoggedIn && authStore.user?.role === 'client'">
-            <RouterLink :to="`/venues/${venue.id}/book`" class="booking-btn">
-              <AppIcon icon="calendar-event" class="w-[18px] h-[18px]" />
-              Book This Venue
-            </RouterLink>
-            <p class="booking-note">Multi-day booking supported</p>
-          </div>
-
-          <div v-else-if="authStore.isLoggedIn" class="booking-note" style="padding:1rem 0;">
-            Only customers can book venues.
-          </div>
-
-          <div v-else>
-            <p class="booking-note" style="margin-bottom:0.75rem;">Sign in to book this venue</p>
-            <RouterLink :to="{ path: '/customer/sign-in', query: { redirect: `/venues/${route.params.id}/book` } }" class="booking-btn">Sign In to Book</RouterLink>
-          </div>
-        </div>
+  <!-- Not found -->
+  <div v-else class="vd-page">
+    <div class="vd-inner">
+      <div class="card empty-state">
+        <div class="empty-state-icon"><AppIcon icon="building-store" class="w-6 h-6" /></div>
+        <p class="empty-state-title">Venue not found</p>
+        <p class="empty-state-desc">The venue may have been removed, or the link is wrong.</p>
+        <RouterLink to="/venues" class="btn-primary btn-sm mt-4">Browse venues</RouterLink>
       </div>
     </div>
   </div>
 
-  <!-- Not Found -->
-  <div v-else class="max-w-7xl mx-auto flex-grow px-4 py-8">
-    <div class="empty-state">
-      <div class="empty-state-icon" style="background:rgba(249,112,102,0.12);color:#F97066;">
-        <AppIcon icon="building-store" class="w-7 h-7" />
-      </div>
-      <p class="empty-state-title">Venue not found</p>
-      <p class="empty-state-desc">The venue may have been removed or the link is incorrect.</p>
-      <RouterLink to="/venues" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-soft hover:shadow-elevated">Browse Venues</RouterLink>
-    </div>
-  </div>
-
-  <ImageLightbox
-    ref="lightboxRef"
-    :images="lightboxImages"
-    :initial-index="galleryIndex"
-  />
+  <ImageLightbox ref="lightboxRef" :images="lightboxImages" :initial-index="0" />
 </template>
 
 <script setup lang="ts">
-import { formatPKR, formatAddress } from '@/lib/format'
-import { ref, computed, watch, onMounted } from 'vue'
+import { formatAddress, formatTimeRange } from '@/lib/format'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
@@ -247,51 +216,67 @@ const authStore = useAuthStore()
 
 const venue = ref<any>(null)
 const loading = ref(true)
-const mainImage = ref<string | null>(null)
-const galleryIndex = ref(0)
-
+const categories = ref<any[]>([])
+const guests = ref(100)
 const lightboxRef = ref<InstanceType<typeof ImageLightbox> | null>(null)
 
-const lightboxImages = computed<LightboxImage[]>(() => {
-  return allImages.value.map((img: any) => ({
-    url: getStorageUrl(img.path),
-    thumbnail: getStorageUrl(img.path),
-    alt: img.alt_text || venue.value?.name || 'Venue image',
-  }))
-})
-
-function openLightbox(index: number = 0) {
-  lightboxRef.value?.open(index)
-}
+const bookLink = computed(() => `/venues/${route.params.id}/book`)
 
 const allImages = computed(() => {
   const imgs = venue.value?.images || []
-  if (!imgs.length) return []
   const primary = imgs.find((i: any) => i.is_primary)
-  const ordered = primary ? [primary, ...imgs.filter((i: any) => i !== primary)] : imgs
-  return ordered
+  return primary ? [primary, ...imgs.filter((i: any) => i !== primary)] : imgs
 })
 
-watch(allImages, (imgs) => {
-  if (imgs.length && mainImage.value) {
-    const idx = imgs.findIndex((i: any) => i.path === mainImage.value)
-    galleryIndex.value = idx >= 0 ? idx : 0
-  }
+const lightboxImages = computed<LightboxImage[]>(() =>
+  allImages.value.map((img: any) => ({
+    url: getStorageUrl(img.path),
+    thumbnail: getStorageUrl(img.path),
+    alt: img.alt_text || venue.value?.name || 'Venue photo',
+  })),
+)
+
+const eventTypeNames = computed(() =>
+  (venue.value?.event_types || []).map((slug: string) => ({
+    slug,
+    name: categories.value.find(c => c.slug === slug)?.name ?? slug.replace(/_/g, ' ').replace(/^\w/, (m: string) => m.toUpperCase()),
+  })),
+)
+
+// Same formula as the API's BookingPricing: price per head × guests, plus 5% tax.
+const base = computed(() => Math.round(Number(venue.value?.price_per_head || 0) * (guests.value || 0)))
+const tax = computed(() => Math.round(base.value * 0.05))
+const total = computed(() => base.value + tax.value)
+
+const guestError = computed(() => {
+  const v = venue.value
+  if (!v) return ''
+  if (!guests.value || guests.value < 1) return 'Enter how many guests you expect.'
+  if (v.capacity_max && guests.value > v.capacity_max) return `This venue holds up to ${Number(v.capacity_max).toLocaleString()} guests.`
+  if (v.capacity_min && guests.value < v.capacity_min) return `This venue takes bookings from ${Number(v.capacity_min).toLocaleString()} guests.`
+  return ''
 })
 
-watch(galleryIndex, (i) => {
-  const imgs = allImages.value
-  if (imgs[i]) mainImage.value = imgs[i].path
-})
+function openLightbox(index = 0) {
+  lightboxRef.value?.open(index)
+}
+
+function onImageError(e: Event) {
+  (e.target as HTMLImageElement).style.visibility = 'hidden'
+}
+
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+}
 
 async function loadVenue() {
   loading.value = true
   try {
     const { data } = await api.get(`/venues/${route.params.id}`)
     venue.value = data.data
-    const primary = venue.value.images?.find((i: any) => i.is_primary)
-    mainImage.value = primary?.path || venue.value.images?.[0]?.path || venue.value.thumbnail || null
-    galleryIndex.value = 0
+    const min = Number(venue.value.capacity_min || 1)
+    const max = Number(venue.value.capacity_max || min)
+    guests.value = Math.min(max, Math.max(min, Math.round((min + max) / 2 / 10) * 10))
   } catch {
     venue.value = null
   } finally {
@@ -299,399 +284,144 @@ async function loadVenue() {
   }
 }
 
-function setMainImage(path: string) {
-  mainImage.value = path
-  const idx = allImages.value.findIndex((i: any) => i.path === path)
-  if (idx >= 0) galleryIndex.value = idx
-}
+watch(() => route.params.id, () => { if (route.params.id) loadVenue() })
 
-function getImageUrl(path: string) {
-  return getStorageUrl(path)
-}
-
-function onImageError(e: Event) {
-  (e.target as HTMLImageElement).style.display = 'none'
-}
-
-function formatPrice(v: any) {
-  const price = v.price_per_head
-  return price ? Number(price).toLocaleString() : 'Contact'
-}
-
-onMounted(loadVenue)
+onMounted(() => {
+  loadVenue()
+  api.get('/categories').then(r => { categories.value = r.data?.data ?? [] }).catch(() => {})
+})
 </script>
 
 <style scoped>
-.cursor-pointer { cursor: pointer; }
+.vd-page { background: var(--canvas); padding: 24px 16px 80px; }
+.vd-inner { max-width: 80rem; margin: 0 auto; }
 
-/* ─── Gallery ──────────────────────────────────────────────────────────────── */
-.detail-gallery {
-  border-radius: 1rem;
-  overflow: hidden;
-  border: 1px solid var(--color-border-light);
-  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.08));
+.vd-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 16px; font-size: 13px; color: var(--ink-muted); }
+.vd-crumbs a { color: inherit; text-decoration: none; }
+.vd-crumbs a:hover { color: var(--ink); text-decoration: underline; }
+.vd-crumbs [aria-current] { color: var(--ink-secondary); }
+
+/* Mosaic: one large photo plus up to four smaller ones */
+.vd-mosaic {
+  position: relative; display: grid; gap: 8px; height: 440px; border-radius: var(--radius-xl); overflow: hidden;
+  grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 1fr 1fr;
+}
+.vd-mosaic-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.vd-mosaic-2 { grid-template-columns: 2fr 1fr; grid-template-rows: 1fr; }
+.vd-mosaic-3 { grid-template-columns: 2fr 1fr; }
+.vd-tile { padding: 0; border: 0; background: var(--surface-sunken); cursor: zoom-in; overflow: hidden; min-width: 0; }
+.vd-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease, filter .2s ease; }
+.vd-tile:hover img { transform: scale(1.03); filter: brightness(.95); }
+.vd-tile:first-child { grid-row: span 2; }
+.vd-mosaic-1 .vd-tile:first-child, .vd-mosaic-2 .vd-tile:first-child { grid-row: auto; }
+.vd-mosaic-4 .vd-tile:nth-child(4) { grid-column: span 2; }
+.vd-all-photos {
+  position: absolute; right: 16px; bottom: 16px; display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-elevated);
+}
+.vd-mosaic-skel { height: 440px; border-radius: var(--radius-xl); }
+.vd-no-photo {
+  height: 240px; border-radius: var(--radius-xl); background: var(--surface-sunken); color: var(--ink-muted);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 14px;
 }
 
-.gallery-main {
-  position: relative;
-  width: 100%;
-  /* Full width at every size; height scales with the viewport (was a capped
-     16:9 box that left an empty strip beside the photo on wide screens). */
-  height: clamp(240px, 42vw, 520px);
-  background: var(--color-bg-hover);
-}
+.vd-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 56px; align-items: start; margin-top: 32px; }
+.vd-main { min-width: 0; }
 
-.gallery-main-img {
-  width: 100%; height: 100%;
-  object-fit: cover;
+.vd-head { padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.vd-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 10px; }
+.vd-featured {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 9999px;
+  background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 600;
 }
+.vd-rating { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink); }
+.vd-star { color: var(--accent); }
+.vd-rating-link { font-weight: 400; color: var(--ink-muted); text-decoration: underline; text-underline-offset: 3px; }
+.vd-title {
+  margin: 0; font-family: var(--font-display); font-size: 42px; line-height: 48px; font-weight: 700;
+  letter-spacing: -0.03em; color: var(--ink);
+}
+.vd-facts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; font-size: 15px; color: var(--ink-secondary); }
+.vd-facts span { display: inline-flex; align-items: center; gap: 6px; }
+.vd-facts :deep(svg) { color: var(--ink-muted); }
 
-.gallery-placeholder {
-  width: 100%; height: 100%;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-}
+.vd-section { padding: 32px 0; border-bottom: 1px solid var(--line); }
+.vd-section:last-child { border-bottom: 0; }
+.vd-h2 { margin: 0 0 16px; font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 650; letter-spacing: -0.015em; color: var(--ink); }
+.vd-text { margin: 0; max-width: 42rem; font-size: 16px; line-height: 27px; color: var(--ink-secondary); white-space: pre-line; }
+.vd-specs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 24px 0 0; }
+.vd-specs div { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.vd-specs dt { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); }
+.vd-specs dd { margin: 4px 0 0; font-family: var(--font-display); font-size: 19px; font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
 
-.gallery-nav {
-  position: absolute;
-  top: 50%; transform: translateY(-50%);
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: white;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
+.vd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.vd-chip {
+  display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 9999px;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-secondary);
+  font-size: 14px; font-weight: 500; text-decoration: none;
 }
-.gallery-nav:hover { background: rgba(0,0,0,0.7); }
-.gallery-prev { left: 16px; }
-.gallery-next { right: 16px; }
+.vd-chip:hover { border-color: var(--brand-strong); background: var(--brand-soft); color: var(--brand-text); }
 
-.gallery-photos-btn {
-  position: absolute;
-  bottom: 16px; right: 16px;
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 16px;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(12px);
-  color: white;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.gallery-photos-btn:hover {
-  background: rgba(0,0,0,0.8);
-  transform: translateY(-1px);
-}
+.vd-amenities { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.vd-amenity { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.vd-amenity-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-sm); background: var(--brand-soft); color: var(--brand-text); flex: none; }
+.vd-amenity-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: var(--ink); }
+.vd-amenity-price { font-family: var(--font-mono); font-size: 13px; color: var(--ink-muted); white-space: nowrap; }
+.vd-note { margin: 12px 0 0; font-size: 13px; color: var(--ink-muted); }
 
-.gallery-thumbs {
-  display: flex; gap: 8px;
-  padding: 12px 16px;
-  overflow-x: auto;
-  background: var(--color-bg-card);
+.vd-host { display: flex; align-items: center; gap: 14px; }
+.vd-host-avatar {
+  width: 48px; height: 48px; border-radius: 9999px; display: grid; place-items: center; flex: none;
+  background: var(--accent-soft); color: var(--accent-text); font-weight: 700;
 }
+.vd-host-text { display: flex; flex-direction: column; font-size: 14px; color: var(--ink-muted); }
+.vd-host-name { font-size: 16px; font-weight: 600; color: var(--ink); text-decoration: none; }
+.vd-host-name:hover { text-decoration: underline; }
 
-.gallery-thumb {
-  flex-shrink: 0;
-  width: 72px; height: 72px;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  border: 2px solid transparent;
-  padding: 0; cursor: pointer;
-  transition: all 0.2s;
-  opacity: 0.65;
+/* Booking panel */
+.vd-panel { position: sticky; top: 88px; }
+.vd-panel-card {
+  display: flex; flex-direction: column; gap: 18px; padding: 24px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-elevated);
 }
-.gallery-thumb:hover { opacity: 1; }
-.gallery-thumb.active { border-color: #10B981; opacity: 1; }
-.gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.vd-price { display: flex; align-items: baseline; gap: 6px; }
+.vd-price strong { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.vd-price span { font-size: 14px; color: var(--ink-muted); }
+.vd-guests { display: flex; flex-direction: column; }
+.vd-guests .form-label { margin-bottom: 6px; }
+.vd-help { margin-top: 6px; font-size: 13px; line-height: 20px; color: var(--ink-muted); }
+.vd-error { margin-top: 6px; font-size: 13px; line-height: 20px; color: var(--danger-text); }
+.vd-center { margin: 0; text-align: center; }
+.vd-breakdown { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.vd-row { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-secondary); }
+.vd-row b, .vd-total b { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink); }
+.vd-total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-top: 12px; border-top: 1px dashed var(--line-strong); }
+.vd-total span { font-weight: 600; color: var(--ink); }
+.vd-total b { font-family: var(--font-display); font-size: 21px; font-weight: 700; }
+.vd-cta { width: 100%; min-height: 52px; font-size: 15px; }
 
-/* ─── Detail Content ───────────────────────────────────────────────────────── */
-.detail-title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: var(--color-text);
-  letter-spacing: -0.02em;
-  margin-bottom: 0.375rem;
+.vd-mobile-bar { display: none; }
+
+@media (max-width: 1023px) {
+  .vd-layout { grid-template-columns: 1fr; gap: 0; }
+  .vd-panel { position: static; margin-top: 8px; }
+  .vd-mosaic { height: 360px; }
 }
-
-.detail-location {
-  display: flex; align-items: center; gap: 0.375rem;
-  color: var(--color-text-secondary);
-  font-size: 0.9375rem;
-  margin-bottom: 0;
-}
-
-.detail-rating {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  flex-shrink: 0;
-}
-
-.detail-rating-score {
-  display: flex; align-items: center; gap: 0.375rem;
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--color-text);
-}
-
-.detail-rating-count {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-.detail-tag {
-  padding: 0.375rem 0.875rem;
-  background: #ECFDF5;
-  color: #10B981;
-  border: 1px solid #A7F3D0;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-:root.dark .detail-tag {
-  background: rgba(16, 185, 129, 0.12);
-  color: #34D399;
-  border-color: rgba(16, 185, 129, 0.25);
-}
-
-/* ─── Sections ─────────────────────────────────────────────────────────────── */
-.detail-section {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  padding: 1.75rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--shadow-soft, 0 1px 2px rgba(0,0,0,0.04));
-}
-
-.detail-section-title {
-  display: flex; align-items: center; gap: 0.625rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1.0625rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 1.25rem;
-}
-
-.detail-section-text {
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-  font-size: 0.9375rem;
-  margin-bottom: 0;
-}
-
-/* ─── Detail Stats ─────────────────────────────────────────────────────────── */
-.detail-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-}
-
-.detail-stat-item {
-  text-align: center;
-  padding: 1.25rem 0.75rem;
-  background: var(--color-bg);
-  border-radius: 0.75rem;
-  border: 1px solid var(--color-border-light);
-}
-
-.detail-stat-icon {
-  width: 42px; height: 42px;
-  border-radius: 0.75rem;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 0.75rem;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
-}
-
-.detail-stat-value {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 0.125rem;
-}
-
-.detail-stat-label {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  font-weight: 500;
-}
-
-/* ─── Amenities ────────────────────────────────────────────────────────────── */
-.amenities-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.75rem;
-}
-
-.amenity-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 0.875rem;
-  background: var(--color-bg);
-  border-radius: 0.75rem;
-  font-size: 0.875rem;
-}
-
-.amenity-name {
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.amenity-price {
-  margin-left: auto;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-/* ─── Reviews ──────────────────────────────────────────────────────────────── */
-.reviews-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.review-card {
-  padding-bottom: 1.25rem;
-  margin-bottom: 1.25rem;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.review-card:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.review-avatar {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #10B981, #34D399);
-  color: white;
-  font-weight: 700;
-  font-size: 0.75rem;
-  display: flex; align-items: center; justify-content: center;
-}
-
-.review-author {
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--color-text);
-}
-
-.review-stars {
-  display: flex; gap: 1px;
-}
-
-.review-text {
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-  line-height: 1.6;
-  margin-bottom: 0;
-  margin-top: 0.25rem;
-}
-
-/* ─── Booking Sidebar ──────────────────────────────────────────────────────── */
-.booking-sidebar {
-  position: sticky;
-  top: 1.5rem;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: 1rem;
-  padding: 1.75rem;
-  box-shadow: var(--shadow-elevated, 0 8px 30px rgba(0,0,0,0.1));
-}
-
-.booking-price-section {
-  text-align: center;
-}
-
-.booking-price {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1.75rem;
-  font-weight: 800;
-  color: #10B981;
-  letter-spacing: -0.02em;
-}
-
-.booking-price-label {
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-}
-
-.booking-divider {
-  height: 1px;
-  background: var(--color-border-light);
-  margin: 1.25rem 0;
-}
-
-.booking-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.875rem 1.5rem;
-  background: linear-gradient(135deg, #10B981, #34D399);
-  color: white;
-  font-weight: 700;
-  font-size: 1rem;
-  border-radius: 0.75rem;
-  text-decoration: none;
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
-  transition: all 0.25s ease;
-}
-
-.booking-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(16, 185, 129, 0.4);
-  color: white;
-}
-
-.booking-note {
-  text-align: center;
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-  margin-top: 0.75rem;
-  margin-bottom: 0;
-}
-
-/* ─── Responsive ───────────────────────────────────────────────────────────── */
-@media (max-width: 767.98px) {
-  .detail-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 639px) {
+  .vd-page { padding-bottom: 104px; }
+  .vd-mosaic { height: 260px; grid-template-columns: 1fr; grid-template-rows: 1fr; border-radius: var(--radius-lg); }
+  .vd-tile:not(:first-child) { display: none; }
+  .vd-tile:first-child { grid-row: auto; }
+  .vd-title { font-size: 30px; line-height: 36px; }
+  .vd-panel { display: none; }
+  .vd-mobile-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 12px max(16px, env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    background: var(--surface); border-top: 1px solid var(--line); box-shadow: var(--shadow-float);
   }
-
-  .detail-title {
-    font-size: 1.375rem;
-  }
-
-  .gallery-main {
-    max-height: 280px;
-  }
-
-  .gallery-thumb {
-    width: 56px;
-    height: 56px;
-  }
-
-  .detail-section {
-    padding: 1.25rem;
-  }
-}
-
-@media (max-width: 400px) {
-  .detail-stats-grid {
-    grid-template-columns: 1fr;
-  }
+  .vd-mobile-bar strong { display: block; font-family: var(--font-display); font-size: 19px; color: var(--ink); }
+  .vd-mobile-bar span { font-size: 13px; color: var(--ink-muted); }
 }
 </style>

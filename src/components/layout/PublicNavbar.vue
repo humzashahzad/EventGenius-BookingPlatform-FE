@@ -42,7 +42,7 @@
           <template v-if="authStore.isLoggedIn">
             <RouterLink
               :to="authStore.defaultRoute"
-              class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-400 rounded-xl shadow-md shadow-primary-500/20 hover:shadow-lg transition-all"
+              class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-xl hover:shadow-lg transition-all"
               @click="mobileOpen = false"
             >
               <AppIcon icon="layout-dashboard" class="w-4 h-4" />
@@ -59,7 +59,7 @@
             </RouterLink>
             <RouterLink
               to="/customer/sign-up"
-              class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-400 rounded-xl shadow-md shadow-primary-500/20 hover:shadow-lg transition-all"
+              class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-xl hover:shadow-lg transition-all"
               @click="mobileOpen = false"
             >
               Get Started

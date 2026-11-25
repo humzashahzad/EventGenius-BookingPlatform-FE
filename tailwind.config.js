@@ -16,10 +16,12 @@ export default {
           300: '#6EE7B7',
           400: '#34D399',
           500: '#10B981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065F46',
-          900: '#064E3B',
+          // 600+ shifted one step darker so emerald text and white-on-emerald
+          // fills pass 4.5:1 (600 = design-system brand-strong).
+          600: '#047857',
+          700: '#065F46',
+          800: '#064E3B',
+          900: '#022C22',
         },
         accent: {
           DEFAULT: '#F59E0B',
@@ -47,12 +49,14 @@ export default {
       },
       fontFamily: {
         sans: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Bricolage Grotesque', 'DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['DM Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
       },
       boxShadow: {
-        'soft': '0 1px 3px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.04)',
-        'card': '0 4px 12px rgba(28, 25, 23, 0.05), 0 1px 3px rgba(28, 25, 23, 0.04)',
-        'elevated': '0 12px 32px rgba(28, 25, 23, 0.08), 0 4px 8px rgba(28, 25, 23, 0.04)',
-        'float': '0 20px 48px rgba(28, 25, 23, 0.1), 0 8px 16px rgba(28, 25, 23, 0.06)',
+        'soft': 'var(--shadow-soft)',
+        'card': 'var(--shadow-card)',
+        'elevated': 'var(--shadow-elevated)',
+        'float': 'var(--shadow-float)',
         'glow': '0 0 24px rgba(16, 185, 129, 0.2)',
       },
       borderRadius: {

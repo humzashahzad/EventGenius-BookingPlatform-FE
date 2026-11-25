@@ -1641,7 +1641,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #34D399, #10B981);
+  background: #047857;
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
@@ -1820,7 +1820,7 @@ onBeforeUnmount(() => {
   min-width: 1.35rem;
   padding: 0.15rem 0.45rem;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #34D399, #10B981);
+  background: #047857;
   color: #fff;
   font-size: 0.6875rem;
   font-weight: 700;
@@ -2262,7 +2262,7 @@ onBeforeUnmount(() => {
 .reply-bar {
   width: 3px;
   border-radius: var(--radius-full);
-  background: linear-gradient(180deg, #34D399, #10B981);
+  background: #047857;
 }
 
 .reply-content {
@@ -2307,7 +2307,7 @@ onBeforeUnmount(() => {
 /* Sent messages: teal bubble */
 .message-own .message-bubble {
   border-bottom-right-radius: var(--radius-sm);
-  background: linear-gradient(135deg, #34D399, #10B981);
+  background: #047857;
   color: #fff;
 }
 
@@ -2828,7 +2828,7 @@ onBeforeUnmount(() => {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #34D399, #10B981);
+  background: #047857;
   color: #fff;
   box-shadow: var(--shadow-elevated), 0 0 20px rgba(16, 185, 129, 0.25);
   cursor: pointer;
