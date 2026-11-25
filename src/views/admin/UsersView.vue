@@ -1,202 +1,179 @@
 <template>
-  <div class="content-container">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between mb-8">
+  <div class="space-y-5">
+    <header class="page-header !mb-0">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-warm-900 dark:text-warm-50">Users</h1>
-        <p class="text-warm-500 dark:text-warm-400 mt-1">Manage all registered users across the platform.</p>
+        <h1 class="page-title">Users</h1>
+        <p class="page-subtitle">Everyone registered on the platform — customers, shop owners and support staff.</p>
       </div>
-      <span v-if="!loading" class="text-sm text-warm-400 dark:text-warm-500">{{ meta.total ?? '---' }} users</span>
-    </div>
+    </header>
 
-    <!-- Table Card -->
-    <div class="card">
-      <!-- Loading skeleton -->
-      <div v-if="loading" class="p-5">
-        <div v-for="i in 8" :key="i" class="flex gap-3 py-3 border-b border-warm-100 dark:border-warm-800 last:border-0 animate-pulse">
-          <div class="h-4 w-1/6 rounded-lg bg-warm-200 dark:bg-warm-700"></div>
-          <div class="h-4 w-1/4 rounded-lg bg-warm-200 dark:bg-warm-700"></div>
-          <div class="h-4 w-1/12 rounded-lg bg-warm-200 dark:bg-warm-700"></div>
-          <div class="h-4 w-1/12 rounded-lg bg-warm-200 dark:bg-warm-700"></div>
-          <div class="h-4 w-1/6 rounded-lg bg-warm-200 dark:bg-warm-700 ml-auto"></div>
-        </div>
-      </div>
-
-      <!-- Empty state -->
-      <div v-else-if="users.length === 0" class="p-5 text-center py-12">
-        <div class="w-14 h-14 rounded-2xl bg-warm-100 dark:bg-warm-800 flex items-center justify-center mx-auto mb-4">
-          <AppIcon icon="users" class="w-7 h-7 text-warm-400" />
-        </div>
-        <p class="font-medium text-warm-700 dark:text-warm-300 mb-1">No users found</p>
-        <p class="text-warm-500 dark:text-warm-400 text-sm">Try adjusting your search or filters.</p>
-      </div>
-
-      <!-- Table -->
-      <div v-else class="table-wrapper overflow-x-auto">
-        <table class="w-full min-w-[700px]">
-          <thead>
-            <tr class="table-header">
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">#</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">User</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Email</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Role</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Status</th>
-              <th class="text-left px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Joined</th>
-              <th class="text-right px-5 py-3 text-xs font-semibold text-warm-500 dark:text-warm-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(u, idx) in users" :key="u.id" class="table-row">
-              <td class="px-5 py-3 text-sm text-warm-400 dark:text-warm-500">{{ (meta.current_page - 1) * perPage + idx + 1 }}</td>
-              <td class="px-5 py-3">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-                    <span class="text-xs font-bold text-primary-700 dark:text-primary-300">{{ initials(u.name) }}</span>
-                  </div>
-                  <span class="text-sm font-medium text-warm-800 dark:text-warm-200">{{ u.name }}</span>
-                </div>
-              </td>
-              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400">{{ u.email }}</td>
-              <td class="px-5 py-3">
-                <span :class="u.role === 'admin' ? 'badge-info' : u.role === 'store_owner' ? 'badge-warning' : 'badge-warm'" class="capitalize">{{ roleLabels[u.role as keyof typeof roleLabels] || u.role?.replace('_', ' ') }}</span>
-              </td>
-              <td class="px-5 py-3">
-                <span :class="u.is_active ? 'badge-success' : 'badge-danger'">{{ u.is_active ? 'Active' : 'Inactive' }}</span>
-              </td>
-              <td class="px-5 py-3 text-sm text-warm-500 dark:text-warm-400 whitespace-nowrap">{{ formatDate(u.created_at) }}</td>
-              <td class="px-5 py-3 text-right">
-                <span v-if="u.id === authStore.user?.id" class="text-xs text-warm-400">You</span>
-                <div v-else class="flex items-center justify-end gap-2">
-                  <button @click="confirmToggle(u)" class="text-sm font-medium px-3 py-1.5 rounded-xl transition-all" :class="u.is_active ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50'" :title="u.is_active ? 'Deactivate' : 'Activate'">
-                    {{ u.is_active ? 'Deactivate' : 'Activate' }}
-                  </button>
-                  <button @click="confirmDelete(u)" class="p-2 rounded-xl text-warm-400 hover:text-coral hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Delete user" aria-label="Delete user">
-                    <AppIcon icon="trash" class="w-4 h-4" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="meta.last_page > 1" class="flex flex-wrap items-center justify-between mt-6">
-      <p class="text-sm text-warm-500 dark:text-warm-400">Showing {{ (meta.current_page - 1) * perPage + 1 }}–{{ Math.min(meta.current_page * perPage, meta.total) }} of {{ meta.total }} users</p>
-      <nav class="flex items-center gap-1">
-        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === 1 ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === 1" @click="changePage(1)">
-          <AppIcon icon="chevron-left" class="w-4 h-4" />
-        </button>
-        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === 1 ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === 1" @click="changePage(meta.current_page - 1)">
-          <AppIcon icon="chevron-left" class="w-4 h-4" />
-        </button>
-        <template v-for="p in pageRange" :key="p">
-          <span v-if="p === '...'" class="w-8 h-8 flex items-center justify-center text-sm text-warm-400 dark:text-warm-500">...</span>
-          <button v-else class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-medium transition-all" :class="meta.current_page === p ? 'bg-primary-600 text-white shadow-soft' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" @click="changePage(Number(p))">{{ p }}</button>
-        </template>
-        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === meta.last_page ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === meta.last_page" @click="changePage(meta.current_page + 1)">
-          <AppIcon icon="chevron-right" class="w-4 h-4" />
-        </button>
-        <button class="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all" :class="meta.current_page === meta.last_page ? 'text-warm-300 dark:text-warm-600 cursor-not-allowed' : 'text-warm-600 dark:text-warm-400 hover:bg-warm-100 dark:hover:bg-warm-800'" :disabled="meta.current_page === meta.last_page" @click="changePage(meta.last_page)">
-          <AppIcon icon="chevron-right" class="w-4 h-4" />
-        </button>
+    <section class="card overflow-hidden">
+      <nav class="tabs px-2 sm:px-4" role="tablist" aria-label="Role">
+        <button v-for="r in roleTabs" :key="r.value" role="tab" class="tab" :aria-selected="roleFilter === r.value" @click="roleFilter = r.value; resetAndLoad()">{{ r.label }}</button>
       </nav>
-    </div>
+      <DataToolbar v-model:search="search" placeholder="Search name or email" :count="loading ? undefined : meta.total" noun="users" @update:search="resetAndLoad">
+        <select v-model="statusFilter" class="form-select" aria-label="Status" @change="resetAndLoad">
+          <option value="">Any status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </DataToolbar>
 
-    <!-- Delete Confirm Dialog -->
-    <VuexyModal v-model:visible="showDeleteDialog" title="Delete User" width="28rem">
-      <div class="flex items-start gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-coral/10 dark:bg-coral/20 flex items-center justify-center flex-shrink-0">
-          <AppIcon icon="alert-triangle" class="w-5 h-5 text-coral" />
-        </div>
-        <div>
-          <p class="font-medium text-warm-800 dark:text-warm-200 mb-1">Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>?</p>
-          <p class="text-warm-500 dark:text-warm-400 text-sm">This action cannot be undone. All their data will be permanently removed.</p>
-        </div>
+      <div v-if="loading" class="p-4 space-y-3" aria-busy="true"><div v-for="i in 8" :key="i" class="skeleton h-10 w-full" /></div>
+
+      <div v-else-if="loadError" class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
+        <p class="empty-state-title">Couldn't load users</p>
+        <p class="empty-state-desc">{{ loadError }}</p>
+        <div class="empty-state-actions"><button class="btn-primary" @click="load">Try again</button></div>
       </div>
-      <template #footer>
-        <button class="btn-secondary" @click="showDeleteDialog = false">Cancel</button>
-        <button class="btn-danger" :disabled="acting" @click="doDelete">
-          <AppIcon v-if="acting" icon="loader" class="w-4 h-4 animate-spin mr-1.5" />
-          Delete User
-        </button>
-      </template>
-    </VuexyModal>
 
-    <!-- Toggle Status Confirm Dialog -->
-    <VuexyModal v-model:visible="showToggleDialog" :title="(toggleTarget?.is_active ? 'Deactivate' : 'Activate') + ' User'" width="28rem">
-      <p class="text-warm-500 dark:text-warm-400">
-        Are you sure you want to <strong class="text-warm-800 dark:text-warm-200">{{ toggleTarget?.is_active ? 'deactivate' : 'activate' }}</strong> user <strong class="text-warm-800 dark:text-warm-200">{{ toggleTarget?.name }}</strong>?
-        <span v-if="toggleTarget?.is_active"> They will be unable to log in until re-activated.</span>
-      </p>
-      <template #footer>
-        <button class="btn-secondary" @click="showToggleDialog = false">Cancel</button>
-        <button :class="toggleTarget?.is_active ? 'btn-danger' : 'btn-primary'" :disabled="acting" @click="doToggle">
-          <AppIcon v-if="acting" icon="loader" class="w-4 h-4 animate-spin mr-1.5" />
-          {{ toggleTarget?.is_active ? 'Deactivate' : 'Activate' }}
-        </button>
+      <div v-else-if="users.length === 0" class="empty-state">
+        <div class="empty-state-icon"><AppIcon icon="users" class="w-5 h-5" /></div>
+        <p class="empty-state-title">No users found</p>
+        <p class="empty-state-desc">Try a different search, role or status.</p>
+        <div class="empty-state-actions"><button class="btn-secondary" @click="clearFilters">Clear filters</button></div>
+      </div>
+
+      <template v-else>
+        <!-- Phone -->
+        <ul class="md:hidden divide-y divide-line">
+          <li v-for="u in users" :key="u.id" class="p-4 flex items-start gap-3">
+            <span class="avatar w-9 h-9 text-xs shrink-0">{{ initials(u.name) }}</span>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-ink truncate">{{ u.name }}</p>
+              <p class="text-xs text-ink-muted truncate">{{ u.email }}</p>
+              <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                <span :class="roleBadge(u.role)">{{ roleLabel(u.role) }}</span>
+                <span :class="u.is_active ? 'badge-confirmed' : 'badge-cancelled'">{{ u.is_active ? 'Active' : 'Inactive' }}</span>
+                <span class="text-xs text-ink-muted">Joined {{ formatDate(u.created_at) }}</span>
+              </div>
+            </div>
+            <div v-if="u.id !== authStore.user?.id" class="flex flex-col gap-1 shrink-0">
+              <button class="btn-secondary btn-sm" @click="confirmToggle(u)">{{ u.is_active ? 'Deactivate' : 'Activate' }}</button>
+              <button class="btn-danger-ghost btn-sm" @click="confirmDelete(u)">Delete</button>
+            </div>
+            <span v-else class="badge-neutral shrink-0">You</span>
+          </li>
+        </ul>
+
+        <!-- Desktop -->
+        <div class="hidden md:block table-wrapper max-h-[calc(100vh-300px)] min-h-[320px] scrollbar-thin">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User</th><th>Role</th><th>Status</th><th>Phone</th><th>Last seen</th><th>Joined</th>
+                <th class="cell-actions"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="u in users" :key="u.id">
+                <td>
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="avatar w-8 h-8 text-[11px] shrink-0">{{ initials(u.name) }}</span>
+                    <div class="min-w-0">
+                      <p class="cell-primary truncate max-w-[220px]">{{ u.name }}</p>
+                      <p class="text-xs text-ink-muted truncate max-w-[260px]">{{ u.email }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td><span :class="roleBadge(u.role)">{{ roleLabel(u.role) }}</span></td>
+                <td><span :class="u.is_active ? 'badge-confirmed' : 'badge-cancelled'">{{ u.is_active ? 'Active' : 'Inactive' }}</span></td>
+                <td class="whitespace-nowrap num">{{ u.phone || '—' }}</td>
+                <td class="whitespace-nowrap text-ink-muted">{{ u.last_seen_at ? timeAgo(u.last_seen_at) : 'Never' }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(u.created_at) }}</td>
+                <td class="cell-actions">
+                  <span v-if="u.id === authStore.user?.id" class="badge-neutral">You</span>
+                  <div v-else class="inline-flex items-center gap-1">
+                    <button class="btn-ghost btn-sm" @click="confirmToggle(u)">{{ u.is_active ? 'Deactivate' : 'Activate' }}</button>
+                    <button class="btn-icon btn-icon-sm hover:!text-danger-text" :aria-label="`Delete ${u.name}`" title="Delete user" @click="confirmDelete(u)">
+                      <AppIcon icon="trash" class="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <TablePager :page="meta.current_page" :per-page="perPage" :total="meta.total" @update:page="changePage" />
       </template>
-    </VuexyModal>
+    </section>
+
+    <ConfirmDialog v-model:visible="showDeleteDialog" title="Delete user" confirm-label="Delete user" tone="danger" :loading="acting" @confirm="doDelete">
+      <p class="font-medium text-ink">Delete <strong>{{ deleteTarget?.name }}</strong>?</p>
+      <p class="mt-1">This can't be undone. All their data will be permanently removed.</p>
+    </ConfirmDialog>
+
+    <ConfirmDialog v-model:visible="showToggleDialog" :title="(toggleTarget?.is_active ? 'Deactivate' : 'Activate') + ' user'"
+      :confirm-label="toggleTarget?.is_active ? 'Deactivate' : 'Activate'" :tone="toggleTarget?.is_active ? 'danger' : 'primary'" :loading="acting" @confirm="doToggle">
+      <p>{{ toggleTarget?.is_active ? 'Deactivate' : 'Activate' }} <strong class="text-ink">{{ toggleTarget?.name }}</strong>?</p>
+      <p v-if="toggleTarget?.is_active" class="mt-1">They won't be able to sign in until re-activated.</p>
+    </ConfirmDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from '@/stores/auth'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
-import { useTopBarActionsStore } from '@/stores/topBarActions'
+import { useAuthStore } from '@/stores/auth'
+import { formatDate } from '@/lib/format'
 import AppIcon from '@/components/ui/AppIcon.vue'
-import VuexyModal from '@/components/ui/VuexyModal.vue'
+import DataToolbar from '@/components/admin/DataToolbar.vue'
+import ConfirmDialog from '@/components/admin/ConfirmDialog.vue'
+import TablePager from '@/components/dashboard/TablePager.vue'
+import { initials, timeAgo } from '@/components/dashboard/metrics'
 
-const users      = ref<any[]>([])
-const loading    = ref(false)
-const acting     = ref(false)
-const roleLabels = {
-  admin: 'Support',
-  store_owner: 'Shop Owner',
-  client: 'Customer',
-} as const
-const search     = ref('')
-const roleFilter = ref('')
+const route = useRoute()
+const users = ref<any[]>([])
+const loading = ref(false)
+const loadError = ref('')
+const acting = ref(false)
+const roleLabels: Record<string, string> = { admin: 'Support', store_owner: 'Shop owner', client: 'Customer' }
+const roleTabs = [
+  { value: '', label: 'All' },
+  { value: 'client', label: 'Customers' },
+  { value: 'store_owner', label: 'Shop owners' },
+  { value: 'admin', label: 'Support' },
+]
+const search = ref('')
+const roleFilter = ref(typeof route.query.role === 'string' ? route.query.role : '')
 const statusFilter = ref('')
 const deleteTarget = ref<any>(null)
 const toggleTarget = ref<any>(null)
 const showDeleteDialog = ref(false)
 const showToggleDialog = ref(false)
-const perPage    = 15
-const meta       = ref({ current_page: 1, last_page: 1, total: 0 })
+const perPage = 15
+const meta = ref({ current_page: 1, last_page: 1, total: 0 })
 let page = 1
-let searchTimeout: ReturnType<typeof setTimeout>
-const topBarActions = useTopBarActionsStore()
 const authStore = useAuthStore()
+
+function roleLabel(r: string) { return roleLabels[r] || r?.replace('_', ' ') }
+function roleBadge(r: string) { return r === 'admin' ? 'badge-info' : r === 'store_owner' ? 'badge-warning' : 'badge-neutral' }
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     const params: any = { per_page: perPage, page }
-    if (search.value)       params.search = search.value
-    if (roleFilter.value)   params.role   = roleFilter.value
+    if (search.value) params.search = search.value
+    if (roleFilter.value) params.role = roleFilter.value
     if (statusFilter.value) params.status = statusFilter.value
     const { data } = await api.get('/admin/users', { params })
     users.value = data.data.data
-    meta.value  = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total }
+    meta.value = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total }
+  } catch (e: any) {
+    loadError.value = e.response?.data?.message || 'Please check your connection and try again.'
   } finally { loading.value = false }
 }
 
 function resetAndLoad() { page = 1; load() }
-
 function changePage(p: number) { page = p; load() }
+function clearFilters() { search.value = ''; roleFilter.value = ''; statusFilter.value = ''; resetAndLoad() }
 
-function confirmDelete(u: any) {
-  deleteTarget.value = u
-  showDeleteDialog.value = true
-}
-
-function confirmToggle(u: any) {
-  toggleTarget.value = u
-  showToggleDialog.value = true
-}
+function confirmDelete(u: any) { deleteTarget.value = u; showDeleteDialog.value = true }
+function confirmToggle(u: any) { toggleTarget.value = u; showToggleDialog.value = true }
 
 async function doDelete() {
   if (!deleteTarget.value) return
@@ -204,8 +181,12 @@ async function doDelete() {
   try {
     await api.delete(`/admin/users/${deleteTarget.value.id}`)
     users.value = users.value.filter(u => u.id !== deleteTarget.value.id)
+    meta.value.total = Math.max(0, meta.value.total - 1)
+    toast.success('User deleted.')
     showDeleteDialog.value = false
     deleteTarget.value = null
+  } catch (e: any) {
+    toast.error(e.response?.data?.message || 'Could not delete this user.')
   } finally { acting.value = false }
 }
 
@@ -215,61 +196,13 @@ async function doToggle() {
   try {
     await api.patch(`/admin/users/${toggleTarget.value.id}/toggle-status`)
     toggleTarget.value.is_active = !toggleTarget.value.is_active
+    toast.success(toggleTarget.value.is_active ? 'User activated.' : 'User deactivated.')
     showToggleDialog.value = false
     toggleTarget.value = null
+  } catch (e: any) {
+    toast.error(e.response?.data?.message || 'Could not update this user.')
   } finally { acting.value = false }
 }
 
-function initials(name: string) {
-  return name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '?'
-}
-
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-const pageRange = computed(() => {
-  const total = meta.value.last_page
-  const cur   = meta.value.current_page
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-  const pages: (number | string)[] = [1]
-  if (cur > 3) pages.push('...')
-  for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i)
-  if (cur < total - 2) pages.push('...')
-  pages.push(total)
-  return pages
-})
-
-onMounted(() => {
-  load()
-  topBarActions.set({
-    searchPlaceholder: 'Search name or email...',
-    searchValue: search.value,
-    filterOptions: [
-      { key: 'role', label: 'All Roles', options: [
-        { value: 'client', label: 'Customer' },
-        { value: 'store_owner', label: 'Shop Owner' },
-        { value: 'admin', label: 'Support' },
-      ]},
-      { key: 'status', label: 'All Status', options: [
-        { value: 'active', label: 'Active' },
-        { value: 'inactive', label: 'Inactive' },
-      ]},
-    ],
-    initialFilterValues: { role: roleFilter.value, status: statusFilter.value },
-    onSearch(q: string) {
-      search.value = q
-      resetAndLoad()
-    },
-    onFilter(key: string, value: string) {
-      if (key === 'role') roleFilter.value = value
-      else if (key === 'status') statusFilter.value = value
-      resetAndLoad()
-    },
-  })
-})
-
-onUnmounted(() => {
-  topBarActions.clear()
-})
+onMounted(load)
 </script>
