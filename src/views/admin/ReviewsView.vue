@@ -65,7 +65,7 @@
               </div>
               <span :class="r.is_approved ? 'badge-confirmed' : 'badge-cancelled'" class="shrink-0">{{ r.is_approved ? 'Visible' : 'Hidden' }}</span>
             </div>
-            <div class="flex items-center gap-2 mt-2"><StarRating :model-value="r.rating" readonly size="sm" /><span class="sr-only">{{ r.rating }} out of 5</span>
+            <div class="flex items-center gap-2 mt-2"><span role="img" :aria-label="`${r.rating} out of 5`" class="inline-flex"><StarRating :model-value="r.rating" readonly size="sm" /></span>
               <span v-if="r.insight?.label" :class="SENT_BADGE[r.insight.label] || 'badge-neutral'">{{ humanize(r.insight.label) }}</span>
             </div>
             <p v-if="r.title" class="text-sm font-medium text-ink mt-1">{{ r.title }}</p>
@@ -94,7 +94,7 @@
                   <p class="text-ink truncate max-w-[180px]">{{ r.client?.name }}</p>
                   <p class="text-xs text-ink-muted truncate max-w-[200px]">{{ r.client?.email }}</p>
                 </td>
-                <td class="whitespace-nowrap"><StarRating :model-value="r.rating" readonly size="sm" /><span class="sr-only">{{ r.rating }} out of 5</span></td>
+                <td class="whitespace-nowrap"><span role="img" :aria-label="`${r.rating} out of 5`" class="inline-flex"><StarRating :model-value="r.rating" readonly size="sm" /></span></td>
                 <td class="min-w-[280px]">
                   <p v-if="r.title" class="font-medium text-ink">{{ r.title }}</p>
                   <p class="text-ink-secondary line-clamp-3">{{ r.comment || '—' }}</p>

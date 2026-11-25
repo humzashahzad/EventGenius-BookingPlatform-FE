@@ -74,8 +74,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                   <span v-if="!r.is_approved" class="badge-neutral">Hidden by admin</span>
-                  <StarRating :model-value="r.rating" readonly size="sm" />
-                  <span class="sr-only">{{ r.rating }} out of 5</span>
+                  <span role="img" :aria-label="`${r.rating} out of 5`" class="inline-flex"><StarRating :model-value="r.rating" readonly size="sm" /></span>
                 </div>
               </div>
               <p v-if="r.title" class="font-medium text-sm text-ink mt-2">{{ r.title }}</p>

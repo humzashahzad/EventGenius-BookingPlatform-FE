@@ -1,53 +1,48 @@
 <template>
-  <div class="content-container search-ranking">
-    <div class="page-header">
+  <div class="search-ranking space-y-5">
+    <header class="page-header !mb-0">
       <div>
-        <h1 class="page-title">Search &amp; Ranking</h1>
+        <h1 class="page-title">Search &amp; ranking</h1>
         <p class="page-subtitle">Tune how “Best match” orders venues, test it live, and see what customers search for.</p>
       </div>
-      <div v-if="dirty" class="flex items-center gap-2">
-        <span class="badge-warning"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Unsaved weight changes</span>
+      <div v-if="dirty" class="page-header-actions">
+        <span class="badge-pending">Unsaved weight changes</span>
+        <button class="btn-secondary btn-sm" :disabled="saving" @click="discard">Discard</button>
         <button class="btn-primary btn-sm" :disabled="saving" @click="save">Save</button>
       </div>
-    </div>
+    </header>
 
-    <!-- Tabs -->
-    <div class="mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-thin">
-      <div class="inline-flex gap-1 p-1 rounded-2xl bg-warm-100 dark:bg-warm-800 border border-warm-200 dark:border-warm-700" role="tablist">
-        <button
-          v-for="t in tabs"
-          :key="t.key"
-          role="tab"
-          type="button"
-          :aria-selected="tab === t.key"
-          :data-tab="t.key"
-          class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-colors"
-          :class="tab === t.key
-            ? 'bg-white text-warm-900 shadow-soft dark:bg-warm-700 dark:text-warm-50'
-            : 'text-warm-500 hover:text-warm-800 dark:text-warm-400 dark:hover:text-warm-200'"
-          @click="setTab(t.key)"
-        >
-          <AppIcon :icon="t.icon" class="w-4 h-4" />
-          {{ t.label }}
-          <span v-if="t.key === 'weights' && dirty" class="w-1.5 h-1.5 rounded-full bg-amber-500" aria-label="unsaved"></span>
-        </button>
-      </div>
-    </div>
+    <nav class="tabs" role="tablist" aria-label="Search and ranking sections">
+      <button
+        v-for="t in tabs"
+        :key="t.key"
+        role="tab"
+        type="button"
+        class="tab"
+        :aria-selected="tab === t.key"
+        :data-tab="t.key"
+        @click="setTab(t.key)"
+      >
+        <AppIcon :icon="t.icon" class="w-4 h-4" />
+        {{ t.label }}
+        <span v-if="t.key === 'weights' && dirty" class="w-1.5 h-1.5 rounded-full bg-warning" aria-label="unsaved"></span>
+      </button>
+    </nav>
 
     <!-- Settings-dependent tabs -->
     <template v-if="tab === 'weights' || tab === 'console'">
-      <div v-if="settingsLoading" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div v-if="settingsLoading" class="grid grid-cols-1 xl:grid-cols-3 gap-6" aria-busy="true">
         <div class="card p-6 xl:col-span-2 space-y-5">
           <div class="skeleton h-6 w-48"></div>
           <div v-for="i in 6" :key="i" class="space-y-2"><div class="skeleton h-4 w-40"></div><div class="skeleton h-2 w-full"></div></div>
         </div>
-        <div class="skeleton h-72 rounded-2xl"></div>
+        <div class="skeleton h-72"></div>
       </div>
       <div v-else-if="settingsError || !draft" class="card empty-state">
-        <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-6 h-6 text-red-500" /></div>
+        <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
         <p class="empty-state-title">Couldn’t load ranking settings</p>
         <p class="empty-state-desc">{{ settingsError || 'No settings returned.' }}</p>
-        <button class="btn-outline btn-sm mt-3" @click="loadSettings">Retry</button>
+        <div class="empty-state-actions"><button class="btn-primary btn-sm" @click="loadSettings">Try again</button></div>
       </div>
       <template v-else>
         <WeightsPanel
@@ -78,18 +73,13 @@
     <VenueControls v-if="tab === 'venues'" :venues="venues" :loading="venuesLoading" :error="venuesError" @reload="loadVenues" />
     <AnalyticsPanel v-if="tab === 'analytics'" />
 
-    <!-- Toast -->
-    <Transition enter-from-class="opacity-0 translate-y-2" leave-to-class="opacity-0 translate-y-2" enter-active-class="transition" leave-active-class="transition">
-      <div v-if="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-warm-900 text-white text-sm shadow-float dark:bg-warm-50 dark:text-warm-900" role="status">
-        {{ toast }}
-      </div>
-    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { toast as sonner } from 'vue-sonner'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { useCategoriesStore } from '@/stores/categories'
@@ -213,12 +203,8 @@ async function loadVenues() {
 }
 
 // ── Misc ────────────────────────────────────────────────────────────────
-const toast = ref('')
-let toastTimer: ReturnType<typeof setTimeout> | undefined
 function showToast(msg: string) {
-  toast.value = msg
-  clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => (toast.value = ''), 2800)
+  sonner.success(msg)
 }
 
 function beforeUnload(e: BeforeUnloadEvent) {
@@ -237,7 +223,6 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', beforeUnload)
-  clearTimeout(toastTimer)
 })
 </script>
 
@@ -255,6 +240,7 @@ onBeforeUnmount(() => {
   --sig-engagement: #e34948;
   --sig-freshness: #a8a29e;
   --sig-personal: #57534e;
+  --sig-sentiment: #00a0b0;
   --sig-featured: #eda100;
   --sig-boost: #78716c;
   --chart-1: #2a78d6;
@@ -271,6 +257,7 @@ onBeforeUnmount(() => {
   --sig-engagement: #e66767;
   --sig-freshness: #a8a29e;
   --sig-personal: #78716c;
+  --sig-sentiment: #14a6b5;
   --sig-featured: #c98500;
   --sig-boost: #a8a29e;
   --chart-1: #3987e5;
