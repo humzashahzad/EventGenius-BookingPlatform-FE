@@ -27,12 +27,12 @@
       </div>
 
       <!-- Theme Switcher — inline row -->
-      <div class="hidden sm:inline-flex segmented !p-0.5" role="group" aria-label="Theme">
+      <div class="hidden sm:inline-flex segmented" role="group" aria-label="Theme">
         <button
           v-for="m in themeModes"
           :key="m.mode"
           type="button"
-          class="!min-h-[30px] !px-2"
+          class="!px-2"
           :aria-pressed="themeStore.themeMode === m.mode"
           :aria-label="m.label"
           :title="m.label"
@@ -54,7 +54,7 @@
           <AppIcon icon="bell" class="w-5 h-5" />
           <span
             v-if="notifStore.unreadCount > 0"
-            class="count-badge absolute top-0.5 right-0.5 !min-w-[18px] !h-[18px] !px-1 ring-2 ring-surface"
+            class="count-badge absolute top-0 right-0 !px-1 ring-2 ring-surface"
           >
             {{ notifStore.unreadCount > 99 ? '99+' : notifStore.unreadCount }}
           </span>
@@ -173,8 +173,8 @@
           </div>
           <div class="sm:hidden border-t border-line px-3 py-2 flex items-center justify-between">
             <span class="text-sm text-ink-secondary">Theme</span>
-            <div class="segmented !p-0.5">
-              <button v-for="m in themeModes" :key="m.mode" type="button" class="!min-h-[36px] !px-2.5" :aria-pressed="themeStore.themeMode === m.mode" :aria-label="m.label" @click="themeStore.setThemeMode(m.mode)">
+            <div class="segmented" role="group" aria-label="Theme">
+              <button v-for="m in themeModes" :key="m.mode" type="button" class="!px-2.5" :aria-pressed="themeStore.themeMode === m.mode" :aria-label="m.label" @click="themeStore.setThemeMode(m.mode)">
                 <AppIcon :icon="m.icon" class="w-4 h-4" />
               </button>
             </div>

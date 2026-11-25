@@ -30,52 +30,34 @@
         <section class="card">
           <div class="card-header"><div><h2 class="card-title">Account</h2><p class="card-subtitle">Name and sign-in email.</p></div></div>
           <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label for="st-name" class="form-label">Name</label>
-              <input id="st-name" v-model="form.name" type="text" class="form-input" placeholder="Your name" autocomplete="name" />
-            </div>
-            <div>
-              <label for="st-email" class="form-label">Email</label>
-              <input id="st-email" v-model="form.email" type="email" class="form-input" placeholder="admin@example.com" autocomplete="email" />
-            </div>
+            <FormField id="st-name" label="Name"><TextInput v-model="form.name" placeholder="Your name" autocomplete="name" /></FormField>
+            <FormField id="st-email" label="Email"><TextInput v-model="form.email" type="email" prefix-icon="mail" placeholder="admin@example.com" autocomplete="email" /></FormField>
           </div>
         </section>
 
         <section class="card">
           <div class="card-header"><div><h2 class="card-title">Change password</h2><p class="card-subtitle">Leave blank to keep your current password.</p></div></div>
           <div class="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="sm:col-span-2">
-              <label for="st-cur" class="form-label">Current password <span v-if="form.password" class="req">*</span></label>
-              <input id="st-cur" v-model="form.current_password" type="password" class="form-input" placeholder="Required to set a new password" autocomplete="current-password" :required="!!form.password" />
-            </div>
-            <div>
-              <label for="st-new" class="form-label">New password</label>
-              <input id="st-new" v-model="form.password" type="password" class="form-input" placeholder="New password" autocomplete="new-password" />
-            </div>
-            <div>
-              <label for="st-conf" class="form-label">Confirm new password</label>
-              <input id="st-conf" v-model="form.password_confirmation" type="password" class="form-input" placeholder="Repeat new password" autocomplete="new-password" :aria-invalid="mismatch" />
-              <p v-if="mismatch" class="form-error">Passwords don't match yet.</p>
-            </div>
+            <FormField id="st-cur" label="Current password" :required="!!form.password" class="sm:col-span-2">
+              <PasswordInput v-model="form.current_password" placeholder="Required to set a new password" autocomplete="current-password" :required="!!form.password" toggle-name="current password" />
+            </FormField>
+            <FormField id="st-new" label="New password">
+              <PasswordInput v-model="form.password" placeholder="New password" autocomplete="new-password" toggle-name="new password" />
+            </FormField>
+            <FormField id="st-conf" label="Confirm new password" :error="mismatch ? 'Passwords don\'t match yet.' : ''">
+              <PasswordInput v-model="form.password_confirmation" placeholder="Repeat new password" autocomplete="new-password" toggle-name="password confirmation" />
+            </FormField>
           </div>
         </section>
 
-        <div class="save-bar">
-          <div class="min-w-0 flex-1 text-sm" aria-live="polite">
-            <p v-if="errorMsg" class="flex items-center gap-2 text-danger-text font-medium"><AppIcon icon="alert-circle" class="w-4 h-4 shrink-0" /><span class="truncate">{{ errorMsg }}</span></p>
-            <p v-else-if="successMsg" class="flex items-center gap-2 text-success-text font-medium"><AppIcon icon="circle-check" class="w-4 h-4 shrink-0" /><span class="truncate">{{ successMsg }}</span></p>
-          </div>
-          <button type="submit" :disabled="saving" class="btn-primary">
-            <AppIcon :icon="saving ? 'loader' : 'check'" :class="saving ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
-            {{ saving ? 'Saving…' : 'Save changes' }}
-          </button>
-        </div>
+        <FormActions sticky submit :saving="saving" :error="errorMsg" :success="successMsg" />
       </div>
     </form>
   </div>
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput, PasswordInput, FormActions } from '@/components/forms'
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
@@ -149,13 +131,3 @@ async function save() {
 
 onMounted(load)
 </script>
-
-<style scoped>
-.save-bar {
-  position: sticky; bottom: 0; z-index: var(--z-sticky);
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem;
-  padding: 0.75rem 1rem;
-  background-color: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-}
-</style>

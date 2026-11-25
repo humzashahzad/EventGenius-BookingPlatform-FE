@@ -88,11 +88,11 @@
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-              <div class="segmented" role="group" aria-label="Metric">
+              <div class="segmented control-sm" role="group" aria-label="Metric">
                 <button type="button" :aria-pressed="metric === 'revenue'" @click="metric = 'revenue'">Revenue</button>
                 <button type="button" :aria-pressed="metric === 'bookings'" @click="metric = 'bookings'">Bookings</button>
               </div>
-              <div class="segmented" role="group" aria-label="Range">
+              <div class="segmented control-sm" role="group" aria-label="Range">
                 <button type="button" :aria-pressed="range === '30d'" @click="range = '30d'">30 days</button>
                 <button type="button" :aria-pressed="range === '12m'" @click="range = '12m'">12 months</button>
               </div>
@@ -313,9 +313,9 @@
         <p class="font-medium text-ink">{{ rejectTarget?.event_name }}</p>
         <p class="text-ink-muted text-xs mt-0.5">{{ rejectTarget?.client?.name }} · {{ formatDate(rejectTarget?.event_date) }}</p>
       </div>
-      <label for="dash-reject" class="form-label">Reason <span class="req">*</span></label>
-      <textarea id="dash-reject" v-model="rejectReason" class="form-textarea" rows="3" placeholder="Let the customer know why…" :aria-invalid="!!rejectError" />
-      <p v-if="rejectError" class="form-error">{{ rejectError }}</p>
+      <FormField id="dash-reject" label="Reason" required :error="rejectError">
+        <TextareaInput v-model="rejectReason" :rows="3" auto-grow placeholder="Let the customer know why…" />
+      </FormField>
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showReject = false">Cancel</button>
@@ -327,6 +327,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextareaInput } from '@/components/forms'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'

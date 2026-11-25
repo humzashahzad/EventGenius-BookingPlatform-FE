@@ -31,10 +31,7 @@
       </nav>
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 border-b border-line">
         <p class="text-sm text-ink-muted num" aria-live="polite">{{ loading ? 'Loading…' : `${total.toLocaleString('en-PK')} review${total === 1 ? '' : 's'}` }}</p>
-        <select v-model="venueId" class="form-select sm:!w-56" aria-label="Venue" @change="load(1)">
-          <option value="">All venues</option>
-          <option v-for="v in venues" :key="v.id" :value="String(v.id)">{{ v.name }}</option>
-        </select>
+        <SelectInput v-model="venueId" class="sm:!w-56" aria-label="Venue" :options="[{ value: '', label: 'All venues' }, ...venues.map(v => ({ value: String(v.id), label: v.name }))]" @change="load(1)" />
       </div>
 
       <div v-if="loading" class="divide-y divide-line" aria-busy="true">
@@ -74,7 +71,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                   <span v-if="!r.is_approved" class="badge-neutral">Hidden by admin</span>
-                  <span role="img" :aria-label="`${r.rating} out of 5`" class="inline-flex"><StarRating :model-value="r.rating" readonly size="sm" /></span>
+                  <StarRating :model-value="r.rating" readonly size="sm" />
                 </div>
               </div>
               <p v-if="r.title" class="font-medium text-sm text-ink mt-2">{{ r.title }}</p>
@@ -97,7 +94,7 @@
                 </button>
                 <form v-else @submit.prevent="sendReply(r)" class="space-y-2">
                   <label :for="`reply-${r.id}`" class="sr-only">Your reply</label>
-                  <textarea :id="`reply-${r.id}`" v-model="replyText" rows="3" maxlength="2000" required class="form-textarea" placeholder="Thank the customer or respond to their feedback" />
+                  <TextareaInput :id="`reply-${r.id}`" v-model="replyText" :rows="3" :maxlength="2000" auto-grow required placeholder="Thank the customer or respond to their feedback" />
                   <div class="flex flex-wrap items-center justify-between gap-2">
                     <p v-if="errorMsg" class="form-error !mt-0">{{ errorMsg }}</p>
                     <p v-else class="form-hint !mt-0 num">{{ replyText.length }} / 2000</p>
@@ -126,10 +123,9 @@
         <p class="text-sm text-ink-secondary mt-1">{{ dialog.item.comment }}</p>
         <p class="text-xs text-ink-muted mt-1">{{ dialog.item.client_name }} · {{ dialog.item.venue_name }}</p>
       </div>
-      <label for="dialog-reply" class="form-label">Your public reply <span class="req">*</span></label>
-      <textarea id="dialog-reply" v-model="dialog.text" rows="4" maxlength="2000" class="form-textarea" placeholder="Thank them, acknowledge the issue and say what you've changed." :aria-invalid="!!dialog.error" />
-      <p v-if="dialog.error" class="form-error">{{ dialog.error }}</p>
-      <p v-else class="form-hint num">{{ dialog.text.length }} / 2000</p>
+      <FormField id="dialog-reply" label="Your public reply" required :error="dialog.error" :count="dialog.text.length" :maxlength="2000">
+        <TextareaInput v-model="dialog.text" :rows="4" :maxlength="2000" auto-grow placeholder="Thank them, acknowledge the issue and say what you've changed." />
+      </FormField>
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="dialog.open = false">Cancel</button>
@@ -141,6 +137,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, SelectInput, TextareaInput } from '@/components/forms'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { toast } from 'vue-sonner'

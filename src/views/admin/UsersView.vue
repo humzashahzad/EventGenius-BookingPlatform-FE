@@ -12,11 +12,7 @@
         <button v-for="r in roleTabs" :key="r.value" role="tab" class="tab" :aria-selected="roleFilter === r.value" @click="roleFilter = r.value; resetAndLoad()">{{ r.label }}</button>
       </nav>
       <DataToolbar v-model:search="search" placeholder="Search name or email" :count="loading ? undefined : meta.total" noun="users" @update:search="resetAndLoad">
-        <select v-model="statusFilter" class="form-select" aria-label="Status" @change="resetAndLoad">
-          <option value="">Any status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
+        <SelectInput v-model="statusFilter" :options="[{ value: '', label: 'Any status' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]" aria-label="Status" @change="resetAndLoad" />
       </DataToolbar>
 
       <div v-if="loading" class="p-4 space-y-3" aria-busy="true"><div v-for="i in 8" :key="i" class="skeleton h-10 w-full" /></div>
@@ -113,6 +109,7 @@
 </template>
 
 <script setup lang="ts">
+import { SelectInput } from '@/components/forms'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'

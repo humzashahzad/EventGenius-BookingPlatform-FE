@@ -23,18 +23,10 @@
         <button role="tab" class="tab" :aria-selected="approved === '0'" @click="approved = '0'; load(1)">Hidden</button>
       </nav>
       <DataToolbar v-model:search="search" placeholder="Search venue, customer or text" :count="loading ? undefined : total" noun="reviews" @update:search="load(1)">
-        <select v-model="rating" class="form-select" aria-label="Rating" @change="load(1)">
-          <option value="">Any rating</option>
-          <option v-for="n in [5, 4, 3, 2, 1]" :key="n" :value="String(n)">{{ n }} star{{ n === 1 ? '' : 's' }}</option>
-        </select>
+        <SelectInput v-model="rating" :options="[{ value: '', label: 'Any rating' }, ...[5, 4, 3, 2, 1].map(n => ({ value: String(n), label: `${n} star${n === 1 ? '' : 's'}` }))]" aria-label="Rating" @change="load(1)" />
         <template v-if="insightsAvailable">
-          <select v-model="sentiment" class="form-select" aria-label="Sentiment" @change="load(1)">
-            <option value="">Any sentiment</option>
-            <option value="positive">Positive</option>
-            <option value="neutral">Neutral</option>
-            <option value="negative">Negative</option>
-          </select>
-          <button v-if="flag" type="button" class="btn-secondary btn-sm" @click="setFlag('')">{{ humanFlag(flag) }} <AppIcon icon="x" class="w-3.5 h-3.5" /></button>
+          <SelectInput v-model="sentiment" :options="[{ value: '', label: 'Any sentiment' }, { value: 'positive', label: 'Positive' }, { value: 'neutral', label: 'Neutral' }, { value: 'negative', label: 'Negative' }]" aria-label="Sentiment" @change="load(1)" />
+          <button v-if="flag" type="button" class="btn-secondary" @click="setFlag('')">{{ humanFlag(flag) }} <AppIcon icon="x" class="w-3.5 h-3.5" /></button>
         </template>
       </DataToolbar>
 
@@ -65,7 +57,7 @@
               </div>
               <span :class="r.is_approved ? 'badge-confirmed' : 'badge-cancelled'" class="shrink-0">{{ r.is_approved ? 'Visible' : 'Hidden' }}</span>
             </div>
-            <div class="flex items-center gap-2 mt-2"><span role="img" :aria-label="`${r.rating} out of 5`" class="inline-flex"><StarRating :model-value="r.rating" readonly size="sm" /></span>
+            <div class="flex items-center gap-2 mt-2"><StarRating :model-value="r.rating" readonly size="sm" />
               <span v-if="r.insight?.label" :class="SENT_BADGE[r.insight.label] || 'badge-neutral'">{{ humanize(r.insight.label) }}</span>
             </div>
             <p v-if="r.title" class="text-sm font-medium text-ink mt-1">{{ r.title }}</p>
@@ -94,7 +86,7 @@
                   <p class="text-ink truncate max-w-[180px]">{{ r.client?.name }}</p>
                   <p class="text-xs text-ink-muted truncate max-w-[200px]">{{ r.client?.email }}</p>
                 </td>
-                <td class="whitespace-nowrap"><span role="img" :aria-label="`${r.rating} out of 5`" class="inline-flex"><StarRating :model-value="r.rating" readonly size="sm" /></span></td>
+                <td class="whitespace-nowrap"><StarRating :model-value="r.rating" readonly size="sm" /></td>
                 <td class="min-w-[280px]">
                   <p v-if="r.title" class="font-medium text-ink">{{ r.title }}</p>
                   <p class="text-ink-secondary line-clamp-3">{{ r.comment || '—' }}</p>
@@ -128,6 +120,7 @@
 </template>
 
 <script setup lang="ts">
+import { SelectInput } from '@/components/forms'
 import { ref, computed, onMounted } from 'vue'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'

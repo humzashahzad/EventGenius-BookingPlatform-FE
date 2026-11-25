@@ -53,42 +53,15 @@
             <ProfileAvatarUpload :current-avatar="authStore.user?.avatar" @update="onAvatarUpdate" />
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label for="profile-name" class="form-label">Full name <span class="req">*</span></label>
-                <input
-                  id="profile-name"
-                  v-model="form.name"
-                  type="text"
-                  class="form-input"
-                  autocomplete="name"
-                  placeholder="Your full name"
-                  :aria-invalid="!!personalErrors.name"
-                  :aria-describedby="personalErrors.name ? 'profile-name-error' : undefined"
-                  @blur="touched.name = true"
-                />
-                <p v-if="personalErrors.name" id="profile-name-error" class="form-error">{{ personalErrors.name }}</p>
-              </div>
-              <div>
-                <label for="profile-phone" class="form-label">Phone number</label>
-                <input
-                  id="profile-phone"
-                  v-model="form.phone"
-                  type="tel"
-                  class="form-input"
-                  autocomplete="tel"
-                  placeholder="0300 1234567"
-                  :aria-invalid="!!personalErrors.phone"
-                  :aria-describedby="personalErrors.phone ? 'profile-phone-error' : 'profile-phone-hint'"
-                  @blur="touched.phone = true"
-                />
-                <p v-if="personalErrors.phone" id="profile-phone-error" class="form-error">{{ personalErrors.phone }}</p>
-                <p v-else id="profile-phone-hint" class="form-hint">For example 0300 1234567 or +92 300 1234567.</p>
-              </div>
-              <div class="sm:col-span-2">
-                <label for="profile-email" class="form-label">Email address</label>
-                <input id="profile-email" :value="form.email" type="email" class="form-input !bg-surface-sunken !text-ink-muted cursor-not-allowed" disabled aria-describedby="profile-email-hint" />
-                <p id="profile-email-hint" class="form-hint">Your sign-in email can't be changed. Contact support if you need to update it.</p>
-              </div>
+              <FormField id="profile-name" label="Full name" required :error="personalErrors.name">
+                <TextInput v-model="form.name" autocomplete="name" placeholder="Your full name" @blur="touched.name = true" />
+              </FormField>
+              <FormField id="profile-phone" label="Phone number" :error="personalErrors.phone" hint="For example 0300 1234567 or +92 300 1234567.">
+                <PhoneInput v-model="form.phone" model-format="raw" placeholder="0300 1234567" @blur="touched.phone = true" />
+              </FormField>
+              <FormField id="profile-email" label="Email address" class="sm:col-span-2" hint="Your sign-in email can't be changed. Contact support if you need to update it.">
+                <TextInput :model-value="form.email" type="email" disabled />
+              </FormField>
             </div>
 
             <div v-if="personalMsg" :class="personalMsg.ok ? 'alert-success' : 'alert-danger'" role="status">
@@ -165,6 +138,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput, PhoneInput } from '@/components/forms'
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'

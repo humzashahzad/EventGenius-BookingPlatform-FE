@@ -23,10 +23,9 @@
             v-for="key in presetKeys"
             :key="key"
             type="button"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors"
-            :class="activePreset === key
-              ? 'border-brand-text bg-brand-soft text-brand-text'
-              : 'border-line-strong/60 text-ink-secondary hover:bg-surface-hover'"
+            class="btn-secondary btn-sm"
+            :class="activePreset === key && '!border-brand-text !bg-brand-soft !text-brand-text'"
+            :aria-pressed="activePreset === key"
             @click="emit('preset', key)"
           >
             <AppIcon :icon="PRESET_LABELS[key]?.icon || 'sliders'" class="w-4 h-4" />
@@ -41,7 +40,7 @@
             <label :for="`w-${s.key}`" class="flex items-center gap-2 text-sm font-medium text-ink">
               <span class="w-2.5 h-2.5 rounded-sm shrink-0" :style="{ background: s.color }"></span>
               {{ s.label }}
-              <span v-if="isOff(s.key)" class="badge-warm !text-[10px] !py-0">{{ offReason(s.key) }}</span>
+              <span v-if="isOff(s.key)" class="badge-warm badge-sm">{{ offReason(s.key) }}</span>
             </label>
             <div class="flex items-center gap-2">
               <span
@@ -52,15 +51,13 @@
               <span class="w-8 text-right text-sm font-semibold tabular-nums text-ink">{{ model.weights[s.key] }}</span>
             </div>
           </div>
-          <input
+          <SliderInput
             :id="`w-${s.key}`"
-            v-model.number="model.weights[s.key]"
-            type="range"
-            min="0"
-            max="10"
-            step="1"
-            class="eg-range w-full mt-1.5"
-            :style="{ '--fill': `${model.weights[s.key] * 10}%`, '--c': s.color }"
+            v-model="model.weights[s.key]"
+            :min="0"
+            :max="10"
+            :step="1"
+            :color="s.color"
             :data-signal="s.key"
           />
           <p class="text-xs text-ink-muted mt-1">{{ s.help }}</p>
@@ -73,23 +70,7 @@
       <div class="card p-5 sm:p-6">
         <h3 class="text-base font-semibold text-ink mb-4">Smart features</h3>
         <div class="space-y-4">
-          <label v-for="t in toggles" :key="t.key" class="flex items-start justify-between gap-4 cursor-pointer">
-            <span>
-              <span class="block text-sm font-medium text-ink">{{ t.label }}</span>
-              <span class="block text-xs text-ink-muted mt-0.5">{{ t.help }}</span>
-            </span>
-            <button
-              type="button"
-              role="switch"
-              :aria-checked="!!model[t.key]"
-              :aria-label="t.label"
-              class="relative shrink-0 w-11 h-6 rounded-full transition-colors"
-              :class="model[t.key] ? 'bg-brand-strong' : 'bg-line-strong'"
-              @click.prevent="model[t.key] = !model[t.key]"
-            >
-              <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="model[t.key] ? 'translate-x-5' : ''"></span>
-            </button>
-          </label>
+          <SwitchInput v-for="t in toggles" :key="t.key" v-model="model[t.key]" :label="t.label" :description="t.help" label-position="start" />
         </div>
 
         <div class="mt-6 pt-5 border-t border-line">
@@ -97,8 +78,7 @@
             <label for="featured-boost" class="text-sm font-medium text-ink">Featured boost</label>
             <span class="text-sm font-semibold tabular-nums text-ink">+{{ model.featured_boost }} pts</span>
           </div>
-          <input id="featured-boost" v-model.number="model.featured_boost" type="range" min="0" max="20" step="1"
-            class="eg-range w-full mt-1.5" :style="{ '--fill': `${(model.featured_boost / 20) * 100}%`, '--c': 'var(--sig-featured)' }" />
+          <SliderInput id="featured-boost" v-model="model.featured_boost" :min="0" :max="20" :step="1" color="var(--sig-featured)" />
           <p class="text-xs text-ink-muted mt-1">Score points (out of 100) added to venues marked as featured.</p>
         </div>
       </div>
@@ -115,8 +95,8 @@
             {{ saving ? 'Saving…' : 'Save weights' }}
           </button>
           <div class="grid grid-cols-2 gap-2">
-            <button type="button" class="btn-secondary !px-3 text-sm" :disabled="!dirty || saving" :class="{ 'opacity-60': !dirty }" @click="emit('discard')">Discard</button>
-            <button type="button" class="btn-ghost !px-3 text-sm border border-line-strong/60" :disabled="saving" @click="emit('reset')">
+            <button type="button" class="btn-secondary !px-3" :disabled="!dirty || saving" :class="{ 'opacity-60': !dirty }" @click="emit('discard')">Discard</button>
+            <button type="button" class="btn-secondary !px-3" :disabled="saving" @click="emit('reset')">
               <AppIcon icon="refresh" class="w-4 h-4" /> Defaults
             </button>
           </div>
@@ -132,6 +112,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import { SliderInput, SwitchInput } from '@/components/forms'
 import { signalsFor, PRESET_LABELS, type RankingSettings, type SignalKey } from './signals'
 
 const model = defineModel<RankingSettings>({ required: true })
@@ -168,35 +149,3 @@ function offReason(k: SignalKey) {
   return k === 'personal' ? 'personalisation off' : k === 'engagement' ? 'learning off' : 'exploration off'
 }
 </script>
-
-<style>
-.dark .eg-range { --track: 68 64 60; }
-</style>
-
-<style scoped>
-.eg-range {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  border-radius: 9999px;
-  background: linear-gradient(to right, var(--c) 0%, var(--c) var(--fill), rgb(var(--track, 231 229 228)) var(--fill), rgb(var(--track, 231 229 228)) 100%);
-  cursor: pointer;
-}
-.eg-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 9999px;
-  background: #fff;
-  border: 2px solid var(--c);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-.eg-range::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 9999px;
-  background: #fff;
-  border: 2px solid var(--c);
-}
-</style>

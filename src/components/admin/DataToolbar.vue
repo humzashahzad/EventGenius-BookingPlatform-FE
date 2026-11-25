@@ -1,14 +1,16 @@
 <template>
   <div class="flex flex-col lg:flex-row lg:items-center gap-3 p-3 sm:p-4 border-b border-line">
-    <div v-if="searchable" class="relative flex-1 min-w-0 lg:max-w-md">
-      <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
-      <input
-        :value="local"
+    <div v-if="searchable" class="flex-1 min-w-0 lg:max-w-md">
+      <TextInput
+        :model-value="local"
         type="search"
-        class="form-input !pl-9"
+        prefix-icon="search"
+        clearable
+        clear-label="Clear search"
         :placeholder="placeholder"
         :aria-label="placeholder"
-        @input="onInput(($event.target as HTMLInputElement).value)"
+        @update:model-value="v => onInput(v ?? '')"
+        @clear="flush"
         @keydown.enter="flush"
       />
     </div>
@@ -24,7 +26,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount } from 'vue'
-import AppIcon from '@/components/ui/AppIcon.vue'
+import { TextInput } from '@/components/forms'
 
 const props = withDefaults(defineProps<{
   search?: string

@@ -10,23 +10,9 @@
     :features="portalCopy.features"
   >
     <form class="space-y-4" novalidate @submit.prevent="onSubmit">
-      <div>
-        <label for="login-email" class="form-label">Email address</label>
-        <input
-          id="login-email"
-          v-model="form.email"
-          type="email"
-          required
-          class="form-input"
-          placeholder="you@example.com"
-          autocomplete="email"
-          inputmode="email"
-          :aria-invalid="!!emailError"
-          :aria-describedby="emailError ? 'login-email-error' : undefined"
-          @blur="touched.email = true"
-        />
-        <p v-if="emailError" id="login-email-error" class="form-error">{{ emailError }}</p>
-      </div>
+      <FormField id="login-email" label="Email address" :error="emailError">
+        <TextInput v-model="form.email" type="email" required placeholder="you@example.com" autocomplete="email" inputmode="email" @blur="touched.email = true" />
+      </FormField>
 
       <PasswordField
         id="login-password"
@@ -77,6 +63,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput } from '@/components/forms'
 import { ref, reactive, computed } from 'vue'
 import { hrefFor } from '@/lib/portalHost'
 import { RouterLink, useRouter, useRoute } from 'vue-router'

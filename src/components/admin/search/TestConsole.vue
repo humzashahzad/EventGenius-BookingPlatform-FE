@@ -18,46 +18,34 @@
         <span v-else>Using the saved weights.</span>
       </div>
 
-      <label for="tc-q" class="form-label">What would a customer type?</label>
-      <div class="relative">
-        <AppIcon icon="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
-        <input id="tc-q" v-model="form.q" class="form-input !pl-9" placeholder="e.g. shadi hall in lahore for 300 guests under 3000" />
-      </div>
+      <FormField id="tc-q" label="What would a customer type?">
+        <TextInput v-model="form.q" prefix-icon="search" clearable placeholder="e.g. shadi hall in lahore for 300 guests under 3000" />
+      </FormField>
       <div class="flex flex-wrap gap-1.5 mt-2">
         <button v-for="ex in examples" :key="ex" type="button"
-          class="text-[11px] px-2 py-0.5 rounded-full bg-warm-100 text-ink-secondary hover:bg-primary-50 hover:text-primary-700 dark:bg-warm-700 dark:text-warm-300 dark:hover:bg-primary-900/30 dark:hover:text-primary-300"
+          class="btn-secondary btn-sm !h-auto !min-h-control-sm !py-1 !text-xs !font-medium whitespace-normal text-left"
           @click="form.q = ex; run()">{{ ex }}</button>
       </div>
 
-      <button type="button" class="mt-4 text-sm font-medium text-brand-text inline-flex items-center gap-1" @click="showMore = !showMore" :aria-expanded="showMore">
+      <button type="button" class="btn-link mt-3" @click="showMore = !showMore" :aria-expanded="showMore">
         <AppIcon :icon="showMore ? 'chevron-up' : 'chevron-down'" class="w-4 h-4" /> Filters &amp; customer
       </button>
       <div v-show="showMore" class="grid grid-cols-2 gap-3 mt-3">
-        <div class="col-span-2 sm:col-span-1 xl:col-span-2">
-          <label for="tc-city" class="form-label">City</label>
-          <input id="tc-city" v-model="form.city" list="tc-cities" class="form-input" placeholder="Any" />
-          <datalist id="tc-cities"><option v-for="c in cities" :key="c" :value="c" /></datalist>
-        </div>
-        <div class="col-span-2 sm:col-span-1 xl:col-span-2">
-          <label for="tc-type" class="form-label">Event type</label>
-          <select id="tc-type" v-model="form.event_type" class="form-select">
-            <option value="">Any</option>
-            <option v-for="c in categories" :key="c.slug" :value="c.slug">{{ c.name }}</option>
-          </select>
-        </div>
-        <div>
-          <label for="tc-guests" class="form-label">Guests</label>
-          <input id="tc-guests" v-model="form.guests" type="number" min="1" class="form-input" placeholder="—" />
-        </div>
-        <div>
-          <label for="tc-budget" class="form-label">Max / head (Rs)</label>
-          <input id="tc-budget" v-model="form.max_price" type="number" min="0" class="form-input" placeholder="—" />
-        </div>
-        <div class="col-span-2">
-          <label for="tc-user" class="form-label">View as customer (user ID)</label>
-          <input id="tc-user" v-model="form.as_user_id" type="number" min="1" class="form-input" placeholder="Signed-out visitor" />
-          <p class="text-[11px] text-ink-muted mt-1">Shows personalisation for that customer’s booking history.</p>
-        </div>
+        <FormField id="tc-city" label="City" class="col-span-2 sm:col-span-1 xl:col-span-2">
+          <Combobox v-model="form.city" :options="cities" placeholder="Any" allow-custom clearable />
+        </FormField>
+        <FormField id="tc-type" label="Event type" class="col-span-2 sm:col-span-1 xl:col-span-2">
+          <SelectInput v-model="form.event_type" :options="[{ value: '', label: 'Any' }, ...categories.map(c => ({ value: c.slug, label: c.name }))]" />
+        </FormField>
+        <FormField id="tc-guests" label="Guests">
+          <NumberInput v-model="form.guests" :min="1" :step="50" :stepper="false" placeholder="—" />
+        </FormField>
+        <FormField id="tc-budget" label="Max / head">
+          <CurrencyInput v-model="form.max_price" placeholder="—" />
+        </FormField>
+        <FormField id="tc-user" label="View as customer (user ID)" hint="Shows personalisation for that customer’s booking history." class="col-span-2">
+          <NumberInput v-model="form.as_user_id" :min="1" :stepper="false" placeholder="Signed-out visitor" />
+        </FormField>
       </div>
 
       <div class="flex gap-2 mt-5">
@@ -65,7 +53,7 @@
           <AppIcon :icon="loading ? 'loader' : 'search'" :class="loading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
           {{ loading ? 'Ranking…' : 'Run preview' }}
         </button>
-        <button type="button" class="btn-ghost !px-3" title="Clear" @click="clear"><AppIcon icon="x" class="w-4 h-4" /></button>
+        <button type="button" class="btn-secondary btn-icon" aria-label="Clear" title="Clear" @click="clear"><AppIcon icon="x" class="w-4 h-4" /></button>
       </div>
     </form>
 
@@ -178,6 +166,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput, Combobox, SelectInput, NumberInput, CurrencyInput } from '@/components/forms'
 import { reactive, ref, computed } from 'vue'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -203,7 +192,7 @@ const props = defineProps<{
   categories: { slug: string; name: string }[]
 }>()
 
-const form = reactive({ q: '', city: '', event_type: '', guests: '', max_price: '', as_user_id: '' })
+const form = reactive({ q: '', city: '', event_type: '', guests: null as number | null, max_price: null as number | null, as_user_id: null as number | null })
 const showMore = ref(true)
 const loading = ref(false)
 const error = ref('')
@@ -237,7 +226,7 @@ function moved(id: number): number {
   return before - now
 }
 
-function toNum(v: string | number): number | undefined {
+function toNum(v: string | number | null): number | undefined {
   if (v === '' || v === null || v === undefined) return undefined
   const n = Number(v)
   return Number.isFinite(n) ? n : undefined
@@ -270,7 +259,7 @@ async function run() {
 }
 
 function clear() {
-  Object.assign(form, { q: '', city: '', event_type: '', guests: '', max_price: '', as_user_id: '' })
+  Object.assign(form, { q: '', city: '', event_type: '', guests: null, max_price: null, as_user_id: null })
   results.value = []
   understood.value = null
   previousOrder.value = []

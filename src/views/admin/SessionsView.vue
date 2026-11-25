@@ -22,12 +22,7 @@
         <button v-for="t in statusTabs" :key="t.value" role="tab" class="tab" :aria-selected="filters.status === t.value" @click="filters.status = t.value; resetAndLoad()">{{ t.label }}</button>
       </nav>
       <DataToolbar v-model:search="filters.search" placeholder="Search by user name or email" :count="loading ? undefined : pagination?.total" noun="sessions" @update:search="resetAndLoad">
-        <select v-model="filters.role" class="form-select" aria-label="Role" @change="resetAndLoad">
-          <option value="">All roles</option>
-          <option value="admin">Support</option>
-          <option value="store_owner">Shop owner</option>
-          <option value="client">Customer</option>
-        </select>
+        <SelectInput v-model="filters.role" :options="[{ value: '', label: 'All roles' }, { value: 'admin', label: 'Support' }, { value: 'store_owner', label: 'Shop owner' }, { value: 'client', label: 'Customer' }]" aria-label="Role" @change="resetAndLoad" />
       </DataToolbar>
 
       <div v-if="loading" class="p-4 space-y-3" aria-busy="true"><div v-for="i in 8" :key="i" class="skeleton h-10 w-full" /></div>
@@ -115,6 +110,7 @@
 </template>
 
 <script setup lang="ts">
+import { SelectInput } from '@/components/forms'
 import { ref, onMounted } from 'vue'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'

@@ -17,11 +17,9 @@
 
     <!-- Form state -->
     <form v-else-if="hasToken" class="space-y-4" novalidate @submit.prevent="onSubmit">
-      <div>
-        <label for="reset-email" class="form-label">Email</label>
-        <input id="reset-email" v-model="email" type="email" required class="form-input !bg-surface-sunken !text-ink-secondary cursor-not-allowed" readonly autocomplete="username" />
-        <p v-if="errors.email" class="form-error">{{ errors.email[0] }}</p>
-      </div>
+      <FormField id="reset-email" label="Email" :error="errors.email">
+        <TextInput v-model="email" type="email" required readonly autocomplete="username" />
+      </FormField>
 
       <PasswordField
         id="reset-password"
@@ -75,6 +73,7 @@
 </template>
 
 <script setup lang="ts">
+import { FormField, TextInput } from '@/components/forms'
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'

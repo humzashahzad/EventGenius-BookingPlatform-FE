@@ -11,10 +11,7 @@
       </div>
       <div class="flex items-center gap-2">
         <label for="ri-venue" class="sr-only">Venue</label>
-        <select id="ri-venue" v-model="venueKey" class="form-select !w-auto max-w-[220px]">
-          <option value="all">All venues</option>
-          <option v-for="v in insights.venues" :key="v.venue_id" :value="String(v.venue_id)">{{ v.name }}</option>
-        </select>
+        <SelectInput id="ri-venue" v-model="venueKey" size="sm" class="!w-auto max-w-[220px]" :options="venueOptions" />
         <button type="button" class="btn-icon btn-icon-sm" :aria-expanded="open" :aria-label="open ? 'Collapse insights' : 'Expand insights'" @click="open = !open">
           <AppIcon :icon="open ? 'chevron-up' : 'chevron-down'" class="w-4 h-4" />
         </button>
@@ -98,6 +95,7 @@
 </template>
 
 <script setup lang="ts">
+import { SelectInput } from '@/components/forms'
 import { computed, onMounted, ref } from 'vue'
 import api from '@/lib/axios'
 import { formatDate } from '@/lib/format'
@@ -126,6 +124,10 @@ defineEmits<{ reply: [item: NeedsReplyItem] }>()
 const state = ref<'loading' | 'ready' | 'hidden'>('loading')
 const insights = ref<any>(null)
 const venueKey = ref('all')
+const venueOptions = computed(() => [
+  { value: 'all', label: 'All venues' },
+  ...((insights.value?.venues ?? []) as { venue_id: number | string; name: string }[]).map(v => ({ value: String(v.venue_id), label: v.name })),
+])
 const open = ref(true)
 
 const TONE_BADGE: Record<string, string> = { success: 'badge-success', warning: 'badge-warning', danger: 'badge-danger', neutral: 'badge-neutral' }
