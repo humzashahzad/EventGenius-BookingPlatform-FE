@@ -266,4 +266,5 @@ export const __liveTest = {
   inject: (payload: EntityChange) => handle(payload),
   channels: () => ({ wanted: Object.fromEntries(publicRefs), bound: [...boundPublic], user: boundUserId, admins: boundAdmins }),
 }
-if (typeof window !== 'undefined') (window as any).__egLive = __liveTest
+// Test hook for local builds only; not exposed in production.
+if (typeof window !== 'undefined' && (import.meta.env.DEV || import.meta.env.VITE_LIVE_TEST_HOOK === 'true')) (window as any).__egLive = __liveTest
