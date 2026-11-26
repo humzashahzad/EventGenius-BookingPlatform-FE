@@ -184,6 +184,7 @@
 </template>
 
 <script setup lang="ts">
+import { usePageTitle } from '@/lib/pageTitle'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import api from '@/lib/axios'
@@ -203,6 +204,7 @@ const { startConversation } = useChat()
 const authStore = useAuthStore()
 
 const store = ref<any>(null)
+usePageTitle(() => store.value?.name)
 const stats = ref<any>(null)
 const landing = ref<any>(null)
 const loading = ref(true)
