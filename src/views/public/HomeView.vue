@@ -266,6 +266,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import api from '@/lib/axios'
+import { cacheGet, cacheSet } from '@/composables/usePageCache'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import SmartSearchBox from '@/components/search/SmartSearchBox.vue'
 import VenueCard from '@/components/venue/VenueCard.vue'
@@ -297,7 +298,14 @@ const loading = ref(true)
 const loadError = ref(false)
 
 async function load() {
-  loading.value = true
+  // Seen before in this visit: show it at once and refresh quietly.
+  const cached = cacheGet<{ venues: any[]; total: number; categories: CategoryLike[] }>('public:home')
+  if (cached) {
+    venues.value = cached.venues
+    totalVenues.value = cached.total
+    categories.value = cached.categories
+  }
+  loading.value = !cached
   loadError.value = false
   try {
     const [vRes, cRes] = await Promise.allSettled([
@@ -311,7 +319,9 @@ async function load() {
     if (cRes.status === 'fulfilled') {
       categories.value = (cRes.value.data?.data ?? []).filter((c: any) => c && c.is_active !== false)
     }
+    cacheSet('public:home', { venues: venues.value, total: totalVenues.value, categories: categories.value })
   } catch {
+    if (cached) return
     loadError.value = true
     venues.value = []
   } finally {

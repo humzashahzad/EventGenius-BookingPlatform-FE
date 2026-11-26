@@ -62,7 +62,7 @@
         <div class="empty-state-icon"><AppIcon icon="alert-triangle" class="w-5 h-5" /></div>
         <p class="empty-state-title">We couldn't load your bookings</p>
         <p class="empty-state-desc">{{ loadError }}</p>
-        <div class="empty-state-actions"><button type="button" class="btn-primary" @click="loadBookings"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button></div>
+        <div class="empty-state-actions"><button type="button" class="btn-primary" @click="res.retry()"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button></div>
       </div>
     </div>
 
@@ -160,6 +160,8 @@ import { TextInput, SelectInput } from '@/components/forms'
 import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
+import { useCachedResource } from '@/composables/usePageCache'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { formatTimeRange, formatPKR } from '@/lib/format'
 import { statusBadgeClass, statusLabel } from '@/lib/status'
@@ -183,9 +185,16 @@ const PER_PAGE = 10
 const route = useRoute()
 const router = useRouter()
 
-const bookings = ref<any[]>([])
-const loading = ref(true)
-const loadError = ref('')
+// Loaded once with a skeleton; coming back to this page (or a status change made by the
+// venue) updates the list quietly in place.
+const res = useCachedResource<any[]>(() => 'client:bookings', async () => {
+  const { data } = await api.get('/client/bookings', { params: { per_page: 1000 } })
+  return data.data?.data || []
+})
+const bookings = computed(() => res.data.value ?? [])
+const loading = res.loading
+const loadError = computed(() => (res.data.value ? '' : res.error.value))
+useLiveRefresh(['booking', 'payment', 'review'], () => { void res.refresh() })
 const search = ref('')
 const sort = ref<'date_asc' | 'date_desc' | 'created_desc' | 'amount_desc' | 'amount_asc'>('date_desc')
 const tab = ref<TabKey>(TABS.some(t => t.key === route.query.status) ? (route.query.status as TabKey) : 'all')
@@ -250,21 +259,8 @@ function setTab(key: TabKey) {
 watch([search, tab, sort], () => { page.value = 1 })
 watch(lastPage, (lp) => { if (page.value > lp) page.value = lp })
 
-async function loadBookings() {
-  loading.value = true
-  loadError.value = ''
-  try {
-    const { data } = await api.get('/client/bookings', { params: { per_page: 1000 } })
-    bookings.value = data.data?.data || []
-  } catch (e: any) {
-    loadError.value = e?.response?.data?.message || 'Please check your connection and try again.'
-  } finally {
-    loading.value = false
-  }
-}
-
 onMounted(() => {
   if (tab.value === 'upcoming' || tab.value === 'pending' || tab.value === 'confirmed') sort.value = 'date_asc'
-  loadBookings()
+  void res.load()
 })
 </script>

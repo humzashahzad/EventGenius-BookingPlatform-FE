@@ -43,14 +43,15 @@
     <p v-if="error" class="form-error mt-3 flex items-center gap-1.5" role="alert">
       <AppIcon icon="alert-circle" class="w-4 h-4 shrink-0" />{{ error }}
     </p>
-    <p v-if="success" class="mt-3 text-sm font-medium text-success-text flex items-center gap-1.5" role="status">
-      <AppIcon icon="check" class="w-4 h-4 shrink-0" />{{ success }}
+    <p v-if="success" class="sr-only" role="status">
+      {{ success }}
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -76,12 +77,13 @@ const baseUrl = (() => {
   return u.replace(/\/api\/?$/, '')
 })()
 
-const currentAvatarUrl = computed(() => {
-  if (!props.currentAvatar) return null
-  if (props.currentAvatar.startsWith('http')) return props.currentAvatar
-  const path = props.currentAvatar.startsWith('/') ? props.currentAvatar.slice(1) : props.currentAvatar
+function toAvatarUrl(value?: string | null): string | null {
+  if (!value) return null
+  if (value.startsWith('http')) return value
+  const path = value.startsWith('/') ? value.slice(1) : value
   return path.startsWith('storage/') ? `${baseUrl}/${path}` : `${baseUrl}/storage/${path}`
-})
+}
+const currentAvatarUrl = computed(() => toAvatarUrl(props.currentAvatar))
 
 const displayAvatarUrl = computed(() => previewUrl.value || currentAvatarUrl.value)
 
@@ -160,14 +162,24 @@ async function uploadFile(file: File) {
       if (authStore.user) {
         authStore.user.avatar = path || (authStore.user.avatar ?? null)
       }
+      toast.success('Photo updated.')
 
-      setTimeout(() => {
-        previewUrl.value = null
-        success.value = null
-      }, 2000)
+      // Keep the local preview until the uploaded photo has downloaded, so the
+      // picture never blinks to empty.
+      const clear = () => { previewUrl.value = null; success.value = null }
+      const nextUrl = toAvatarUrl(path || avatarUrl)
+      if (nextUrl) {
+        const img = new Image()
+        img.onload = clear
+        img.onerror = clear
+        img.src = nextUrl
+      } else {
+        clear()
+      }
     }
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to upload avatar'
+    toast.error(error.value || 'Something went wrong')
     previewUrl.value = null
   } finally {
     uploading.value = false
@@ -193,13 +205,12 @@ async function handleRemove() {
       if (authStore.user) {
         authStore.user.avatar = undefined
       }
-
-      setTimeout(() => {
-        success.value = null
-      }, 2000)
+      toast.success('Photo removed.')
+      setTimeout(() => { success.value = null }, 2000)
     }
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to remove avatar'
+    toast.error(error.value || 'Something went wrong')
   } finally {
     uploading.value = false
   }
