@@ -29,7 +29,16 @@
         </template>
       </PasswordField>
 
-      <div v-if="error" class="alert-danger" role="alert">
+      <div v-if="wrongPortal" class="alert-warning wrong-portal" role="alert">
+        <AppIcon icon="info-circle" class="w-5 h-5 shrink-0" />
+        <div class="min-w-0">
+          <p>{{ error }}</p>
+          <a :href="wrongPortalHref" class="btn-primary btn-sm mt-2">
+            Go to {{ PORTAL_NAMES[wrongPortal.portal] }} sign in <AppIcon icon="arrow-right" class="w-4 h-4" />
+          </a>
+        </div>
+      </div>
+      <div v-else-if="error" class="alert-danger" role="alert">
         <AppIcon icon="alert-triangle" class="w-5 h-5 shrink-0" />
         <p>{{ error }}</p>
       </div>
@@ -125,7 +134,16 @@ function safeRedirect(): string | null {
   return target === portal.value && target === accountPortal ? r : null
 }
 
-const form = ref({ email: '', password: '' })
+// Each account type signs in on its own portal; a mismatch gets a link to the right one.
+const PORTAL_NAMES: Record<string, string> = { customer: 'customer', shop: 'shop', support: 'support' }
+const wrongPortal = ref<{ portal: string; signInUrl: string } | null>(null)
+const wrongPortalHref = computed(() => {
+  if (!wrongPortal.value) return ''
+  const url = new URL(wrongPortal.value.signInUrl, window.location.origin)
+  if (form.value.email) url.searchParams.set('email', form.value.email)
+  return url.toString()
+})
+const form = ref({ email: typeof route.query.email === 'string' ? route.query.email.slice(0, 254) : '', password: '' })
 const error = ref('')
 const loading = ref(false)
 const touched = reactive({ email: false, password: false, submit: false })
@@ -148,7 +166,8 @@ function onSubmit() {
 async function handleLogin() {
   loading.value = true
   error.value = ''
-  const result = await authStore.login(form.value.email, form.value.password)
+  wrongPortal.value = null
+  const result = await authStore.login(form.value.email, form.value.password, portal.value as 'customer' | 'shop' | 'support')
   
   if (result.success) {
     // Short pause so the button state is visible before redirecting
@@ -165,7 +184,8 @@ async function handleLogin() {
   } else {
     loading.value = false
     error.value = result.message || 'Login failed. Please check your credentials.'
-    toast.error(error.value)
+    wrongPortal.value = result.wrongPortal ?? null
+    if (!wrongPortal.value) toast.error(error.value)
   }
 }
 </script>

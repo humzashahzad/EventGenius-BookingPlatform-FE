@@ -133,12 +133,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // ── Login ──────────────────────────────────────────────────────────────
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string, portal?: Portal) {
     loading.value = true
     try {
       // Ensure login writes token to the portal of the active URL (support/shop/customer).
-      currentPortal.value = detectPortalFromPath(window.location.pathname)
-      const response = await api.post('/auth/login', { email, password })
+      currentPortal.value = portal ?? detectPortalFromPath(window.location.pathname)
+      // The API only signs an account in on its own portal (customer / shop / support).
+      const response = await api.post('/auth/login', { email, password, portal: currentPortal.value })
       const payload = response.data?.data ?? {}
       const userData = payload.user ?? null
       const jwt =
@@ -167,10 +168,15 @@ export const useAuthStore = defineStore('auth', () => {
 
       return { success: true, redirectTo }
     } catch (error: any) {
+      const body = error.response?.data
       return {
         success: false,
-        message: error.response?.data?.message || 'Login failed',
-        errors:  error.response?.data?.errors,
+        message: body?.message || 'Login failed',
+        errors:  body?.errors,
+        // Account belongs to another portal: where it should sign in instead.
+        wrongPortal: body?.code === 'wrong_portal'
+          ? { portal: body.account_portal as Portal, signInUrl: body.sign_in_url as string }
+          : null,
       }
     } finally {
       loading.value = false
