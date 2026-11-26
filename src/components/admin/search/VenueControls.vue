@@ -101,6 +101,7 @@
 <script setup lang="ts">
 import { TextInput, SelectInput, CheckboxInput } from '@/components/forms'
 import { computed, reactive, ref } from 'vue'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import BoostControl, { type BoostState } from './BoostControl.vue'
@@ -145,7 +146,9 @@ async function setBoost(v: AdminSearchVenue, boost: number) {
     setTimeout(() => { if (state[v.id]?.status === 'saved') state[v.id] = { status: 'idle', saved: v.search_boost } }, 1800)
   } catch (e) {
     v.search_boost = prev
-    state[v.id] = { status: 'error', saved: prev, message: apiError(e, 'Could not save boost.') }
+    const message = apiError(e, 'Could not save boost.')
+    state[v.id] = { status: 'error', saved: prev, message }
+    toast.error(`${v.name}: ${message}`)
   }
 }
 </script>
