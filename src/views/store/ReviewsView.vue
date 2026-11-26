@@ -30,8 +30,11 @@
         <button role="tab" class="tab" :aria-selected="replied === 'yes'" @click="setReplied('yes')">Replied</button>
       </nav>
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 border-b border-line">
-        <p class="text-sm text-ink-muted num" aria-live="polite">{{ loading ? 'Loading…' : `${total.toLocaleString('en-PK')} review${total === 1 ? '' : 's'}` }}</p>
-        <SelectInput v-model="venueId" class="sm:!w-56" aria-label="Venue" :options="[{ value: '', label: 'All venues' }, ...venues.map(v => ({ value: String(v.id), label: v.name }))]" @change="load(1)" />
+        <p class="text-sm text-ink-muted num inline-flex items-center gap-1.5" aria-live="polite">
+          {{ loading ? 'Loading…' : `${total.toLocaleString('en-PK')} review${total === 1 ? '' : 's'}` }}
+          <AppIcon v-if="switching" icon="loader" class="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+        </p>
+        <SelectInput v-model="venueId" class="sm:!w-56" aria-label="Venue" :options="[{ value: '', label: 'All venues' }, ...venues.map(v => ({ value: String(v.id), label: v.name }))]" @change="load(1, true)" />
       </div>
 
       <div v-if="loading" class="divide-y divide-line" aria-busy="true">
@@ -55,7 +58,7 @@
         </div>
       </div>
 
-      <ul v-else class="divide-y divide-line">
+      <ul v-else ref="listEl" class="divide-y divide-line transition-opacity duration-150" :class="switching && 'opacity-70'">
         <li v-for="r in reviews" :key="r.id" class="p-4 sm:p-5">
           <div class="flex items-start gap-3">
             <img v-if="r.client?.avatar" :src="getStorageUrl(r.client.avatar)" alt="" class="w-9 h-9 rounded-full object-cover shrink-0" loading="lazy" />
@@ -84,8 +87,11 @@
               <div class="mt-3">
                 <div v-if="r.store_reply && replyingId !== r.id" class="reply-block">
                   <div class="flex items-center justify-between gap-2">
-                    <p class="text-xs font-semibold text-brand-text">Your reply · {{ formatDate(r.store_replied_at) }}</p>
-                    <button type="button" class="btn-ghost btn-sm" @click="startReply(r)"><AppIcon icon="edit" class="w-3.5 h-3.5" />Edit</button>
+                    <p class="text-xs font-semibold text-brand-text inline-flex items-center gap-1.5">
+                      Your reply · {{ actions.isPending(r.id) ? 'Posting…' : formatDate(r.store_replied_at) }}
+                      <AppIcon v-if="actions.isPending(r.id)" icon="loader" class="w-3 h-3 animate-spin" aria-hidden="true" />
+                    </p>
+                    <button type="button" class="btn-ghost btn-sm" :disabled="actions.isPending(r.id)" @click="startReply(r)"><AppIcon icon="edit" class="w-3.5 h-3.5" />Edit</button>
                   </div>
                   <p class="text-sm text-ink-secondary whitespace-pre-line">{{ r.store_reply }}</p>
                 </div>
@@ -100,7 +106,7 @@
                     <p v-else class="form-hint !mt-0 num">{{ replyText.length }} / 2000</p>
                     <div class="flex gap-2">
                       <button type="button" class="btn-secondary btn-sm" @click="replyingId = null">Cancel</button>
-                      <button type="submit" :disabled="sending || !replyText.trim()" class="btn-primary btn-sm">{{ sending ? 'Saving…' : 'Post reply' }}</button>
+                      <button type="submit" :disabled="!replyText.trim()" class="btn-primary btn-sm">Post reply</button>
                     </div>
                   </div>
                 </form>
@@ -110,7 +116,7 @@
         </li>
       </ul>
 
-      <TablePager v-if="!loading && reviews.length" :page="page" :per-page="perPage" :total="total" @update:page="load" />
+      <TablePager v-if="!loading && reviews.length" :page="page" :per-page="perPage" :total="total" @update:page="(p: number) => load(p, true)" />
     </section>
 
     <!-- Reply dialog for reviews flagged in Insights (same reply endpoint) -->
@@ -129,7 +135,7 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="dialog.open = false">Cancel</button>
-          <button class="btn-primary" :disabled="dialog.sending || !dialog.text.trim()" @click="sendDialogReply">{{ dialog.sending ? 'Saving…' : 'Post reply' }}</button>
+          <button class="btn-primary" :disabled="!dialog.text.trim()" @click="sendDialogReply">Post reply</button>
         </div>
       </template>
     </VuexyModal>
@@ -138,7 +144,9 @@
 
 <script setup lang="ts">
 import { FormField, SelectInput, TextareaInput } from '@/components/forms'
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { useRowActions } from '@/composables/useRowActions'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { RouterLink } from 'vue-router'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
@@ -154,6 +162,8 @@ import { initials } from '@/components/dashboard/metrics'
 
 const reviews = ref<any[]>([])
 const loading = ref(true)
+// Tab, venue and page changes keep the current list on screen until the new one arrives.
+const switching = ref(false)
 const loadError = ref('')
 const page = ref(1)
 const perPage = ref(10)
@@ -162,9 +172,11 @@ const replied = ref('')
 const venueId = ref('')
 const replyingId = ref<number | null>(null)
 const replyText = ref('')
-const sending = ref(false)
 const errorMsg = ref('')
 const insightsRef = ref<InstanceType<typeof StoreReviewInsights> | null>(null)
+const listEl = ref<HTMLElement | null>(null)
+// Per-review pending state: reply to one review after another without waiting.
+const actions = useRowActions()
 
 const venues = ref<any[]>([])
 const venuesLoading = ref(true)
@@ -179,26 +191,51 @@ const replyRate = computed(() => {
   return `${Math.max(0, Math.round(((totalReviews.value - awaiting.value) / totalReviews.value) * 100))}%`
 })
 
-async function load(p = 1) {
-  loading.value = true
-  loadError.value = ''
+let loadedOnce = false
+let seq = 0
+/**
+ * Loads a page of reviews. Only the very first load (or a retry after an error)
+ * shows skeletons; everything after that swaps the rows in place.
+ * `navigate` scrolls the list back into view after a page/filter change.
+ */
+async function load(p = 1, navigate = false, quiet = loadedOnce) {
+  const id = ++seq
+  let slow: ReturnType<typeof setTimeout> | null = null
+  // Only hint "updating" if the answer is slow, so quick switches don't blink.
+  if (quiet && !loadError.value) slow = setTimeout(() => { if (id === seq) switching.value = true }, 250)
+  else { loading.value = true; loadError.value = '' }
   try {
     const { data } = await api.get('/store/reviews', { params: { page: p, replied: replied.value || undefined, venue_id: venueId.value || undefined } })
+    if (id !== seq) return
     reviews.value = data.data.data
     page.value = data.data.current_page
     perPage.value = data.data.per_page || 10
     total.value = data.data.total ?? reviews.value.length
+    loadError.value = ''
+    loadedOnce = true
+    if (navigate) {
+      await nextTick()
+      const top = listEl.value?.getBoundingClientRect().top
+      if (top !== undefined && top < 80) listEl.value?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    }
   } catch (e: any) {
-    reviews.value = []
-    loadError.value = e.response?.data?.message || 'Please check your connection and try again.'
+    if (id !== seq) return
+    if (!loadedOnce) {
+      reviews.value = []
+      loadError.value = e.response?.data?.message || 'Please check your connection and try again.'
+    } else {
+      toast.error(e.response?.data?.message || 'Could not load reviews.')
+    }
   } finally {
-    loading.value = false
+    if (slow) clearTimeout(slow)
+    if (id === seq) { loading.value = false; switching.value = false }
   }
 }
 
 function setReplied(v: string) {
   replied.value = v
-  load(1)
+  replyingId.value = null
+  load(1, true)
 }
 
 async function loadSummary() {
@@ -208,8 +245,15 @@ async function loadSummary() {
   }).catch(() => {}).finally(() => { venuesLoading.value = false })
   api.get('/store/reviews', { params: { replied: 'no', per_page: 1 } })
     .then(({ data }) => { awaiting.value = data.data?.total ?? 0 })
-    .catch(() => { awaiting.value = 0 })
+    .catch(() => { if (awaiting.value === null) awaiting.value = 0 })
 }
+
+// New reviews (and admin moderation) appear quietly.
+useLiveRefresh(['review'], () => {
+  loadSummary()
+  insightsRef.value?.reload()
+  if (replyingId.value === null && !actions.pending.size) load(page.value)
+})
 
 function startReply(r: any) {
   replyingId.value = r.id
@@ -217,21 +261,45 @@ function startReply(r: any) {
   errorMsg.value = ''
 }
 
-async function sendReply(r: any) {
-  sending.value = true
+/** Shared optimistic reply: the reply shows at once, the counters move, and all of it is undone on failure. */
+function postReply(reviewId: number | string, text: string, row: any | null, onRollback?: () => void) {
+  const hadReply = !!row?.store_reply
+  const prev = row ? { store_reply: row.store_reply, store_replied_at: row.store_replied_at } : null
+  let undoInsights: () => void = () => {}
+  let counted = false
+  return actions.run(reviewId, {
+    apply: () => {
+      if (row) Object.assign(row, { store_reply: text, store_replied_at: new Date().toISOString() })
+      if (!hadReply && awaiting.value) { awaiting.value--; counted = true }
+      undoInsights = insightsRef.value?.markReplied(reviewId) ?? (() => {})
+    },
+    request: () => api.post(`/store/reviews/${reviewId}/reply`, { reply: text }),
+    onSuccess: (res: any) => {
+      const d = res?.data?.data
+      if (row && d) Object.assign(row, { store_reply: d.store_reply, store_replied_at: d.store_replied_at })
+    },
+    rollback: () => {
+      if (row && prev) Object.assign(row, prev)
+      if (counted && awaiting.value !== null) awaiting.value++
+      undoInsights()
+      onRollback?.()
+    },
+    success: hadReply ? 'Reply updated.' : 'Reply posted.',
+    error: 'Could not save reply.',
+    after: () => { insightsRef.value?.reload() },
+  }, 'reply')
+}
+
+function sendReply(r: any) {
+  const text = replyText.value.trim()
+  if (!text) return
   errorMsg.value = ''
-  const hadReply = !!r.store_reply
-  try {
-    const { data } = await api.post(`/store/reviews/${r.id}/reply`, { reply: replyText.value.trim() })
-    Object.assign(r, { store_reply: data.data.store_reply, store_replied_at: data.data.store_replied_at })
-    replyingId.value = null
-    if (!hadReply && awaiting.value) awaiting.value--
-    toast.success('Reply posted.')
-  } catch (e: any) {
-    errorMsg.value = e.response?.data?.message || 'Could not save reply.'
-  } finally {
-    sending.value = false
-  }
+  // Close the editor straight away; reopen it with the text if the server refuses.
+  replyingId.value = null
+  postReply(r.id, text, r, () => {
+    replyingId.value = r.id
+    replyText.value = text
+  })
 }
 
 const dialog = reactive({ open: false, item: null as NeedsReplyItem | null, text: '', sending: false, error: '' })
@@ -240,22 +308,16 @@ function openReplyDialog(item: NeedsReplyItem) {
   Object.assign(dialog, { open: true, item, text: '', sending: false, error: '' })
 }
 
-async function sendDialogReply() {
+function sendDialogReply() {
   if (!dialog.item || !dialog.text.trim()) return
-  dialog.sending = true
-  dialog.error = ''
-  try {
-    await api.post(`/store/reviews/${dialog.item.review_id}/reply`, { reply: dialog.text.trim() })
-    dialog.open = false
-    toast.success('Reply posted.')
-    if (awaiting.value) awaiting.value--
-    insightsRef.value?.reload()
-    load(page.value)
-  } catch (e: any) {
-    dialog.error = e.response?.data?.message || 'Could not save reply.'
-  } finally {
-    dialog.sending = false
-  }
+  const item = dialog.item
+  const text = dialog.text.trim()
+  // Close straight away; the review updates in the list (if shown) and in Insights.
+  dialog.open = false
+  const row = reviews.value.find(r => String(r.id) === String(item.review_id)) ?? null
+  postReply(item.review_id, text, row, () => {
+    Object.assign(dialog, { open: true, item, text, sending: false, error: '' })
+  })
 }
 
 function subRatings(r: any) {

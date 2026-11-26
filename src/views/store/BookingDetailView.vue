@@ -15,7 +15,7 @@
         <p class="empty-state-title">{{ error }}</p>
         <p class="empty-state-desc">It may have been removed, or belongs to another store.</p>
         <div class="empty-state-actions">
-          <button class="btn-secondary" @click="load">Try again</button>
+          <button class="btn-secondary" @click="res.load()">Try again</button>
           <RouterLink to="/shop/bookings" class="btn-primary">Back to bookings</RouterLink>
         </div>
       </div>
@@ -29,7 +29,7 @@
             <p class="ref text-ink-muted">{{ booking.booking_number }}</p>
             <h1 class="page-title mt-1 break-words">{{ booking.event_name }}</h1>
             <div class="flex flex-wrap items-center gap-2 mt-2">
-              <span :class="statusBadgeClass(booking.status)">{{ statusLabel(booking.status) }}</span>
+              <span :class="statusBadgeClass(booking.status)"><AppIcon v-if="acting" icon="loader" class="w-3 h-3 animate-spin" />{{ statusLabel(booking.status) }}</span>
               <span v-if="booking.payment_status === 'paid'" class="badge-paid">Paid</span>
               <span v-else-if="booking.payment_status === 'refunded'" class="badge-refunded">Refunded</span>
               <span v-else-if="booking.status === 'confirmed'" class="badge-unpaid">Awaiting payment</span>
@@ -44,8 +44,8 @@
               <button class="btn-secondary" :disabled="acting" @click="openReject">
                 <AppIcon icon="x" class="w-4 h-4" />Reject
               </button>
-              <button class="btn-primary" :disabled="acting" @click="confirmBooking">
-                <AppIcon :icon="acting ? 'loader' : 'check'" :class="acting ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Confirm booking
+              <button class="btn-primary" :disabled="acting" :aria-busy="actions.isPending(bookingKey, 'confirm')" @click="confirmBooking">
+                <AppIcon :icon="actions.isPending(bookingKey, 'confirm') ? 'loader' : 'check'" :class="actions.isPending(bookingKey, 'confirm') ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Confirm booking
               </button>
             </template>
           </div>
@@ -201,7 +201,7 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showReject = false">Cancel</button>
-          <button class="btn-danger" :disabled="acting" @click="rejectBooking">Reject booking</button>
+          <button class="btn-danger" @click="rejectBooking">Reject booking</button>
         </div>
       </template>
     </VuexyModal>
@@ -211,8 +211,10 @@
 <script setup lang="ts">
 import { FormField, TextareaInput } from '@/components/forms'
 import { ref, computed, onMounted } from 'vue'
+import { useSilentResource } from '@/composables/useSilentList'
+import { useRowActions } from '@/composables/useRowActions'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { RouterLink, useRoute } from 'vue-router'
-import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import { formatDate, formatPKR, formatTimeRange, formatAddress } from '@/lib/format'
 import { getStorageUrl } from '@/lib/storageUrl'
@@ -222,38 +224,47 @@ import VuexyModal from '@/components/ui/VuexyModal.vue'
 import { humanize, initials } from '@/components/dashboard/metrics'
 
 const route = useRoute()
-const booking = ref<any>(null)
-const loading = ref(true)
-const error = ref('')
-const acting = ref(false)
+const bookingKey = String(route.params.id)
+
+// Loads once with a skeleton; after an action or a realtime update it refreshes in place.
+const res = useSilentResource<any>(async () => {
+  try {
+    const { data } = await api.get(`/store/bookings/${route.params.id}`)
+    return data.data
+  } catch (e: any) {
+    throw { response: { data: { message: e?.response?.status === 404 ? 'Booking not found.' : 'Could not load this booking.' } } }
+  }
+})
+const booking = res.data
+const loading = res.loading
+const error = res.error
+const actions = useRowActions()
+const acting = computed(() => actions.isPending(bookingKey))
 const showReject = ref(false)
 const rejectReason = ref('')
 const rejectError = ref('')
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    const { data } = await api.get(`/store/bookings/${route.params.id}`)
-    booking.value = data.data
-  } catch (e: any) {
-    error.value = e.response?.status === 404 ? 'Booking not found.' : 'Could not load this booking.'
-  } finally {
-    loading.value = false
-  }
+// Payments, cancellations and changes made elsewhere show up quietly.
+useLiveRefresh(['booking', 'payment'], (_type, payload) => {
+  const id = payload?.booking_id ?? payload?.booking?.id ?? payload?.id
+  if (!id || String(id) === bookingKey) res.refresh()
+})
+
+/** Shallow ref: replace the object so the page re-renders with the change. */
+function patch(fields: Record<string, any>) {
+  if (booking.value) booking.value = { ...booking.value, ...fields }
 }
 
-async function confirmBooking() {
-  acting.value = true
-  try {
-    await api.patch(`/store/bookings/${route.params.id}/confirm`)
-    toast.success('Booking confirmed — the customer can now pay.')
-    await load()
-  } catch (e: any) {
-    toast.error(e.response?.data?.message || 'Could not confirm this booking.')
-  } finally {
-    acting.value = false
-  }
+function confirmBooking() {
+  const prev = { status: booking.value?.status, confirmed_at: booking.value?.confirmed_at }
+  actions.run(bookingKey, {
+    apply: () => patch({ status: 'confirmed', confirmed_at: new Date().toISOString() }),
+    request: () => api.patch(`/store/bookings/${route.params.id}/confirm`),
+    rollback: () => patch(prev),
+    success: 'Booking confirmed — the customer can now pay.',
+    error: 'Could not confirm this booking.',
+    after: () => res.refresh(),
+  }, 'confirm')
 }
 
 function openReject() {
@@ -262,20 +273,21 @@ function openReject() {
   showReject.value = true
 }
 
-async function rejectBooking() {
+function rejectBooking() {
   if (!rejectReason.value.trim()) { rejectError.value = 'Please give a reason.'; return }
-  acting.value = true
+  const reason = rejectReason.value.trim()
+  const prev = { status: booking.value?.status, rejection_reason: booking.value?.rejection_reason, updated_at: booking.value?.updated_at }
   rejectError.value = ''
-  try {
-    await api.patch(`/store/bookings/${route.params.id}/reject`, { reason: rejectReason.value.trim() })
-    toast.success('Booking rejected.')
-    showReject.value = false
-    await load()
-  } catch (e: any) {
-    rejectError.value = e.response?.data?.message || 'Could not reject this booking.'
-  } finally {
-    acting.value = false
-  }
+  // Close straight away; the page shows the change instantly and rolls back if refused.
+  showReject.value = false
+  actions.run(bookingKey, {
+    apply: () => patch({ status: 'rejected', rejection_reason: reason, updated_at: new Date().toISOString() }),
+    request: () => api.patch(`/store/bookings/${route.params.id}/reject`, { reason }),
+    rollback: () => patch(prev),
+    success: 'Booking rejected.',
+    error: 'Could not reject this booking.',
+    after: () => res.refresh(),
+  }, 'reject')
 }
 
 const venueImage = computed(() => {
@@ -344,5 +356,5 @@ const timeline = computed<Step[]>(() => {
   return steps
 })
 
-onMounted(load)
+onMounted(() => res.load())
 </script>

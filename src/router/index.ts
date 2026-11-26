@@ -6,6 +6,14 @@ import { createPortalHistory, setRouteMatcher, crossHostHref, cleanAddressBar } 
 const router = createRouter({
   // Portal subdomains (customer./shop./support.) map to /customer, /shop, /support routes.
   history: createPortalHistory(),
+  // New pages open at the top, Back/Forward restore where you were, #links scroll to their section.
+  scrollBehavior(to, from, saved) {
+    if (saved) return saved
+    if (to.hash) return { el: to.hash, top: 80, behavior: 'smooth' }
+    // Same page with only the query changed (filters, tabs, pagination): keep the position.
+    if (to.path === from.path) return false
+    return { top: 0 }
+  },
   routes: [
     // ── Public ───────────────────────────────────────────────────────────
     {

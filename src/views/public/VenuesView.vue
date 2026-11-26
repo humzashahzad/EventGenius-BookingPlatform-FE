@@ -93,7 +93,8 @@
       </div>
 
       <!-- Loading -->
-      <div v-if="loading" :class="gridClass">
+      <!-- Skeleton only before the first results; later searches keep the cards on screen. -->
+      <div v-if="loading && !loadedOnce" :class="gridClass">
         <VenueCardSkeleton v-for="i in 6" :key="i" :layout="density" />
       </div>
 
@@ -138,7 +139,7 @@
       </div>
 
       <!-- Results -->
-      <ul v-else :class="gridClass" aria-label="Venue results">
+      <ul v-else :class="[gridClass, 'transition-opacity duration-150', loading ? 'opacity-60' : '']" :aria-busy="loading" aria-label="Venue results">
         <li v-for="(venue, index) in venues" :key="venue.id" class="min-w-0">
           <VenueCard
             :venue="venue"
@@ -153,7 +154,7 @@
       </ul>
 
       <!-- Pagination -->
-      <nav v-if="!loading && meta.last_page > 1" class="pagination-bar" aria-label="Pagination">
+      <nav v-if="meta.last_page > 1 && !(loading && !loadedOnce)" class="pagination-bar" aria-label="Pagination">
         <p class="text-[0.8125rem] text-ink-muted">Page {{ meta.current_page }} of {{ meta.last_page }}</p>
         <ul class="flex items-center gap-1">
           <li>
@@ -196,6 +197,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
+import { cacheGet, cacheSet } from '@/composables/usePageCache'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import SmartSearchBox from '@/components/search/SmartSearchBox.vue'
 import { Combobox, SelectInput } from '@/components/forms'
@@ -216,6 +218,7 @@ const venues = ref<any[]>([])
 const categories = ref<any[]>([])
 const knownCities = ref<string[]>([])
 const loading = ref(false)
+const loadedOnce = ref(false)
 const loadFailed = ref(false)
 const meta = ref({ current_page: 1, last_page: 1, total: 0 })
 const understood = ref<Understood | null>(null)
@@ -304,6 +307,21 @@ const relaxOptions = computed(() => {
 // Only the newest request may update the list, so a slow older search can't overwrite it.
 let requestId = 0
 
+// Last results per search, so coming back to this page shows them at once.
+function resultsKey() {
+  return `public:venues:${JSON.stringify([filters.q.trim(), filters.city.trim(), filters.event_type, filters.sort_by, filters.page, filters.lat, filters.lng])}`
+}
+function showCachedResults(): boolean {
+  const hit = cacheGet<{ venues: any[]; meta: typeof meta.value; understood: Understood | null; resultSort: string }>(resultsKey())
+  if (!hit) return false
+  venues.value = hit.venues
+  meta.value = hit.meta
+  understood.value = hit.understood
+  resultSort.value = hit.resultSort
+  loadedOnce.value = true
+  return true
+}
+
 async function loadVenues() {
   const id = ++requestId
   loading.value = true
@@ -321,6 +339,7 @@ async function loadVenues() {
     if (hasLocation.value) { params.lat = filters.lat; params.lng = filters.lng }
     if (filters.page > 1 && searchId) params.search_id = searchId
 
+    const key = resultsKey()
     const { data } = await api.get('/venues', { params })
     if (id !== requestId) return
     venues.value = data.data.data
@@ -333,6 +352,8 @@ async function loadVenues() {
     understood.value = normalizeUnderstood(search?.understood)
     resultSort.value = search?.sort ?? filters.sort_by
     if (filters.page === 1 || !searchId) searchId = search?.search_id ?? null
+    loadedOnce.value = true
+    cacheSet(key, { venues: venues.value, meta: meta.value, understood: understood.value, resultSort: resultSort.value })
   } catch (e) {
     if (id !== requestId) return
     loadFailed.value = true
@@ -574,6 +595,7 @@ onMounted(() => {
   readQuery()
   // Rewrite an old ?search= link to the new ?q= form.
   if (typeof route.query.search === 'string') writeQuery()
+  showCachedResults()
   loadVenues()
   api.get('/categories')
     .then(r => { categories.value = (r.data?.data ?? []).filter((c: any) => c.is_active !== false) })

@@ -21,7 +21,7 @@
         <p class="empty-state-title">{{ notFound ? 'Booking not found' : "We couldn't load this booking" }}</p>
         <p class="empty-state-desc">{{ notFound ? "This booking may have been removed or doesn't belong to your account." : loadError }}</p>
         <div class="empty-state-actions">
-          <button v-if="!notFound" type="button" class="btn-secondary" @click="load"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button>
+          <button v-if="!notFound" type="button" class="btn-secondary" @click="res.retry()"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button>
           <RouterLink to="/customer/bookings" class="btn-primary">Back to bookings</RouterLink>
         </div>
       </div>
@@ -232,10 +232,12 @@
 
 <script setup lang="ts">
 import { FormField, TextareaInput } from '@/components/forms'
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
+import { useCachedResource, cacheGet } from '@/composables/usePageCache'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import ReviewForm from '@/components/reviews/ReviewForm.vue'
 import { formatTimeRange, formatPKR, formatAddress } from '@/lib/format'
@@ -246,10 +248,15 @@ import {
 } from '@/components/client/bookingUtils'
 
 const route = useRoute()
-const booking = ref<any>(null)
-const loading = ref(true)
-const loadError = ref('')
-const notFound = ref(false)
+// Shown at once when this booking was opened before, then refreshed quietly.
+const res = useCachedResource<any>(() => `client:booking:${route.params.id}`, async () => {
+  const { data } = await api.get(`/client/bookings/${route.params.id}`)
+  return data.data
+})
+const booking = computed(() => res.data.value)
+const loading = res.loading
+const loadError = res.error
+const notFound = computed(() => !res.data.value && (res.errorStatus.value === 404 || res.errorStatus.value === 403))
 const showCancel = ref(false)
 const cancelReason = ref('')
 const cancelError = ref('')
@@ -339,19 +346,20 @@ function formatZar(n: number | string) {
   return Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-async function load() {
-  loading.value = true
-  loadError.value = ''
-  notFound.value = false
-  try {
-    const { data } = await api.get(`/client/bookings/${route.params.id}`)
-    booking.value = data.data
-  } catch (e: any) {
-    booking.value = null
-    notFound.value = e?.response?.status === 404 || e?.response?.status === 403
-    loadError.value = e?.response?.data?.message || 'Please check your connection and try again.'
-  } finally { loading.value = false }
-}
+// The venue confirms or declines, or a payment lands: update this page quietly.
+useLiveRefresh(['booking', 'payment'], (_type, data) => {
+  if (!data?.booking_id || String(data.booking_id) === String(route.params.id)) void res.refresh()
+})
+
+// Opening another booking from a notification reuses this page.
+watch(() => route.params.id, (id, old) => {
+  if (id && id !== old && route.name === 'customer-booking-detail') {
+    showCancel.value = false
+    cancelReason.value = ''
+    cancelError.value = ''
+    void res.load()
+  }
+})
 
 function onReviewLoaded(s: { eligible: boolean; review: any }) {
   if (route.hash === '#review' && (s.eligible || s.review)) {
@@ -366,17 +374,34 @@ function openCancel() {
 }
 
 async function cancelBooking() {
+  const b = booking.value
+  if (!b || cancelling.value) return
   cancelling.value = true
   cancelError.value = ''
+  const id = route.params.id
+  const reason = cancelReason.value
+  // Show the result straight away; put it back if the server says no.
+  const before = { status: b.status, cancellation_reason: b.cancellation_reason, cancelled_at: b.cancelled_at }
+  const listRow = (cacheGet<any[]>('client:bookings') || []).find(x => String(x.id) === String(b.id))
+  const listBefore = listRow ? listRow.status : null
+  b.status = 'cancelled'
+  b.cancellation_reason = reason || b.cancellation_reason
+  b.cancelled_at = new Date().toISOString()
+  if (listRow) listRow.status = 'cancelled'
+  showCancel.value = false
   try {
-    await api.patch(`/client/bookings/${route.params.id}/cancel`, { reason: cancelReason.value })
-    await load()
-    showCancel.value = false
+    await api.patch(`/client/bookings/${id}/cancel`, { reason })
     toast.success('Booking cancelled.')
+    void res.refresh()
   } catch (e: any) {
+    Object.assign(b, before)
+    if (listRow && listBefore) listRow.status = listBefore
     cancelError.value = e?.response?.data?.message || 'Could not cancel this booking. Please try again.'
+    showCancel.value = true
+    toast.error(cancelError.value)
   } finally { cancelling.value = false }
 }
 
-onMounted(load)
+onMounted(() => { void res.load() })
+
 </script>

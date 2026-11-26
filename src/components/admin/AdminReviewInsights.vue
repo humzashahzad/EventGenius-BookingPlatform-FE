@@ -100,10 +100,10 @@
               </ul>
             </div>
             <div class="flex sm:flex-col gap-2 shrink-0">
-              <button type="button" class="btn-secondary btn-sm" :disabled="busyId === r.review_id" @click="$emit('toggle', r)">
+              <button type="button" class="btn-secondary btn-sm" :disabled="isBusy(r.review_id)" :aria-busy="isBusy(r.review_id)" @click="$emit('toggle', r)">
                 <AppIcon :icon="r.is_approved ? 'eye-off' : 'eye'" class="w-4 h-4" />{{ r.is_approved ? 'Hide' : 'Show' }}
               </button>
-              <button type="button" class="btn-danger-ghost btn-sm" :disabled="busyId === r.review_id" @click="$emit('remove', r)"><AppIcon icon="trash" class="w-4 h-4" />Delete</button>
+              <button type="button" class="btn-danger-ghost btn-sm" :disabled="isBusy(r.review_id)" @click="$emit('remove', r)"><AppIcon icon="trash" class="w-4 h-4" />Delete</button>
             </div>
           </li>
         </ul>
@@ -125,7 +125,8 @@ import SentimentDistribution from '@/components/dashboard/SentimentDistribution.
 import { sentimentLabel, sentimentTone, humanFlag } from '@/components/dashboard/SentimentBits'
 import { timeAgo } from '@/components/dashboard/metrics'
 
-defineProps<{ busyId?: number | null; flagFilter?: string }>()
+const props = defineProps<{ busyId?: number | null; flagFilter?: string; isPending?: (id: number) => boolean }>()
+const isBusy = (id: number) => props.busyId === id || !!props.isPending?.(id)
 defineEmits<{ toggle: [r: any]; remove: [r: any]; 'filter-flag': [flag: string] }>()
 
 const state = ref<'loading' | 'ready' | 'hidden'>('loading')
@@ -142,14 +143,21 @@ const languages = computed(() => {
   return Object.entries(l).map(([k, v]) => `${names[k] || k} ${v}`).join(' · ')
 })
 
+let seq = 0
+/** First load decides whether the panel shows at all; later reloads are quiet and keep the panel if they fail. */
 async function load() {
+  const id = ++seq
+  const quiet = state.value === 'ready'
   try {
     const { data } = await api.get('/admin/reviews/insights')
+    if (id !== seq) return
     const v = data?.data
     const ok = v && (v.totals || v.sentiment_distribution)
+    if (!ok && quiet) return
     d.value = ok ? v : null
     state.value = ok ? 'ready' : 'hidden'
   } catch {
+    if (id !== seq || quiet) return
     d.value = null
     state.value = 'hidden'
   }
@@ -162,7 +170,23 @@ function patchFlagged(reviewId: number, patch: Record<string, any> | null) {
   else d.value.flagged = d.value.flagged.map((r: any) => (r.review_id === reviewId ? { ...r, ...patch } : r))
 }
 
-defineExpose({ reload: load, patchFlagged, available: computed(() => state.value === 'ready') })
+/** Take a flagged review off the list straight away; returns a function that puts it back. */
+function removeFlagged(reviewId: number): () => void {
+  const list: any[] = d.value?.flagged
+  if (!list) return () => {}
+  const idx = list.findIndex(r => r.review_id === reviewId)
+  if (idx < 0) return () => {}
+  const item = list[idx]
+  d.value.flagged = list.filter((_, i) => i !== idx)
+  return () => {
+    if (!d.value?.flagged || d.value.flagged.some((r: any) => r.review_id === reviewId)) return
+    const next = [...d.value.flagged]
+    next.splice(Math.min(idx, next.length), 0, item)
+    d.value.flagged = next
+  }
+}
+
+defineExpose({ reload: load, patchFlagged, removeFlagged, available: computed(() => state.value === 'ready') })
 onMounted(load)
 </script>
 

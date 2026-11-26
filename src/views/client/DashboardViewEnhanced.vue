@@ -49,7 +49,7 @@
         <p class="empty-state-title">We couldn't load your dashboard</p>
         <p class="empty-state-desc">{{ loadError }}</p>
         <div class="empty-state-actions">
-          <button type="button" class="btn-primary" @click="load"><AppIcon icon="refresh" class="w-4 h-4" /> Try again</button>
+          <button type="button" class="btn-primary" @click="res.retry()"><AppIcon icon="refresh" class="w-4 h-4" /> Try again</button>
         </div>
       </div>
     </div>
@@ -262,9 +262,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import api from '@/lib/axios'
+import { useCachedResource, cacheGet, cacheSet } from '@/composables/usePageCache'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -278,14 +280,33 @@ import {
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const router = useRouter()
+interface DashboardData {
+  stats: { total_bookings: number; upcoming_bookings: number; completed_bookings: number; cancelled_bookings: number }
+  recent: any[]
+  all: any[]
+}
+const EMPTY_STATS = { total_bookings: 0, upcoming_bookings: 0, completed_bookings: 0, cancelled_bookings: 0 }
 
-const loading = ref(true)
-const loadError = ref('')
-const stats = reactive({ total_bookings: 0, upcoming_bookings: 0, completed_bookings: 0, cancelled_bookings: 0 })
-const recentBookings = ref<any[]>([])
-const allBookings = ref<any[]>([])
+// First visit shows the skeleton; coming back shows the last data and refreshes it quietly.
+const res = useCachedResource<DashboardData>(() => 'client:dashboard', async () => {
+  const [dash, list] = await Promise.allSettled([
+    api.get('/client/dashboard'),
+    api.get('/client/bookings', { params: { per_page: 100 } }),
+  ])
+  if (dash.status === 'rejected') throw dash.reason
+  return {
+    stats: { ...EMPTY_STATS, ...dash.value.data.data.stats },
+    recent: (dash.value.data.data.recent_bookings || []).slice(0, 5),
+    all: list.status === 'fulfilled' ? (list.value.data.data?.data || []) : [],
+  }
+})
+const loading = res.loading
+const loadError = computed(() => (res.data.value ? '' : res.error.value))
+const stats = computed(() => res.data.value?.stats ?? EMPTY_STATS)
+const recentBookings = computed(() => res.data.value?.recent ?? [])
+const allBookings = computed(() => res.data.value?.all ?? [])
 /** booking id → true when a completed booking can still be reviewed */
-const reviewable = ref<Record<number, boolean>>({})
+const reviewable = ref<Record<number, boolean>>(cacheGet<Record<number, boolean>>('client:dashboard:reviewable') ?? {})
 
 const firstName = computed(() => authStore.user?.name?.split(' ')[0] || 'there')
 const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -315,12 +336,12 @@ const headerSummary = computed(() => {
 })
 
 const kpis = computed(() => [
-  { label: 'Total bookings', value: stats.total_bookings, icon: 'calendar-event', tone: 'tone-brand', helper: `${stats.cancelled_bookings} cancelled`, small: false },
+  { label: 'Total bookings', value: stats.value.total_bookings, icon: 'calendar-event', tone: 'tone-brand', helper: `${stats.value.cancelled_bookings} cancelled`, small: false },
   {
-    label: 'Upcoming', value: stats.upcoming_bookings, icon: 'calendar-clock', tone: 'tone-warning', small: false,
+    label: 'Upcoming', value: stats.value.upcoming_bookings, icon: 'calendar-clock', tone: 'tone-warning', small: false,
     helper: pendingCount.value ? `${pendingCount.value} awaiting venue reply` : nextEvent.value ? `Next ${countdownLabel(nextEvent.value.event_date).toLowerCase()}` : 'Nothing planned yet',
   },
-  { label: 'Completed', value: stats.completed_bookings, icon: 'circle-check', tone: 'tone-info', helper: 'Events you have hosted', small: false },
+  { label: 'Completed', value: stats.value.completed_bookings, icon: 'circle-check', tone: 'tone-info', helper: 'Events you have hosted', small: false },
   { label: 'Total spent', value: formatPKRCompact(totalSpent.value), icon: 'wallet', tone: 'tone-success', helper: `Across ${paidBookings.value.length} paid booking${paidBookings.value.length === 1 ? '' : 's'}`, small: true },
 ])
 
@@ -351,7 +372,7 @@ const attention = computed(() => {
 
 const quickActions = computed(() => [
   { to: '/venues', label: 'Browse venues', desc: 'Halls, marquees and lawns', icon: 'search', tone: 'tone-brand' },
-  { to: '/customer/bookings', label: 'My bookings', desc: `${stats.total_bookings} in total`, icon: 'calendar-event', tone: 'tone-neutral' },
+  { to: '/customer/bookings', label: 'My bookings', desc: `${stats.value.total_bookings} in total`, icon: 'calendar-event', tone: 'tone-neutral' },
   { to: '/customer/messages', label: 'Messages', desc: chatStore.totalUnreadCount ? `${chatStore.totalUnreadCount} unread` : 'Talk to venues and support', icon: 'message', tone: 'tone-neutral' },
   { to: '/customer/profile', label: 'Profile', desc: 'Details, photo and password', icon: 'user', tone: 'tone-neutral' },
 ])
@@ -368,27 +389,21 @@ async function checkReviews() {
     if (r.status === 'fulfilled') map[completed[i].id] = !!r.value.data?.data?.eligible
   })
   reviewable.value = map
+  cacheSet('client:dashboard:reviewable', map)
 }
 
 async function load() {
-  loading.value = true
-  loadError.value = ''
-  try {
-    const [dash, list] = await Promise.allSettled([
-      api.get('/client/dashboard'),
-      api.get('/client/bookings', { params: { per_page: 100 } }),
-    ])
-    if (dash.status === 'rejected') throw dash.reason
-    Object.assign(stats, dash.value.data.data.stats)
-    recentBookings.value = (dash.value.data.data.recent_bookings || []).slice(0, 5)
-    allBookings.value = list.status === 'fulfilled' ? (list.value.data.data?.data || []) : []
-  } catch (e: any) {
-    loadError.value = e?.response?.data?.message || 'Please check your connection and try again.'
-  } finally {
-    loading.value = false
-  }
-  if (!loadError.value) void checkReviews()
+  await res.load()
+  if (res.data.value) void checkReviews()
 }
+
+async function quietRefresh() {
+  await res.refresh()
+  if (res.data.value) void checkReviews()
+}
+
+// The venue confirms/rejects, a payment lands or a review is answered: update quietly.
+useLiveRefresh(['booking', 'payment', 'review'], () => { void quietRefresh() })
 
 onMounted(load)
 </script>

@@ -75,9 +75,10 @@
                 class="btn-icon btn-icon-sm"
                 aria-label="Mark all as read"
                 title="Mark all as read"
-                @click="notifStore.markAllRead()"
+                :disabled="actions.isPending('all')"
+                @click="markAllRead"
               >
-                <AppIcon icon="mail-opened" class="w-4 h-4" />
+                <AppIcon :icon="actions.isPending('all') ? 'loader' : 'mail-opened'" :class="actions.isPending('all') ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
               </button>
             </div>
           </div>
@@ -106,7 +107,7 @@
                 <p class="text-xs text-ink-secondary line-clamp-2">{{ n.body }}</p>
                 <p class="text-xs text-ink-muted mt-0.5">{{ notifStore.timeAgo(n.created_at) }}</p>
               </span>
-              <button type="button" class="btn-icon btn-icon-sm !w-7 !h-7" aria-label="Remove notification" @click.stop="notifStore.remove(n.id)">
+              <button type="button" class="btn-icon btn-icon-sm !w-7 !h-7" aria-label="Remove notification" :disabled="actions.isPending(`del-${n.id}`)" @click.stop="removeNotif(n.id)">
                 <AppIcon icon="x" class="w-4 h-4" />
               </button>
             </div>
@@ -203,6 +204,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notifications'
 import { useThemeStore } from '@/stores/theme'
 import TopBarActions from '@/components/layout/TopBarActions.vue'
+import { useRowActions } from '@/composables/useRowActions'
 import AppIcon from '@/components/ui/AppIcon.vue'
 
 const props = defineProps<{ sidebarCollapsed?: boolean }>()
@@ -302,8 +304,30 @@ function toggleProfile() {
   showNotif.value = false
 }
 
+// Bell actions are optimistic (the store rolls back on failure) and per item, so
+// several can be cleared quickly one after another.
+const actions = useRowActions()
+
+function markAllRead() {
+  void actions.run('all', {
+    request: () => notifStore.markAllRead(),
+    success: 'All notifications marked as read',
+    error: 'Could not mark all as read.',
+  })
+}
+
+function removeNotif(id: number) {
+  void actions.run(`del-${id}`, {
+    request: () => notifStore.remove(id),
+    success: 'Notification removed',
+    error: 'Could not remove this notification.',
+  })
+}
+
 function handleNotifClick(n: any) {
-  if (!n.is_read) notifStore.markRead(n.id)
+  if (!n.is_read) {
+    void actions.run(n.id, { request: () => notifStore.markRead(n.id), success: false, error: 'Could not mark this notification as read.' })
+  }
   showNotif.value = false
   const to = notifStore.linkFor(n, authStore.user?.role)
   if (to) router.push(to)

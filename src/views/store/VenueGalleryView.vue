@@ -7,26 +7,15 @@
         <p class="page-subtitle">The cover photo is shown first in search and on the venue page.</p>
       </div>
       <div class="page-header-actions">
-        <label class="btn-primary cursor-pointer" :class="uploading && 'opacity-60 pointer-events-none'">
+        <label class="btn-primary cursor-pointer">
           <AppIcon icon="upload" class="w-4 h-4" />Upload photos
           <input ref="fileInput" type="file" multiple accept="image/*" class="sr-only" @change="handleUpload" />
         </label>
       </div>
     </header>
 
-    <div v-if="uploading" class="alert-info" role="status">
-      <AppIcon icon="loader" class="w-5 h-5 animate-spin shrink-0" />
-      <p>Uploading {{ uploadCount }} photo{{ uploadCount === 1 ? '' : 's' }}… please wait.</p>
-    </div>
-    <div v-if="successMsg" class="alert-success" role="status">
-      <AppIcon icon="circle-check" class="w-5 h-5 shrink-0" /><p>{{ successMsg }}</p>
-    </div>
-    <div v-if="errorMsg" class="alert-danger" role="alert">
-      <AppIcon icon="alert-circle" class="w-5 h-5 shrink-0" /><p>{{ errorMsg }}</p>
-    </div>
-
     <!-- Loading -->
-    <div v-if="loading && !images.length" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4" aria-busy="true">
+    <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4" aria-busy="true">
       <div v-for="i in 8" :key="i" class="skeleton aspect-[4/3]" />
     </div>
 
@@ -39,18 +28,26 @@
         icon="cloud-upload"
         title="Drag photos here or"
         hint="JPG or PNG, landscape works best. You can select several at once."
-        :disabled="uploading"
         @select="uploadFiles"
       />
 
-      <section v-if="images.length" class="card">
+      <div v-if="loadError && !images.length" class="alert-danger" role="alert">
+        <AppIcon icon="alert-circle" class="w-5 h-5 shrink-0" /><p>{{ loadError }}</p>
+        <button type="button" class="btn-secondary btn-sm ml-auto" @click="loadVenue">Try again</button>
+      </div>
+
+      <section v-if="images.length || uploads.length" class="card">
         <div class="card-header">
-          <div><h2 class="card-title">{{ images.length }} photo{{ images.length !== 1 ? 's' : '' }}</h2><p class="card-subtitle">Set a cover or remove photos you no longer want.</p></div>
+          <div>
+            <h2 class="card-title">{{ images.length }} photo{{ images.length !== 1 ? 's' : '' }}</h2>
+            <p class="card-subtitle">Set a cover, change the order with the arrows, or remove photos you no longer want.</p>
+          </div>
+          <span v-if="orderSaving" class="text-xs text-ink-muted inline-flex items-center gap-1.5" role="status"><AppIcon icon="loader" class="w-3.5 h-3.5 animate-spin" />Saving order…</span>
         </div>
         <div class="card-body">
-          <ul class="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+          <TransitionGroup tag="ul" name="tile" class="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
             <li
-              v-for="image in images"
+              v-for="(image, i) in images"
               :key="image.id"
               class="rounded-lg border overflow-hidden bg-surface flex flex-col"
               :class="image.is_primary ? 'border-brand-text ring-1 ring-brand-text' : 'border-line'"
@@ -59,23 +56,41 @@
                 <img :src="imageUrl(image.path)" :alt="image.alt_text || venue?.name || 'Venue photo'" loading="lazy" class="w-full h-full object-cover" />
                 <span v-if="image.is_primary" class="absolute top-2 left-2 badge-confirmed shadow-xs">Cover photo</span>
               </div>
-              <div class="flex items-center justify-between gap-2 px-2.5 py-2 border-t border-line">
+              <div class="flex items-center justify-between gap-1 px-2.5 py-2 border-t border-line">
                 <button
                   v-if="!image.is_primary"
                   type="button"
                   class="btn-ghost btn-sm"
-                  :disabled="actionId === image.id"
+                  :disabled="actions.isPending(image.id)"
                   @click="setPrimary(image)"
                 >
-                  <AppIcon :icon="actionId === image.id ? 'loader' : 'star'" :class="actionId === image.id ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Make cover
+                  <AppIcon :icon="actions.isPending(image.id, 'primary') ? 'loader' : 'star'" :class="actions.isPending(image.id, 'primary') ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Make cover
                 </button>
                 <span v-else class="text-xs text-ink-muted px-2">Shown first</span>
-                <button type="button" class="btn-icon btn-icon-sm hover:!text-danger-text" :disabled="actionId === image.id" aria-label="Delete photo" title="Delete photo" @click="deleteImage(image)">
-                  <AppIcon icon="trash" class="w-4 h-4" />
-                </button>
+                <div class="flex items-center gap-0.5 shrink-0">
+                  <button type="button" class="btn-icon btn-icon-sm" :disabled="i === 0" aria-label="Move photo earlier" title="Move earlier" @click="move(i, -1)">
+                    <AppIcon icon="chevron-left" class="w-4 h-4" />
+                  </button>
+                  <button type="button" class="btn-icon btn-icon-sm" :disabled="i === images.length - 1" aria-label="Move photo later" title="Move later" @click="move(i, 1)">
+                    <AppIcon icon="chevron-right" class="w-4 h-4" />
+                  </button>
+                  <button type="button" class="btn-icon btn-icon-sm hover:!text-danger-text" :disabled="actions.isPending(image.id)" aria-label="Delete photo" title="Delete photo" @click="deleteImage(image)">
+                    <AppIcon icon="trash" class="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </li>
-          </ul>
+            <!-- Photos still uploading: local previews hold their place in the grid. -->
+            <li v-for="u in uploads" :key="u.key" class="rounded-lg border border-line overflow-hidden bg-surface flex flex-col" aria-live="polite">
+              <div class="relative aspect-[4/3] bg-surface-sunken">
+                <img :src="u.preview" alt="" class="w-full h-full object-cover opacity-60" />
+                <span class="absolute inset-0 flex items-center justify-center"><span class="badge-neutral shadow-xs"><AppIcon icon="loader" class="w-3.5 h-3.5 animate-spin" />Uploading</span></span>
+              </div>
+              <div class="flex items-center px-2.5 py-2 border-t border-line min-h-[2.75rem]">
+                <span class="text-xs text-ink-muted truncate">{{ u.name }}</span>
+              </div>
+            </li>
+          </TransitionGroup>
         </div>
       </section>
 
@@ -102,10 +117,7 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showDeleteModal = false">Cancel</button>
-          <button class="btn-danger" :disabled="deleting" @click="confirmDelete">
-            <AppIcon v-if="deleting" icon="loader" class="w-4 h-4 animate-spin" />
-            {{ deleting ? 'Deleting…' : 'Delete photo' }}
-          </button>
+          <button class="btn-danger" @click="confirmDelete">Delete photo</button>
         </div>
       </template>
     </VuexyModal>
@@ -114,10 +126,12 @@
 
 <script setup lang="ts">
 import { FileUpload } from '@/components/forms'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
+import { useRowActions } from '@/composables/useRowActions'
 import VuexyModal from '@/components/ui/VuexyModal.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 
@@ -135,50 +149,45 @@ interface Venue {
   name: string
 }
 
+interface PendingUpload { key: string; name: string; preview: string }
+
 const route = useRoute()
 const venueId = route.params.id as string
 
 const venue       = ref<Venue | null>(null)
 const images      = ref<VenueImage[]>([])
-const loading     = ref(false)
-const uploading   = ref(false)
-const uploadCount = ref(0)
-const actionId    = ref<number | null>(null)
-const deleting    = ref(false)
+const loading     = ref(true)
+const loadError   = ref('')
+const uploads     = ref<PendingUpload[]>([])
 const deleteTarget = ref<VenueImage | null>(null)
 const showDeleteModal = ref(false)
-const successMsg  = ref('')
-const errorMsg    = ref('')
+// Per-photo pending state, so several photos can be changed one after another.
+const actions = useRowActions()
 
 function imageUrl(path: string): string {
   return getStorageUrl(path)
 }
 
-function showSuccess(msg: string) {
-  successMsg.value = msg
-  errorMsg.value   = ''
-  setTimeout(() => (successMsg.value = ''), 3000)
+function sortImages(list: VenueImage[]) {
+  return [...list].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 }
 
-function showError(msg: string) {
-  errorMsg.value   = msg
-  successMsg.value = ''
-  setTimeout(() => (errorMsg.value = ''), 4000)
-}
-
+let loadSeq = 0
+/** First call shows the skeleton; later calls swap in fresh data quietly. */
 async function loadVenue() {
-  loading.value = true
+  const id = ++loadSeq
   try {
     const { data } = await api.get(`/store/venues/${venueId}`)
+    if (id !== loadSeq) return
     venue.value  = data.data
-    images.value = data.data.images || []
+    images.value = sortImages(data.data.images || [])
+    loadError.value = ''
   } catch {
-    showError('Failed to load venue.')
+    if (id === loadSeq && loading.value) loadError.value = 'Failed to load venue.'
   } finally {
-    loading.value = false
+    if (id === loadSeq) loading.value = false
   }
 }
-
 
 async function handleUpload(event: Event) {
   const input = event.target as HTMLInputElement
@@ -190,36 +199,50 @@ async function handleUpload(event: Event) {
   }
 }
 
+let uploadSeq = 0
 async function uploadFiles(files: File[]) {
+  if (!files.length) return
   const formData = new FormData()
-  uploadCount.value = files.length
   for (const file of files) {
     formData.append('images[]', file)
   }
-
-  uploading.value = true
+  // Show local previews straight away; they turn into real photos when the upload finishes.
+  const batch: PendingUpload[] = files.map(f => ({ key: `up-${++uploadSeq}`, name: f.name, preview: URL.createObjectURL(f) }))
+  uploads.value.push(...batch)
+  const done = () => {
+    const keys = new Set(batch.map(b => b.key))
+    uploads.value = uploads.value.filter(u => !keys.has(u.key))
+    batch.forEach(b => URL.revokeObjectURL(b.preview))
+  }
   try {
-    await api.post(`/store/venues/${venueId}/images`, formData, {
+    const { data } = await api.post(`/store/venues/${venueId}/images`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    showSuccess(`${uploadCount.value} image(s) uploaded successfully.`)
-    await loadVenue()
+    const added: VenueImage[] = Array.isArray(data?.data) ? data.data : []
+    const known = new Set(images.value.map(i => i.id))
+    images.value.push(...added.filter(i => !known.has(i.id)))
+    done()
+    toast.success(`${files.length} photo${files.length === 1 ? '' : 's'} uploaded.`)
+    loadVenue()
   } catch (e: any) {
-    showError(e.response?.data?.message || 'Upload failed.')
-  } finally {
-    uploading.value = false
+    done()
+    toast.error(e.response?.data?.message || 'Upload failed.')
   }
 }
 
 function setPrimary(image: VenueImage) {
-  actionId.value = image.id
-  api.patch(`/store/venues/${venueId}/images/${image.id}/set-primary`)
-    .then(() => {
-      showSuccess('Cover image updated.')
-      return loadVenue()
-    })
-    .catch(() => showError('Failed to update cover image.'))
-    .finally(() => (actionId.value = null))
+  const prevPrimary = images.value.find(i => i.is_primary) ?? null
+  actions.run(image.id, {
+    apply: () => {
+      images.value.forEach(i => { i.is_primary = i.id === image.id })
+    },
+    request: () => api.patch(`/store/venues/${venueId}/images/${image.id}/set-primary`),
+    rollback: () => {
+      images.value.forEach(i => { i.is_primary = !!prevPrimary && i.id === prevPrimary.id })
+    },
+    success: 'Cover photo updated.',
+    error: 'Failed to update cover image.',
+  }, 'primary')
 }
 
 function deleteImage(image: VenueImage) {
@@ -227,21 +250,81 @@ function deleteImage(image: VenueImage) {
   showDeleteModal.value = true
 }
 
-async function confirmDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
+function confirmDelete() {
+  const image = deleteTarget.value
+  if (!image) return
+  // Close straight away; the photo disappears and comes back if the server refuses.
+  deleteTarget.value = null
+  showDeleteModal.value = false
+  let index = -1
+  let promoted: VenueImage | null = null
+  actions.run(image.id, {
+    apply: () => {
+      index = images.value.findIndex(i => i.id === image.id)
+      if (index !== -1) images.value.splice(index, 1)
+      // Same rule as the server: the next photo becomes the cover.
+      if (image.is_primary && images.value.length) {
+        promoted = sortImages(images.value)[0]
+        promoted.is_primary = true
+      }
+    },
+    request: () => api.delete(`/store/venues/${venueId}/images/${image.id}`),
+    rollback: () => {
+      if (promoted) promoted.is_primary = false
+      if (!images.value.some(i => i.id === image.id)) images.value.splice(Math.max(0, Math.min(index, images.value.length)), 0, image)
+    },
+    success: 'Photo deleted.',
+    error: 'Failed to delete image.',
+  }, 'delete')
+}
+
+// ── Reorder: moves apply instantly; the new order is saved once clicks settle ──
+const orderSaving = ref(false)
+let savedOrder: number[] = []
+let orderTimer: ReturnType<typeof setTimeout> | null = null
+
+function move(index: number, dir: -1 | 1) {
+  const j = index + dir
+  if (j < 0 || j >= images.value.length) return
+  if (!orderTimer && !orderSaving.value) savedOrder = images.value.map(i => i.id)
+  const list = [...images.value]
+  ;[list[index], list[j]] = [list[j], list[index]]
+  list.forEach((img, k) => { img.sort_order = k })
+  images.value = list
+  if (orderTimer) clearTimeout(orderTimer)
+  orderTimer = setTimeout(saveOrder, 600)
+}
+
+async function saveOrder() {
+  orderTimer = null
+  const order = images.value.map(i => i.id)
+  orderSaving.value = true
   try {
-    await api.delete(`/store/venues/${venueId}/images/${deleteTarget.value.id}`)
-    showSuccess('Image deleted.')
-    deleteTarget.value = null
-    showDeleteModal.value = false
-    await loadVenue()
-  } catch {
-    showError('Failed to delete image.')
+    await api.post(`/store/venues/${venueId}/images/reorder`, { order })
+    savedOrder = order
+    if (!orderTimer) toast.success('Photo order saved.')
+  } catch (e: any) {
+    if (!orderTimer) {
+      const byId = new Map(images.value.map(i => [i.id, i]))
+      const restored = savedOrder.map(id => byId.get(id)).filter(Boolean) as VenueImage[]
+      for (const img of images.value) if (!savedOrder.includes(img.id)) restored.push(img)
+      restored.forEach((img, k) => { img.sort_order = k })
+      images.value = restored
+    }
+    toast.error(e.response?.data?.message || 'Could not save the new photo order.')
   } finally {
-    deleting.value = false
+    orderSaving.value = false
   }
 }
 
 onMounted(loadVenue)
+onBeforeUnmount(() => {
+  if (orderTimer) { clearTimeout(orderTimer); saveOrder() }
+  uploads.value.forEach(u => URL.revokeObjectURL(u.preview))
+})
 </script>
+
+<style scoped>
+.tile-move { transition: transform 200ms ease; }
+@media (prefers-reduced-motion: reduce) { .tile-move { transition: none; } }
+</style>

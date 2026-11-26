@@ -26,8 +26,12 @@
               <p class="form-label">Hero image</p>
               <div class="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div class="w-full sm:w-48 aspect-[16/9] rounded-lg overflow-hidden bg-surface-sunken border border-line shrink-0 flex items-center justify-center">
-                  <img v-if="form.hero_image" :src="getStorageUrl(form.hero_image)" alt="Current hero image" class="w-full h-full object-cover" />
-                  <AppIcon v-else icon="image" class="w-6 h-6 text-ink-muted" />
+                  <div class="relative w-full h-full flex items-center justify-center">
+                    <img v-if="heroPreview" :src="heroPreview" alt="New hero image" class="w-full h-full object-cover opacity-60" />
+                    <img v-else-if="form.hero_image" :src="getStorageUrl(form.hero_image)" alt="Current hero image" class="w-full h-full object-cover" />
+                    <AppIcon v-else icon="image" class="w-6 h-6 text-ink-muted" />
+                    <span v-if="heroUploading" class="absolute inset-0 flex items-center justify-center" role="status"><span class="badge-neutral shadow-xs"><AppIcon icon="loader" class="w-3.5 h-3.5 animate-spin" />Uploading</span></span>
+                  </div>
                 </div>
                 <div class="flex-1 min-w-0">
                   <FileUpload accept="image/*" instant compact icon="upload" :title="form.hero_image ? 'Replace image: drop a photo or' : 'Upload image: drop a photo or'" hint="Wide landscape photo, at least 1600px across. Uploads straight away." @select="files => uploadHero(files[0])" />
@@ -157,6 +161,7 @@
 import { FormField, TextInput, TextareaInput, SelectInput, FileUpload, FormActions } from '@/components/forms'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -213,6 +218,7 @@ async function loadLanding() {
 }
 
 async function save() {
+  if (saving.value) return
   saving.value = true
   successMsg.value = ''
   errorMsg.value = ''
@@ -226,25 +232,41 @@ async function save() {
       social_links: form.social_links,
     })
     successMsg.value = 'Landing page saved!'
+    toast.success('Landing page saved.')
     setTimeout(() => (successMsg.value = ''), 3500)
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || 'Save failed.'
+    toast.error(errorMsg.value)
     setTimeout(() => (errorMsg.value = ''), 4000)
   } finally {
     saving.value = false
   }
 }
 
+// Hero upload: the chosen photo shows at once (dimmed, with a spinner) and is swapped
+// for the stored one when the upload finishes; the previous image comes back on failure.
+const heroPreview = ref('')
+const heroUploading = ref(false)
 async function uploadHero(file: File | undefined) {
   if (!file) return
   const fd = new FormData()
   fd.append('hero_image', file)
+  const preview = URL.createObjectURL(file)
+  if (heroPreview.value) URL.revokeObjectURL(heroPreview.value)
+  heroPreview.value = preview
+  heroUploading.value = true
   try {
     const { data } = await api.post('/store/landing/hero', fd)
     form.hero_image = data.data.hero_image
-  } catch {
-    errorMsg.value = 'Failed to upload hero image.'
-    setTimeout(() => (errorMsg.value = ''), 3000)
+    toast.success('Hero image updated.')
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message || 'Failed to upload hero image.')
+  } finally {
+    if (heroPreview.value === preview) {
+      heroPreview.value = ''
+      heroUploading.value = false
+    }
+    URL.revokeObjectURL(preview)
   }
 }
 

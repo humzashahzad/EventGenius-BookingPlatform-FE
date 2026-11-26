@@ -20,10 +20,11 @@
 </template>
 
 <script setup lang="ts">
+import { watch, nextTick } from 'vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import VuexyModal from '@/components/ui/VuexyModal.vue'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   visible: boolean
   title: string
   confirmLabel?: string
@@ -33,4 +34,17 @@ withDefaults(defineProps<{
   error?: string
 }>(), { confirmLabel: 'Confirm', tone: 'primary', loading: false, error: '' })
 defineEmits<{ 'update:visible': [v: boolean]; confirm: [] }>()
+
+// Put keyboard focus back on the button that opened the dialog, so people can carry on
+// down the list (the row's own buttons stay where they were).
+let opener: HTMLElement | null = null
+watch(() => props.visible, v => {
+  if (v) {
+    opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    return
+  }
+  const el = opener
+  opener = null
+  nextTick(() => { if (el && el.isConnected && !(el as HTMLButtonElement).disabled) el.focus({ preventScroll: true }) })
+})
 </script>

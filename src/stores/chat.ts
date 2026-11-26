@@ -108,6 +108,8 @@ export const useChatStore = defineStore('chat', () => {
 
   /** True while the messages page is mounted (set by MessagesView). */
   const viewActive = ref(false)
+  /** True while the chat widget shows the open conversation (set by ChatWidget). */
+  const widgetViewing = ref(false)
 
   // Echo channel references
   const subscribedChatChannels = ref<Set<number>>(new Set())
@@ -304,7 +306,7 @@ export const useChatStore = defineStore('chat', () => {
 
   /** Is the user looking at this conversation right now (messages page, chat open, tab visible)? */
   function isViewingChat(chatId: number): boolean {
-    return viewActive.value
+    return (viewActive.value || widgetViewing.value)
       && currentChatId.value === chatId
       && typeof document !== 'undefined'
       && document.visibilityState === 'visible'
@@ -320,6 +322,22 @@ export const useChatStore = defineStore('chat', () => {
   function setViewActive(active: boolean) {
     viewActive.value = active
     if (active) markCurrentReadIfViewing()
+  }
+
+  /** The chat widget is (or stops) showing the open conversation; treated like the messages page. */
+  function setWidgetViewing(active: boolean) {
+    widgetViewing.value = active
+    if (active) {
+      markCurrentReadIfViewing()
+      if (currentChatId.value) useNotificationStore().dismissChatToast(currentChatId.value)
+    }
+  }
+
+  /** Show a cached conversation list right away (before the API answers). Ignored once chats are loaded. */
+  function hydrateChats(cached: Chat[]) {
+    if (chats.value.length || !Array.isArray(cached) || !cached.length) return
+    chats.value = cached
+    updateOnlineStatus()
   }
 
   /**
@@ -479,14 +497,17 @@ export const useChatStore = defineStore('chat', () => {
 
   // ── Select Chat ──────────────────────────────────────────────────────
 
-  async function selectChat(chatId: number) {
+  async function selectChat(chatId: number, options?: { cached?: ChatMessage[] }) {
     currentChatId.value = chatId
-    messages.value = []
+    const cached = (options?.cached || []).filter(m => m && m.chat_id === chatId && m.id > 0)
+    messages.value = cached
     processedMessageIds.value.clear()
+    cached.forEach(m => processedMessageIds.value.add(m.id))
     typingUsers.value.clear()
 
     subscribeToChatChannel(chatId)
-    await fetchMessages(chatId)
+    // With cached messages on screen, refresh quietly instead of showing a loader.
+    await fetchMessages(chatId, undefined, { silent: cached.length > 0 })
 
     // Mark as read
     const chat = chats.value.find(c => c.id === chatId)
@@ -1066,6 +1087,7 @@ export const useChatStore = defineStore('chat', () => {
     hasMoreMessages,
     connectionStatus,
     viewActive,
+    widgetViewing,
     typingUsers,
     onlineUserIds,
 
@@ -1102,6 +1124,9 @@ export const useChatStore = defineStore('chat', () => {
     isUserOnline,
     requestNotificationPermission,
     setViewActive,
+    setWidgetViewing,
+    hydrateChats,
+    mergeLatestMessages,
     syncNow,
     handleNewMessageSignal,
     $reset,

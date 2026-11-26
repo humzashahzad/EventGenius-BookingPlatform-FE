@@ -8,12 +8,12 @@
         </p>
       </div>
       <div class="page-header-actions">
-        <button type="button" class="btn-secondary" :disabled="loadingFirst || loadingMore" @click="loadNotifications(1)">
-          <AppIcon icon="refresh" :class="loadingFirst ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
+        <button type="button" class="btn-secondary" :disabled="loadingFirst" :aria-busy="refreshing" @click="refresh">
+          <AppIcon icon="refresh" :class="refreshing ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
           Refresh
         </button>
-        <button type="button" class="btn-primary" :disabled="notifStore.unreadCount === 0 || actionBusy" @click="markAll">
-          <AppIcon icon="checks" class="w-4 h-4" />
+        <button type="button" class="btn-primary" :disabled="notifStore.unreadCount === 0 || actions.isPending('all')" @click="markAll">
+          <AppIcon :icon="actions.isPending('all') ? 'loader' : 'checks'" :class="actions.isPending('all') ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />
           Mark all as read
         </button>
       </div>
@@ -22,7 +22,7 @@
     <div v-if="errorMsg" class="alert-danger" role="alert">
       <AppIcon icon="alert-circle" class="w-5 h-5 shrink-0" />
       <div class="flex-1"><p>{{ errorMsg }}</p></div>
-      <button type="button" class="btn-ghost btn-sm" @click="loadNotifications(1)">Retry</button>
+      <button type="button" class="btn-ghost btn-sm" @click="refresh">Retry</button>
     </div>
 
     <section class="card overflow-hidden" aria-labelledby="feed-title">
@@ -48,7 +48,7 @@
           <h3 class="bg-surface-sunken border-b border-line px-5 py-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
             {{ group.label }}
           </h3>
-          <ul class="divide-y divide-line">
+          <TransitionGroup tag="ul" name="notif-row" class="divide-y divide-line">
             <li
               v-for="n in group.items"
               :key="n.id"
@@ -79,7 +79,7 @@
                     <AppIcon v-if="n.type === 'review_request'" icon="star" class="w-4 h-4" />
                     {{ actionLabel(n) }}
                   </button>
-                  <button v-if="!n.is_read" type="button" class="btn-ghost btn-sm" :disabled="actionBusy" @click="markRead(n)">
+                  <button v-if="!n.is_read" type="button" class="btn-ghost btn-sm" :disabled="actions.isPending(n.id)" @click="markRead(n)">
                     <AppIcon icon="check" class="w-4 h-4" /> Mark as read
                   </button>
                 </div>
@@ -88,7 +88,7 @@
               <button
                 type="button"
                 class="btn-icon btn-icon-sm shrink-0 self-start"
-                :disabled="actionBusy"
+                :disabled="actions.isPending(`del-${n.id}`)"
                 :aria-label="`Delete notification: ${n.title}`"
                 title="Delete"
                 @click="removeNotif(n.id)"
@@ -96,7 +96,7 @@
                 <AppIcon icon="trash" class="w-4 h-4" />
               </button>
             </li>
-          </ul>
+          </TransitionGroup>
         </div>
 
         <!-- Empty -->
@@ -112,7 +112,7 @@
       </template>
 
       <div v-if="total > 0" class="card-footer">
-        <p class="text-sm text-ink-muted num">Showing {{ notifStore.notifications.length }} of {{ total }}</p>
+        <p class="text-sm text-ink-muted num">Showing {{ Math.min(notifStore.notifications.length, total) }} of {{ total }}</p>
         <button v-if="canLoadMore" type="button" class="btn-secondary btn-sm" :disabled="loadingMore" @click="loadMore">
           <span v-if="loadingMore" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
           {{ loadingMore ? 'Loading…' : 'Load more' }}
@@ -126,22 +126,27 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore, type AppNotification } from '@/stores/notifications'
+import { useRowActions } from '@/composables/useRowActions'
 import AppIcon from '@/components/ui/AppIcon.vue'
 
 const route = useRoute()
 const notifStore = useNotificationStore()
 
-const loadingFirst = ref(false)
+// Skeleton only before the list has ever loaded; after that the list stays on screen.
+const loadingFirst = computed(() => notifStore.loading && !notifStore.listLoaded)
 const loadingMore = ref(false)
-const actionBusy = ref(false)
+const refreshing = ref(false)
 const errorMsg = ref('')
 const filter = ref<'all' | 'unread' | 'read'>('all')
+// Per-item pending state: mark several as read (or delete several) in a row.
+const actions = useRowActions()
 
-const page = ref(1)
-const lastPage = ref(1)
-const total = ref(0)
+const page = computed(() => notifStore.page)
+const lastPage = computed(() => notifStore.lastPage)
+const total = computed(() => Math.max(notifStore.total, notifStore.notifications.length))
 
 const homeLink = computed(() => route.path.startsWith('/support') ? '/support/dashboard' : route.path.startsWith('/shop') ? '/shop/dashboard' : '/customer/dashboard')
 
@@ -217,75 +222,80 @@ const groups = computed(() => {
   return out
 })
 
-async function loadNotifications(targetPage = 1) {
+async function refresh() {
+  if (refreshing.value) return
   errorMsg.value = ''
-  if (targetPage === 1) loadingFirst.value = true
-  else loadingMore.value = true
-
+  refreshing.value = true
   try {
-    const result = await notifStore.fetchAll(targetPage)
-    if (result) {
-      page.value = Number(result.current_page ?? targetPage)
-      lastPage.value = Number(result.last_page ?? page.value)
-      total.value = Number(result.total ?? notifStore.notifications.length)
-    } else if (targetPage === 1) {
-      page.value = 1
-      lastPage.value = 1
-      total.value = notifStore.notifications.length
-    }
+    await notifStore.fetchAll(1)
   } catch {
-    errorMsg.value = 'Failed to load notifications. Please try again.'
+    // Keep what is on screen; only say something when there is nothing to show.
+    if (!notifStore.listLoaded) errorMsg.value = 'Failed to load notifications. Please try again.'
+    else toast.error('Could not refresh notifications.')
   } finally {
-    loadingFirst.value = false
-    loadingMore.value = false
+    refreshing.value = false
   }
 }
 
 async function loadMore() {
   if (!canLoadMore.value || loadingMore.value) return
-  await loadNotifications(page.value + 1)
+  loadingMore.value = true
+  try {
+    await notifStore.fetchAll(page.value + 1)
+  } catch {
+    toast.error('Could not load more notifications.')
+  } finally {
+    loadingMore.value = false
+  }
 }
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-async function openNotif(n: AppNotification) {
+function openNotif(n: AppNotification) {
   const to = notifStore.linkFor(n, authStore.user?.role)
-  if (!n.is_read) await markRead(n)
+  // Mark read in the background; don't hold up the navigation.
+  if (!n.is_read) void markRead(n)
   if (to) router.push(to)
 }
 
-async function markRead(notification: AppNotification) {
-  if (notification.is_read) return
-  actionBusy.value = true
-  try {
-    await notifStore.markRead(notification.id)
-  } finally {
-    actionBusy.value = false
-  }
+function markRead(notification: AppNotification) {
+  if (notification.is_read) return Promise.resolve(false)
+  return actions.run(notification.id, {
+    request: () => notifStore.markRead(notification.id),
+    success: false,
+    error: 'Could not mark this notification as read.',
+  })
 }
 
-async function markAll() {
+function markAll() {
   if (!notifStore.unreadCount) return
-  actionBusy.value = true
-  try {
-    await notifStore.markAllRead()
-  } finally {
-    actionBusy.value = false
-  }
+  void actions.run('all', {
+    request: () => notifStore.markAllRead(),
+    success: 'All notifications marked as read',
+    error: 'Could not mark all as read.',
+  })
 }
 
-async function removeNotif(id: number) {
-  actionBusy.value = true
-  try {
-    await notifStore.remove(id)
-    total.value = Math.max(0, total.value - 1)
-  } finally {
-    actionBusy.value = false
-  }
+function removeNotif(id: number) {
+  void actions.run(`del-${id}`, {
+    request: () => notifStore.remove(id),
+    success: 'Notification deleted',
+    error: 'Could not delete this notification.',
+  })
 }
 
 onMounted(() => {
-  void loadNotifications(1)
+  // First visit: shows the skeleton. Coming back: the list is already there and refreshes quietly.
+  void refresh()
 })
 </script>
+
+<style scoped>
+.notif-row-leave-active { transition: opacity 0.18s ease, transform 0.18s ease; }
+.notif-row-leave-to { opacity: 0; transform: translateX(12px); }
+.notif-row-move { transition: transform 0.2s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .notif-row-leave-active, .notif-row-move { transition: none; }
+}
+</style>

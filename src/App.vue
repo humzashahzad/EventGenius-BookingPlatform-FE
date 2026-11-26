@@ -67,10 +67,10 @@
             class="flex-1 min-h-0"
             :class="isMessagesRoute ? 'overflow-hidden' : 'px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8'"
           >
-            <div v-if="!isMessagesRoute" class="mx-auto w-full max-w-[1440px]">
+            <!-- One RouterView for every page so the shell never remounts between pages. -->
+            <div :class="isMessagesRoute ? 'h-full' : 'mx-auto w-full max-w-[1440px]'">
               <RouterView />
             </div>
-            <RouterView v-else />
           </main>
         </div>
       </div>
@@ -80,8 +80,24 @@
       <RouterView />
     </template>
 
-    <Toaster position="top-right" rich-colors close-button :duration="3200" :theme="toastTheme" />
+    <ChatWidget v-if="authStore.isLoggedIn" />
   </div>
+
+  <!-- Thin progress bar while a page takes a moment to open (no full-screen loader). -->
+  <div v-if="navigating" class="eg-nav-progress" role="progressbar" aria-label="Opening page" aria-hidden="true" />
+
+  <!-- The one toast host for the whole app. -->
+  <Toaster
+    position="top-right"
+    rich-colors
+    close-button
+    :duration="4000"
+    :visible-toasts="4"
+    :gap="10"
+    :offset="16"
+    :mobile-offset="12"
+    :theme="toastTheme"
+  />
 </template>
 
 <script setup lang="ts">
@@ -92,6 +108,8 @@ import { Toaster } from 'vue-sonner'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notifications'
+import { setPageCacheScope } from '@/composables/usePageCache'
+import { useRouter } from 'vue-router'
 import { soundService } from '@/services/soundService'
 import PublicNavbar from '@/components/layout/PublicNavbar.vue'
 import CustomerSidebar from '@/components/layout/CustomerSidebar.vue'
@@ -99,8 +117,10 @@ import Footer from '@/components/layout/Footer.vue'
 import TopBar from '@/components/layout/TopBar.vue'
 import StoreSidebar from '@/components/layout/StoreSidebar.vue'
 import AdminSidebar from '@/components/layout/AdminSidebar.vue'
+import ChatWidget from '@/components/chat/ChatWidget.vue'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
 const chatStore = useChatStore()
@@ -168,10 +188,13 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   toggleSidebar()
 }
 
+// Only a different signed-in account re-runs this (saving the profile replaces the user
+// object but must not reconnect sockets or refetch everything).
 watch(
-  () => authStore.user,
-  async (user) => {
-    if (user && authStore.token) {
+  () => (authStore.user && authStore.token ? authStore.user.id : null),
+  async (userId) => {
+    setPageCacheScope(userId)
+    if (userId) {
       // System notification permission is only requested from a click (messages page).
       chatStore.connect()
       await Promise.all([
@@ -187,6 +210,22 @@ watch(
   { immediate: true }
 )
 
+// Route changes keep the current page on screen until the next one is ready; a thin bar
+// shows only if that takes longer than a moment.
+const navigating = ref(false)
+let navTimer: ReturnType<typeof setTimeout> | null = null
+const stopNavBefore = router.beforeEach(() => {
+  if (navTimer) clearTimeout(navTimer)
+  navTimer = setTimeout(() => { navigating.value = true }, 180)
+})
+const endNav = () => {
+  if (navTimer) clearTimeout(navTimer)
+  navTimer = null
+  navigating.value = false
+}
+const stopNavAfter = router.afterEach(endNav)
+const stopNavError = router.onError(endNav)
+
 onMounted(() => {
   soundService.installUnlock()
   window.addEventListener('keydown', handleGlobalKeydown)
@@ -196,6 +235,10 @@ onMounted(() => {
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 })
 onBeforeUnmount(() => {
+  stopNavBefore()
+  stopNavAfter()
+  stopNavError()
+  endNav()
   window.removeEventListener('keydown', handleGlobalKeydown)
   themeObserver?.disconnect()
 })
@@ -203,6 +246,17 @@ onBeforeUnmount(() => {
 
 <style>
 .eg-loading-bar { animation: eg-loading 1.1s ease-in-out infinite; }
+.eg-nav-progress {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 9999; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(var(--c-brand-strong, 0 0 0) / 1), transparent);
+  background-size: 40% 100%; background-repeat: no-repeat;
+  animation: eg-nav 0.9s ease-in-out infinite;
+}
+@keyframes eg-nav {
+  0% { background-position: -40% 0; }
+  100% { background-position: 140% 0; }
+}
+@media (prefers-reduced-motion: reduce) { .eg-nav-progress { animation: none; background-position: 50% 0; } }
 @keyframes eg-loading {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(300%); }

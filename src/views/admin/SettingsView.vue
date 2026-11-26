@@ -59,6 +59,7 @@
 <script setup lang="ts">
 import { FormField, TextInput, PasswordInput, FormActions } from '@/components/forms'
 import { ref, reactive, computed, onMounted } from 'vue'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import { useAuthStore } from '@/stores/auth'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -89,16 +90,25 @@ function onAvatarUpdate() {
   // Auth store updated by AvatarUpload
 }
 
+// Show the signed-in account straight away (no skeleton), then sync with the server quietly.
+const prefilled = !!authStore.user
+if (prefilled) {
+  form.name = authStore.user?.name || ''
+  form.email = authStore.user?.email || ''
+  loading.value = false
+}
+
 async function load() {
-  loading.value = true
+  const start = { name: form.name, email: form.email }
   try {
     const { data } = await api.get('/admin/profile')
     const user = data.data
     authStore.user = { ...authStore.user!, ...user }
-    form.name = user.name || ''
-    form.email = user.email || ''
+    // Don't overwrite anything typed while the profile was loading.
+    if (form.name === start.name) form.name = user.name || ''
+    if (form.email === start.email) form.email = user.email || ''
   } catch {
-    errorMsg.value = 'Failed to load profile.'
+    if (!prefilled) errorMsg.value = 'Failed to load profile.'
   } finally {
     loading.value = false
   }
@@ -117,13 +127,15 @@ async function save() {
     }
     const { data } = await api.put('/admin/profile', payload)
     authStore.user = { ...authStore.user!, ...data.data }
-    successMsg.value = 'Settings saved!'
+    successMsg.value = 'Settings saved'
+    toast.success('Settings saved')
     form.password = ''
     form.password_confirmation = ''
     form.current_password = ''
     setTimeout(() => (successMsg.value = ''), 3500)
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || 'Save failed.'
+    toast.error(errorMsg.value)
   } finally {
     saving.value = false
   }

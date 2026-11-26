@@ -10,7 +10,7 @@
     </div>
 
     <div class="card-body space-y-3">
-      <div v-if="loading" class="py-4 flex justify-center"><AppIcon icon="loader" class="w-6 h-6 animate-spin text-ink-muted" /></div>
+      <div v-if="loading" class="space-y-2" aria-busy="true"><div v-for="i in 2" :key="i" class="skeleton h-11 w-full" /></div>
 
       <template v-else>
         <p v-if="!amenities.length" class="text-sm text-ink-muted">No amenities yet.</p>
@@ -20,17 +20,18 @@
             <TextInput v-model="edit.name" class="flex-1 !w-auto min-w-[10rem]" :maxlength="255" placeholder="Name" aria-label="Amenity name" size="sm" />
             <SwitchInput v-model="edit.is_paid" label="Paid" size="sm" class="!py-0 items-center" />
             <CurrencyInput v-if="edit.is_paid" v-model="edit.price" :decimals="2" class="!w-36" placeholder="Price" aria-label="Price (PKR)" size="sm" />
-            <button type="button" :disabled="busy" class="btn-primary btn-sm" @click="saveEdit(a)">Save</button>
+            <button type="button" :disabled="!edit.name.trim()" class="btn-primary btn-sm" @click="saveEdit(a)">Save</button>
             <button type="button" class="btn-ghost btn-sm" @click="editingId = null">Cancel</button>
           </template>
           <template v-else>
             <AppIcon icon="circle-check" class="w-4 h-4 text-brand shrink-0" />
             <span class="flex-1 min-w-0 text-sm font-medium text-ink">{{ a.name }}</span>
+            <AppIcon v-if="actions.isPending(a.id)" icon="loader" class="w-4 h-4 animate-spin text-ink-muted shrink-0" aria-hidden="true" />
             <span :class="a.is_paid ? 'badge-warning' : 'badge-success'">{{ a.is_paid ? `PKR ${Number(a.price || 0).toLocaleString()}` : 'Free' }}</span>
-            <button type="button" class="btn-icon btn-icon-sm" :aria-label="`Edit ${a.name}`" title="Edit" @click="startEdit(a)">
+            <button type="button" class="btn-icon btn-icon-sm" :disabled="actions.isPending(a.id)" :aria-label="`Edit ${a.name}`" title="Edit" @click="startEdit(a)">
               <AppIcon icon="edit" class="w-4 h-4" />
             </button>
-            <button type="button" class="btn-icon btn-icon-sm hover:!text-danger-text" :disabled="busy" :aria-label="`Delete ${a.name}`" title="Delete" @click="remove(a)">
+            <button type="button" class="btn-icon btn-icon-sm hover:!text-danger-text" :disabled="actions.isPending(a.id)" :aria-label="`Delete ${a.name}`" title="Delete" @click="remove(a)">
               <AppIcon icon="trash" class="w-4 h-4" />
             </button>
           </template>
@@ -45,8 +46,8 @@
           <FormField v-if="draft.is_paid" label="Price" class="w-40">
             <CurrencyInput v-model="draft.price" :decimals="2" required />
           </FormField>
-          <button type="submit" :disabled="busy || !draft.name.trim()" class="btn-primary">
-            <AppIcon icon="plus" class="w-4 h-4" /> Add
+          <button type="submit" :disabled="busy || !draft.name.trim()" class="btn-primary" :aria-busy="busy">
+            <AppIcon :icon="busy ? 'loader' : 'plus'" :class="busy ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" /> Add
           </button>
         </form>
         <p v-if="errorMsg" class="form-error">{{ errorMsg }}</p>
@@ -57,7 +58,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
+import { useRowActions } from '@/composables/useRowActions'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { FormField, TextInput, SwitchInput, CurrencyInput } from '@/components/forms'
 
@@ -73,20 +76,29 @@ const editingId = ref<number | null>(null)
 const draft = reactive({ name: '', is_paid: false, price: null as number | null })
 const edit = reactive({ name: '', is_paid: false, price: null as number | null })
 
+// Per-amenity pending state: edit or remove one after another without waiting.
+const actions = useRowActions()
+
+function apiMessage(e: any, fallback: string): string {
+  const errs = e?.response?.data?.errors
+  return errs ? (Object.values(errs)[0] as string[])[0] : (e?.response?.data?.message || fallback)
+}
 function apiError(e: any, fallback: string) {
-  const errs = e.response?.data?.errors
-  errorMsg.value = errs ? (Object.values(errs)[0] as string[])[0] : (e.response?.data?.message || fallback)
+  errorMsg.value = apiMessage(e, fallback)
 }
 
 function payload(src: { name: string; is_paid: boolean; price: number | null }) {
   return { name: src.name.trim(), is_paid: src.is_paid, price: src.is_paid ? src.price : null }
 }
 
+/** First load shows placeholders; later loads (venue change) keep the list on screen. */
+let loadedOnce = false
 async function load() {
-  loading.value = true
+  if (!loadedOnce) loading.value = true
   try {
     const { data } = await api.get(`/store/venues/${props.venueId}/amenities`)
     amenities.value = data.data || []
+    loadedOnce = true
   } catch (e) {
     apiError(e, 'Failed to load amenities.')
   } finally {
@@ -95,12 +107,17 @@ async function load() {
 }
 
 async function add() {
+  if (busy.value) return
   busy.value = true; errorMsg.value = ''
   try {
     const { data } = await api.post(`/store/venues/${props.venueId}/amenities`, payload(draft))
     amenities.value.push(data.data)
     Object.assign(draft, { name: '', is_paid: false, price: null })
-  } catch (e) { apiError(e, 'Failed to add amenity.') } finally { busy.value = false }
+    toast.success(`${data.data?.name || 'Amenity'} added.`)
+  } catch (e) {
+    apiError(e, 'Failed to add amenity.')
+    toast.error(errorMsg.value)
+  } finally { busy.value = false }
 }
 
 function startEdit(a: Amenity) {
@@ -108,22 +125,42 @@ function startEdit(a: Amenity) {
   Object.assign(edit, { name: a.name, is_paid: a.is_paid, price: a.price })
 }
 
-async function saveEdit(a: Amenity) {
-  busy.value = true; errorMsg.value = ''
-  try {
-    const { data } = await api.put(`/store/venues/${props.venueId}/amenities/${a.id}`, payload(edit))
-    Object.assign(a, data.data)
-    editingId.value = null
-  } catch (e) { apiError(e, 'Failed to update amenity.') } finally { busy.value = false }
+function saveEdit(a: Amenity) {
+  const body = payload(edit)
+  const prev = { name: a.name, is_paid: a.is_paid, price: a.price }
+  errorMsg.value = ''
+  // Show the change straight away; put it back (and reopen the editor) if the server refuses.
+  editingId.value = null
+  actions.run(a.id, {
+    apply: () => Object.assign(a, body),
+    request: () => api.put(`/store/venues/${props.venueId}/amenities/${a.id}`, body),
+    onSuccess: (res: any) => { if (res?.data?.data) Object.assign(a, res.data.data) },
+    rollback: () => {
+      Object.assign(a, prev)
+      editingId.value = a.id
+      Object.assign(edit, body)
+    },
+    success: 'Amenity updated.',
+    error: 'Failed to update amenity.',
+  }, 'edit')
 }
 
-async function remove(a: Amenity) {
+function remove(a: Amenity) {
   if (!confirm(`Remove "${a.name}"?`)) return
-  busy.value = true; errorMsg.value = ''
-  try {
-    await api.delete(`/store/venues/${props.venueId}/amenities/${a.id}`)
-    amenities.value = amenities.value.filter(x => x.id !== a.id)
-  } catch (e) { apiError(e, 'Failed to remove amenity.') } finally { busy.value = false }
+  errorMsg.value = ''
+  let index = -1
+  actions.run(a.id, {
+    apply: () => {
+      index = amenities.value.findIndex(x => x.id === a.id)
+      if (index !== -1) amenities.value.splice(index, 1)
+    },
+    request: () => api.delete(`/store/venues/${props.venueId}/amenities/${a.id}`),
+    rollback: () => {
+      if (!amenities.value.some(x => x.id === a.id)) amenities.value.splice(Math.max(0, Math.min(index, amenities.value.length)), 0, a)
+    },
+    success: `${a.name} removed.`,
+    error: 'Failed to remove amenity.',
+  }, 'delete')
 }
 
 watch(() => props.venueId, load)
