@@ -80,6 +80,7 @@
       <RouterView />
     </template>
 
+    <ChatWidget v-if="authStore.isLoggedIn" />
   </div>
 
   <!-- Thin progress bar while a page takes a moment to open (no full-screen loader). -->
@@ -116,6 +117,7 @@ import Footer from '@/components/layout/Footer.vue'
 import TopBar from '@/components/layout/TopBar.vue'
 import StoreSidebar from '@/components/layout/StoreSidebar.vue'
 import AdminSidebar from '@/components/layout/AdminSidebar.vue'
+import ChatWidget from '@/components/chat/ChatWidget.vue'
 
 const route = useRoute()
 const router = useRouter()
