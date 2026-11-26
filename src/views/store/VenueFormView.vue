@@ -240,6 +240,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
+import { toast } from 'vue-sonner'
 import { useCategoriesStore } from '@/stores/categories'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import AmenityEditor from '@/components/amenities/AmenityEditor.vue'
@@ -461,22 +462,31 @@ async function load() {
 }
 
 async function save() {
+  if (saving.value) return
   saving.value     = true
   successMsg.value = ''
   errorMsg.value   = ''
   try {
     if (isEdit.value) {
-      await api.put(`/store/venues/${route.params.id}`, form)
+      // The form stays on screen; only the save button shows progress.
+      const sent = JSON.stringify(form)
+      const { data } = await api.put(`/store/venues/${route.params.id}`, form)
+      // Take the saved values from the server, unless the user kept typing meanwhile.
+      if (data?.data && JSON.stringify(form) === sent) Object.assign(form, data.data)
       successMsg.value = 'Venue updated successfully!'
       takeSnapshot()
+      toast.success('Venue saved.')
       setTimeout(() => (successMsg.value = ''), 3500)
     } else {
       const { data } = await api.post('/store/venues', form)
       successMsg.value = 'Venue created! Redirecting to gallery...'
+      toast.success('Venue created — now add some photos.')
+      takeSnapshot()
       setTimeout(() => router.push(`/shop/venues/${data.data.id}/gallery`), 1500)
     }
   } catch (e: any) {
     errorMsg.value = extractErrorMessage(e)
+    toast.error(errorMsg.value)
     setTimeout(() => (errorMsg.value = ''), 4000)
   } finally {
     saving.value = false

@@ -191,21 +191,50 @@ const needsReply = computed<NeedsReplyItem[]>(() => {
     .slice(0, 8)
 })
 
+// Quiet reload: keeps the panel (and its layout) on screen; a failed reload keeps the
+// last good data instead of hiding the panel.
+let seq = 0
 async function load() {
+  const id = ++seq
   try {
     const { data } = await api.get('/store/reviews/insights')
+    if (id !== seq) return
     const d = data?.data
     const hasData = d && Array.isArray(d.venues) && d.venues.length &&
       ((d.overall?.analysed_count ?? 0) > 0 || d.venues.some((v: any) => (v.summary?.analysed_count ?? 0) > 0 || v.needs_reply?.length))
     insights.value = hasData ? d : null
     state.value = hasData ? 'ready' : 'hidden'
   } catch {
+    if (id !== seq || state.value === 'ready') return
     insights.value = null
     state.value = 'hidden'
   }
 }
 
-defineExpose({ reload: load })
+/** Optimistically drop a review from "needs a reply"; returns an undo function. */
+function markReplied(reviewId: number | string): () => void {
+  const d = insights.value
+  if (!d) return () => {}
+  const removed: { venue: any; index: number; item: any }[] = []
+  for (const v of d.venues || []) {
+    const list = v.needs_reply || []
+    const index = list.findIndex((r: any) => String(r.review_id) === String(reviewId))
+    if (index !== -1) removed.push({ venue: v, index, item: list[index] })
+  }
+  if (!removed.length) return () => {}
+  for (const r of removed) r.venue.needs_reply = r.venue.needs_reply.filter((x: any) => x !== r.item)
+  insights.value = { ...d }
+  return () => {
+    for (const r of removed) {
+      const list = [...(r.venue.needs_reply || [])]
+      if (!list.includes(r.item)) list.splice(Math.min(r.index, list.length), 0, r.item)
+      r.venue.needs_reply = list
+    }
+    if (insights.value) insights.value = { ...insights.value }
+  }
+}
+
+defineExpose({ reload: load, markReplied })
 onMounted(load)
 </script>
 

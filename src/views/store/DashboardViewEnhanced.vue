@@ -24,7 +24,7 @@
         <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
         <p class="empty-state-title">Couldn't load your dashboard</p>
         <p class="empty-state-desc">{{ loadError }}</p>
-        <div class="empty-state-actions"><button class="btn-primary" @click="load">Try again</button></div>
+        <div class="empty-state-actions"><button class="btn-primary" @click="retry">Try again</button></div>
       </div>
     </div>
 
@@ -150,11 +150,20 @@
                     <p class="text-sm font-medium text-ink truncate group-hover:underline">{{ b.event_name || b.client?.name }}</p>
                     <p class="text-xs text-ink-muted truncate">{{ b.venue?.name }} · {{ formatDate(b.event_date) }} · <span class="num">{{ compactPKR(b.total_amount) }}</span></p>
                   </RouterLink>
-                  <div class="flex gap-2 shrink-0">
-                    <button class="btn-primary btn-sm" :disabled="acting === b.id" @click="doConfirm(b)">
-                      <AppIcon :icon="acting === b.id ? 'loader' : 'check'" :class="acting === b.id ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Accept
-                    </button>
-                    <button class="btn-secondary btn-sm" :disabled="acting === b.id" @click="openReject(b)">Reject</button>
+                  <!-- Fixed-height action slot so the row never jumps when it is answered. -->
+                  <div class="flex gap-2 shrink-0 min-h-[2rem] items-center justify-end sm:min-w-[11rem]">
+                    <template v-if="b.status === 'pending'">
+                      <button class="btn-primary btn-sm" :disabled="actions.isPending(b.id)" :aria-busy="actions.isPending(b.id, 'confirm')" @click="doConfirm(b)">
+                        <AppIcon :icon="actions.isPending(b.id, 'confirm') ? 'loader' : 'check'" :class="actions.isPending(b.id, 'confirm') ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Accept
+                      </button>
+                      <button class="btn-secondary btn-sm" :disabled="actions.isPending(b.id)" @click="openReject(b)">Reject</button>
+                    </template>
+                    <template v-else>
+                      <span :class="statusBadgeClass(b.status)">
+                        <AppIcon v-if="actions.isPending(b.id)" icon="loader" class="w-3 h-3 animate-spin" />{{ statusLabel(b.status) }}
+                      </span>
+                      <RouterLink :to="`/shop/bookings/${b.id}`" class="btn-ghost btn-sm">View</RouterLink>
+                    </template>
                   </div>
                 </li>
               </ul>
@@ -319,7 +328,7 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showReject = false">Cancel</button>
-          <button class="btn-danger" :disabled="!!acting" @click="submitReject">Reject booking</button>
+          <button class="btn-danger" @click="submitReject">Reject booking</button>
         </div>
       </template>
     </VuexyModal>
@@ -330,10 +339,12 @@
 import { FormField, TextareaInput } from '@/components/forms'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import { formatPKR, formatDate } from '@/lib/format'
 import { statusBadgeClass, statusLabel } from '@/lib/status'
+import { useSilentList, useSilentResource } from '@/composables/useSilentList'
+import { useRowActions } from '@/composables/useRowActions'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import VuexyModal from '@/components/ui/VuexyModal.vue'
 import KpiTile from '@/components/dashboard/KpiTile.vue'
@@ -342,23 +353,45 @@ import RankBars from '@/components/dashboard/RankBars.vue'
 import { compactNumber, compactPKR, pctDelta, dayBuckets, monthBuckets, fillBuckets, sumBetween, initials } from '@/components/dashboard/metrics'
 
 const router = useRouter()
-const loading = ref(true)
-const loadError = ref('')
-const data = ref<any>(null)
-const bookings = ref<any[]>([])
-const bookingsLoading = ref(true)
-const venues = ref<any[]>([])
-const unanswered = ref<{ total: number; items: any[] }>({ total: 0, items: [] })
+
+// Each block loads once with a skeleton, then refreshes quietly in place.
+const dash = useSilentResource<any>(async () => (await api.get('/store/dashboard')).data.data)
+const data = dash.data
+const loading = dash.loading
+const loadError = dash.error
+const bookingsList = useSilentList<any>(async () => {
+  const { data: res } = await api.get('/store/bookings', { params: { per_page: 1000 } })
+  return res.data?.data ?? []
+})
+const bookings = bookingsList.items
+const bookingsLoading = bookingsList.loading
+const venuesList = useSilentList<any>(async () => {
+  const { data: res } = await api.get('/store/venues')
+  const v = res.data
+  return Array.isArray(v) ? v : (v?.data ?? [])
+})
+const venues = venuesList.items
+const unansweredRes = useSilentResource<{ total: number; items: any[] }>(async () => {
+  const { data: res } = await api.get('/store/reviews', { params: { replied: 'no', per_page: 5 } })
+  return { total: res.data?.total ?? 0, items: res.data?.data ?? [] }
+})
+const unanswered = computed(() => unansweredRes.data.value ?? { total: 0, items: [] })
 
 const metric = ref<'revenue' | 'bookings'>('revenue')
 const range = ref<'30d' | '12m'>('12m')
 const actionTab = ref<'requests' | 'unpaid' | 'reviews'>('requests')
 
+// Requests answered from this screen stay in place (showing their new status) so the
+// next row doesn't jump under the pointer while people work down the list.
+const answered = ref(new Set<number>())
+
 const stats = computed(() => data.value?.stats ?? {})
 const pendingList = computed(() => bookings.value
-  .filter(b => b.status === 'pending')
+  .filter(b => b.status === 'pending' || answered.value.has(b.id))
   .sort((a, b) => String(a.event_date).localeCompare(String(b.event_date))))
-const pendingCount = computed(() => bookingsLoading.value ? (stats.value.pending_bookings ?? 0) : pendingList.value.length)
+const pendingCount = computed(() => bookingsLoading.value
+  ? (stats.value.pending_bookings ?? 0)
+  : bookings.value.filter(b => b.status === 'pending').length)
 const unpaid = computed(() => bookings.value
   .filter(b => b.status === 'confirmed' && b.payment_status !== 'paid' && b.payment_status !== 'refunded')
   .sort((a, b) => String(a.event_date).localeCompare(String(b.event_date))))
@@ -417,65 +450,52 @@ const chartHasData = computed(() => chartData.value.some(d => d.value > 0))
 
 const venueBookings = computed(() => (data.value?.charts?.bookings_by_venue ?? []).map((d: any) => ({ label: d.label, value: Number(d.value) || 0 })))
 
-async function loadBookings() {
-  bookingsLoading.value = true
-  try {
-    const { data: res } = await api.get('/store/bookings', { params: { per_page: 1000 } })
-    bookings.value = res.data?.data ?? []
-  } catch {
-    bookings.value = []
-  } finally {
-    bookingsLoading.value = false
-  }
+function refreshAll() {
+  dash.refresh()
+  bookingsList.refresh()
+  venuesList.refresh()
+  unansweredRes.refresh()
 }
 
 async function load() {
-  loading.value = true
-  loadError.value = ''
-  try {
-    const { data: res } = await api.get('/store/dashboard')
-    data.value = res.data
-  } catch (e: any) {
-    loadError.value = e.response?.data?.message || 'Please check your connection and try again.'
-  } finally {
-    loading.value = false
-  }
-  if (!data.value?.has_store) { bookingsLoading.value = false; return }
-  loadBookings()
-  api.get('/store/venues').then(({ data: res }) => {
-    const v = res.data
-    venues.value = Array.isArray(v) ? v : (v?.data ?? [])
-  }).catch(() => {})
-  api.get('/store/reviews', { params: { replied: 'no', per_page: 5 } }).then(({ data: res }) => {
-    unanswered.value = { total: res.data?.total ?? 0, items: res.data?.data ?? [] }
-  }).catch(() => {})
+  await dash.load()
+  if (!data.value?.has_store) return
+  bookingsList.load()
+  venuesList.load()
+  unansweredRes.load()
 }
 
+function retry() {
+  load()
+}
+
+// New requests, payments and reviews from customers appear without a reload.
+useLiveRefresh(['booking', 'payment', 'review'], () => { if (data.value?.has_store) refreshAll() })
+
 // ── Accept / reject (same calls as the bookings page) ────────────────────
-const acting = ref<number | null>(null)
+// Per-row pending state: owners can accept one request after another without waiting.
+const actions = useRowActions()
 const showReject = ref(false)
 const rejectTarget = ref<any>(null)
 const rejectReason = ref('')
 const rejectError = ref('')
 
-async function refreshAfterAction() {
-  await Promise.all([
-    loadBookings(),
-    api.get('/store/dashboard').then(({ data: res }) => { data.value = res.data }).catch(() => {}),
-  ])
+function quietSync() {
+  bookingsList.refresh()
+  dash.refresh()
 }
 
-async function doConfirm(b: any) {
-  acting.value = b.id
-  try {
-    await api.patch(`/store/bookings/${b.id}/confirm`)
-    toast.success('Booking confirmed — the customer can now pay.')
-    await refreshAfterAction()
-  } catch (e: any) {
-    toast.error(e.response?.data?.message || 'Could not confirm this booking.')
-  } finally {
-    acting.value = null
-  }
+function doConfirm(b: any) {
+  const prev = { status: b.status, confirmed_at: b.confirmed_at }
+  answered.value.add(b.id)
+  actions.run(b.id, {
+    apply: () => { b.status = 'confirmed'; b.confirmed_at = new Date().toISOString() },
+    request: () => api.patch(`/store/bookings/${b.id}/confirm`),
+    rollback: () => { Object.assign(b, prev); answered.value.delete(b.id) },
+    success: `${b.event_name || 'Booking'} confirmed — the customer can now pay.`,
+    error: 'Could not confirm this booking.',
+    after: quietSync,
+  }, 'confirm')
 }
 
 function openReject(b: any) {
@@ -485,19 +505,23 @@ function openReject(b: any) {
   showReject.value = true
 }
 
-async function submitReject() {
+function submitReject() {
   if (!rejectReason.value.trim()) { rejectError.value = 'Please give a reason.'; return }
-  acting.value = rejectTarget.value.id
-  try {
-    await api.patch(`/store/bookings/${rejectTarget.value.id}/reject`, { reason: rejectReason.value.trim() })
-    toast.success('Booking rejected.')
-    showReject.value = false
-    await refreshAfterAction()
-  } catch (e: any) {
-    rejectError.value = e.response?.data?.message || 'Could not reject this booking.'
-  } finally {
-    acting.value = null
-  }
+  const b = rejectTarget.value
+  const reason = rejectReason.value.trim()
+  const prev = { status: b.status, rejection_reason: b.rejection_reason }
+  // Close straight away; the row updates instantly and rolls back if the server refuses.
+  showReject.value = false
+  rejectTarget.value = null
+  answered.value.add(b.id)
+  actions.run(b.id, {
+    apply: () => { b.status = 'rejected'; b.rejection_reason = reason },
+    request: () => api.patch(`/store/bookings/${b.id}/reject`, { reason }),
+    rollback: () => { Object.assign(b, prev); answered.value.delete(b.id) },
+    success: 'Booking rejected.',
+    error: 'Could not reject this booking.',
+    after: quietSync,
+  }, 'reject')
 }
 
 onMounted(load)
