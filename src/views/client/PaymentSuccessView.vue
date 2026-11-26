@@ -57,6 +57,8 @@
         </dl>
       </div>
 
+      <div v-if="state === 'paid' && bookingId" class="px-6 pb-6"><InvoiceSummaryCard :booking-id="bookingId" /></div>
+
       <!-- Actions -->
       <div class="card-footer flex-wrap !justify-center">
         <button v-if="state === 'processing' && timedOut" type="button" class="btn-secondary" @click="restartPolling"><AppIcon icon="refresh" class="w-4 h-4" />Check again</button>
@@ -75,6 +77,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import AppIcon from '@/components/ui/AppIcon.vue'
+import InvoiceSummaryCard from '@/components/invoice/InvoiceSummaryCard.vue'
 
 type PayState = 'processing' | 'paid' | 'cancelled' | 'failed' | 'refunded' | 'unpaid' | 'error'
 

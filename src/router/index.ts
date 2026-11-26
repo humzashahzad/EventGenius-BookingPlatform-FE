@@ -117,6 +117,12 @@ const router = createRouter({
       meta: { layout: 'customer', requiresAuth: true, role: 'client' },
     },
     {
+      path: '/customer/bookings/:id/invoice',
+      name: 'customer-booking-invoice',
+      component: () => import('@/views/client/InvoiceView.vue'),
+      meta: { layout: 'customer', requiresAuth: true, role: 'client' },
+    },
+    {
       path: '/customer/profile',
       name: 'customer-profile',
       component: () => import('@/views/client/ProfileView.vue'),
