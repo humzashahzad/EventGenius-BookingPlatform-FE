@@ -8,6 +8,25 @@ import api, { setSocketIdProvider } from '@/lib/axios'
 let echoInstance: Echo<'reverb'> | null = null
 type StateListener = (current: string, previous: string) => void
 const stateListeners = new Set<StateListener>()
+type InstanceListener = (echo: Echo<'reverb'> | null) => void
+const instanceListeners = new Set<InstanceListener>()
+
+function notifyInstance(echo: Echo<'reverb'> | null) {
+  instanceListeners.forEach(fn => {
+    try { fn(echo) } catch (error) { console.error(error) }
+  })
+}
+
+/** Called with the new Echo instance when one is created, and with null when it is torn down. */
+export function onEchoInstance(fn: InstanceListener): () => void {
+  instanceListeners.add(fn)
+  return () => instanceListeners.delete(fn)
+}
+
+/** The current Echo instance, without creating one. */
+export function currentEcho(): Echo<'reverb'> | null {
+  return echoInstance
+}
 
 function resolveWsHost(): string {
   const browserHost = window.location.hostname || 'localhost'
@@ -66,6 +85,7 @@ export function getEcho(): Echo<'reverb'> {
   // Lets the API skip echoing our own actions back to this socket (Laravel's toOthers()).
   setSocketIdProvider(() => echoInstance?.socketId() || null)
 
+  notifyInstance(echoInstance)
   return echoInstance
 }
 
@@ -99,6 +119,7 @@ export function disconnectEcho(): void {
   if (echoInstance) {
     echoInstance.disconnect()
     echoInstance = null
+    notifyInstance(null)
   }
   setSocketIdProvider(null)
 }

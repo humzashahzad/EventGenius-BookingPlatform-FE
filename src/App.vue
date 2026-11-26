@@ -109,6 +109,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notifications'
 import { setPageCacheScope } from '@/composables/usePageCache'
+import { setLiveUser } from '@/lib/liveData'
 import { useRouter } from 'vue-router'
 import { soundService } from '@/services/soundService'
 import PublicNavbar from '@/components/layout/PublicNavbar.vue'
@@ -194,6 +195,8 @@ watch(
   () => (authStore.user && authStore.token ? authStore.user.id : null),
   async (userId) => {
     setPageCacheScope(userId)
+    // Before chat/notifications open the socket, so their instance binds our channels too.
+    setLiveUser(userId && authStore.user ? { id: authStore.user.id, role: authStore.user.role } : null)
     if (userId) {
       // System notification permission is only requested from a click (messages page).
       chatStore.connect()

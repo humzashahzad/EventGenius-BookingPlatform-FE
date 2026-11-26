@@ -46,6 +46,8 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import api from '@/lib/axios'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { isAboutVenue } from '@/lib/liveData'
 import { getStorageUrl } from '@/lib/storageUrl'
 import StarRating from '@/components/reviews/StarRating.vue'
 
@@ -72,6 +74,25 @@ async function fetchPage(p: number) {
 }
 
 function loadMore() { fetchPage(page.value + 1) }
+
+// A new review or an owner reply on this venue: reload the pages already shown, quietly.
+let refreshSeq = 0
+async function refreshQuietly() {
+  if (loading.value) return
+  const id = ++refreshSeq
+  const shown = Math.max(1, page.value)
+  try {
+    const { data } = await api.get(`/venues/${props.venueId}/reviews`, { params: { page: 1, per_page: 5 * shown } })
+    if (id !== refreshSeq || loading.value) return
+    const pg = data.data
+    reviews.value = pg.data
+    // Keep paging in 5s: work out how many 5-review pages that covers.
+    const total = Number(pg.total ?? pg.data.length)
+    page.value = Math.max(1, Math.ceil(pg.data.length / 5))
+    lastPage.value = Math.max(page.value, Math.ceil(total / 5))
+  } catch { /* keep what is shown */ }
+}
+useLiveRefresh(['review'], () => { void refreshQuietly() }, { debounceMs: 500, match: (_t, d) => isAboutVenue(d, props.venueId) })
 
 function formatDate(d: string) {
   return d ? new Date(d).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : ''

@@ -267,6 +267,8 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { cacheGet, cacheSet } from '@/composables/usePageCache'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { useLiveChannel } from '@/lib/liveData'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import SmartSearchBox from '@/components/search/SmartSearchBox.vue'
 import VenueCard from '@/components/venue/VenueCard.vue'
@@ -330,6 +332,10 @@ async function load() {
 }
 
 onMounted(load)
+
+// Catalogue changes (new/approved venues, ratings, stores, categories) refresh the page quietly.
+useLiveChannel('catalog')
+useLiveRefresh(['venue', 'store', 'category'], () => { if (!loading.value) void load() }, 500)
 
 const withPhoto = computed(() => venues.value.filter(v => venueImageUrl(v)))
 
