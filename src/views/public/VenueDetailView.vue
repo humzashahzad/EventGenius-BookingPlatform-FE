@@ -349,6 +349,7 @@ import { formatPKR, formatAddress } from '@/lib/format'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
+import { cacheGet, cacheSet } from '@/composables/usePageCache'
 import { useAuthStore } from '@/stores/auth'
 import { getStorageUrl } from '@/lib/storageUrl'
 import ImageLightbox from '@/components/gallery/ImageLightbox.vue'
@@ -371,19 +372,39 @@ const loadError = ref(false)
 const categories = ref<CategoryLike[]>([])
 const lightboxRef = ref<InstanceType<typeof ImageLightbox> | null>(null)
 
+let venueSeq = 0
 async function loadVenue() {
-  loading.value = true
+  const id = ++venueSeq
+  const key = `public:venue:${route.params.id}`
+  // Opened before: show it at once and refresh quietly.
+  const cached = cacheGet<any>(key)
+  if (cached) {
+    if (venue.value?.id !== cached.id) {
+      venue.value = cached
+      guests.value = Number(cached?.capacity_min) || 1
+    }
+    loading.value = false
+  } else {
+    loading.value = true
+  }
   loadError.value = false
   try {
     const { data } = await api.get(`/venues/${route.params.id}`)
-    venue.value = data?.data ?? null
-    guests.value = Number(venue.value?.capacity_min) || 1
+    if (id !== venueSeq) return
+    const fresh = data?.data ?? null
+    const sameVenue = !!fresh && venue.value?.id === fresh.id
+    venue.value = fresh
+    // Don't reset what the visitor already picked when the same venue refreshes.
+    if (!sameVenue || !cached) guests.value = Number(venue.value?.capacity_min) || 1
+    if (fresh) cacheSet(key, fresh)
   } catch (e: any) {
+    if (id !== venueSeq) return
+    if (cached) return // quiet refresh failed: keep showing the venue
     venue.value = null
     // A missing venue shows "not found"; anything else is a load error with a retry.
     loadError.value = !!e && e.response?.status !== 404 && e.response?.status !== 403
   } finally {
-    loading.value = false
+    if (id === venueSeq) loading.value = false
   }
 }
 

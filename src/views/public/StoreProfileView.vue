@@ -187,6 +187,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import api from '@/lib/axios'
+import { cacheGet, cacheSet } from '@/composables/usePageCache'
 import { useChat } from '@/composables/useChat'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -241,18 +242,27 @@ function toggleFaq(i: number) {
 }
 
 async function fetchStoreProfile() {
+  const storeId = route.params.id
+  const key = `public:store:${storeId}`
+  // Opened before: show it at once and refresh quietly.
+  const cached = cacheGet<{ store: any; stats: any }>(key)
+  if (cached) {
+    store.value = cached.store
+    stats.value = cached.stats
+    landing.value = cached.store?.landing_page || null
+  }
   try {
-    loading.value = true
+    loading.value = !cached
     error.value = null
-    const storeId = route.params.id
     const response = await api.get(`/stores/${storeId}/profile`)
     if (response.data.success) {
       store.value = response.data.data.store
       stats.value = response.data.data.stats
       landing.value = store.value.landing_page || null
+      cacheSet(key, { store: store.value, stats: stats.value })
     }
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to load store profile'
+    if (!cached) error.value = err.response?.data?.message || 'Failed to load store profile'
   } finally {
     loading.value = false
   }

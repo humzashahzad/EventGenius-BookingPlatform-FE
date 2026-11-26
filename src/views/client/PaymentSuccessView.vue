@@ -73,6 +73,7 @@ import { formatPKR } from '@/lib/format'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import AppIcon from '@/components/ui/AppIcon.vue'
 
 type PayState = 'processing' | 'paid' | 'cancelled' | 'failed' | 'refunded' | 'unpaid' | 'error'
@@ -89,7 +90,11 @@ const state = ref<PayState>('processing')
 const errorMessage = ref('')
 const timedOut = ref(false)
 let polls = 0
+let failures = 0
+let inFlight = false
+let stopped = false
 let timer: ReturnType<typeof setTimeout> | null = null
+const MAX_QUIET_FAILURES = 3
 
 const statusLabel = computed(() => {
   if (state.value === 'paid') return 'Paid'
@@ -97,24 +102,45 @@ const statusLabel = computed(() => {
   return state.value
 })
 
+function schedule() {
+  if (timer) clearTimeout(timer)
+  timer = stopped ? null : setTimeout(fetchStatus, POLL_INTERVAL_MS)
+}
+
 async function fetchStatus() {
+  if (inFlight || stopped) return
+  if (timer) { clearTimeout(timer); timer = null }
   if (!bookingId) {
     state.value = 'error'
     errorMessage.value = 'No booking reference was returned from PayFast.'
     return
   }
+  inFlight = true
   try {
     const { data } = await api.get(`/client/bookings/${bookingId}/payment-status`, {
       params: mPaymentId ? { m_payment_id: mPaymentId } : {},
     })
+    if (stopped) return
+    failures = 0
     status.value = data.data
     // Returning to the success URL is NOT proof of payment: only the ITN-backed state counts.
     const s = data.data.state as PayState
     state.value = s === 'unpaid' ? 'processing' : s
   } catch (err: any) {
+    if (stopped) return
+    // A brief network blip while waiting keeps the "confirming" screen and tries again;
+    // only repeated failures show the error state.
+    failures++
+    if (state.value === 'processing' && failures < MAX_QUIET_FAILURES && polls < MAX_POLLS) {
+      polls++
+      schedule()
+      return
+    }
     state.value = 'error'
     errorMessage.value = err.response?.data?.message || 'Please try again in a moment.'
     return
+  } finally {
+    inFlight = false
   }
 
   if (state.value === 'processing') {
@@ -123,13 +149,19 @@ async function fetchStatus() {
       timedOut.value = true
       return
     }
-    timer = setTimeout(fetchStatus, POLL_INTERVAL_MS)
+    schedule()
   }
 }
+
+// PayFast confirmed (realtime notification): check straight away instead of waiting.
+useLiveRefresh(['payment'], () => {
+  if (state.value === 'processing' || state.value === 'error') void fetchStatus()
+})
 
 function restartPolling() {
   if (timer) clearTimeout(timer)
   polls = 0
+  failures = 0
   timedOut.value = false
   state.value = 'processing'
   fetchStatus()
@@ -141,5 +173,5 @@ function formatDate(d: string) {
 }
 
 onMounted(fetchStatus)
-onBeforeUnmount(() => { if (timer) clearTimeout(timer) })
+onBeforeUnmount(() => { stopped = true; if (timer) clearTimeout(timer) })
 </script>

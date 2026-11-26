@@ -63,7 +63,8 @@
       </div>
 
       <!-- Loading -->
-      <div v-if="loading" class="shops-grid" aria-busy="true">
+      <!-- Skeleton only before the first results; later searches keep the cards on screen. -->
+      <div v-if="loading && !loadedOnce" class="shops-grid" aria-busy="true">
         <div v-for="i in 6" :key="i" class="shop-card shop-skel">
           <div class="skeleton shop-skel-img"></div>
           <div class="p-5 space-y-3">
@@ -91,7 +92,7 @@
       </div>
 
       <!-- Grid -->
-      <ul v-else class="shops-grid">
+      <ul v-else class="shops-grid transition-opacity duration-150" :class="loading ? 'opacity-60' : ''" :aria-busy="loading">
         <li v-for="s in shops" :key="s.id">
           <RouterLink :to="`/stores/${s.id}`" class="shop-card" :aria-label="`${s.name}, ${s.city || 'Pakistan'}`">
             <div class="shop-media">
@@ -154,7 +155,7 @@
       </ul>
 
       <!-- Pagination -->
-      <nav v-if="meta.last_page > 1 && !loading" class="shops-pager" aria-label="Pagination">
+      <nav v-if="meta.last_page > 1 && !(loading && !loadedOnce)" class="shops-pager" aria-label="Pagination">
         <button type="button" class="btn-secondary btn-sm" :disabled="meta.current_page <= 1" @click="goPage(meta.current_page - 1)">
           <AppIcon icon="chevron-left" class="w-4 h-4" /> Previous
         </button>
@@ -171,6 +172,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
+import { cacheGet, cacheSet } from '@/composables/usePageCache'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { getStorageUrl } from '@/lib/storageUrl'
 import { formatPKR } from '@/lib/format'
@@ -194,6 +196,7 @@ const cities = ref<CityRow[]>([])
 const categories = ref<{ slug: string; name: string }[]>([])
 const meta = ref({ current_page: 1, last_page: 1, total: 0 })
 const loading = ref(true)
+const loadedOnce = ref(false)
 const loadFailed = ref(false)
 const locating = ref(false)
 const locationError = ref('')
@@ -283,6 +286,18 @@ function nearMe() {
   )
 }
 
+// Last results per search, so coming back to this page shows them at once.
+function resultsKey() {
+  return `public:shops:${JSON.stringify([filters.q.trim(), filters.city, filters.event_type, filters.sort, filters.page, filters.lat, filters.lng])}`
+}
+function showCachedResults() {
+  const hit = cacheGet<{ shops: Shop[]; meta: typeof meta.value }>(resultsKey())
+  if (!hit) return
+  shops.value = hit.shops
+  meta.value = hit.meta
+  loadedOnce.value = true
+}
+
 async function load() {
   const id = ++requestId
   loading.value = true
@@ -293,10 +308,13 @@ async function load() {
     if (filters.city) params.city = filters.city
     if (filters.event_type) params.event_type = filters.event_type
     if (hasLocation.value) { params.lat = filters.lat!; params.lng = filters.lng! }
+    const key = resultsKey()
     const { data } = await api.get('/stores', { params })
     if (id !== requestId) return
     shops.value = data.data.data
     meta.value = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total }
+    loadedOnce.value = true
+    cacheSet(key, { shops: shops.value, meta: meta.value })
   } catch {
     if (id !== requestId) return
     shops.value = []
@@ -334,6 +352,7 @@ watch(() => route.fullPath, () => {
 
 onMounted(() => {
   readQuery()
+  showCachedResults()
   load()
   api.get('/stores/cities').then(r => { cities.value = r.data?.data ?? [] }).catch(() => {})
   api.get('/categories').then(r => { categories.value = (r.data?.data ?? []).filter((c: any) => c.is_active !== false) }).catch(() => {})

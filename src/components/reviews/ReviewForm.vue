@@ -91,7 +91,10 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
+import { cacheGet, cacheSet } from '@/composables/usePageCache'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { FormField, RatingInput, TextInput, TextareaInput } from '@/components/forms'
 
@@ -107,12 +110,16 @@ const subRatings: { key: SubKey; label: string }[] = [
 ]
 const ratingWords = ['Poor', 'Fair', 'Good', 'Very good', 'Excellent']
 
-const loading = ref(true)
+type ReviewState = { eligible: boolean; review: any | null }
+const cacheKey = () => `client:review:${props.bookingId}`
+const cached = cacheGet<ReviewState>(cacheKey())
+// Known from an earlier visit: show it at once (no pop-in), then refresh quietly.
+const loading = ref(!cached)
 const submitting = ref(false)
 const ratingTouched = ref(false)
 const errorMsg = ref('')
 const errors = ref<Record<string, string[]>>({})
-const state = reactive<{ eligible: boolean; review: any | null }>({ eligible: false, review: null })
+const state = reactive<ReviewState>({ eligible: cached?.eligible ?? false, review: cached?.review ?? null })
 const form = reactive<Record<SubKey, number | null> & { rating: number; title: string; comment: string }>({
   rating: 0, title: '', comment: '',
   cleanliness_rating: null, value_rating: null, service_rating: null, location_rating: null,
@@ -129,20 +136,40 @@ function formatDate(d?: string) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-async function load() {
-  loading.value = true
+let seq = 0
+async function load(opts: { quiet?: boolean } = {}) {
+  const id = ++seq
+  const key = cacheKey()
+  if (!opts.quiet) {
+    const known = cacheGet<ReviewState>(key)
+    loading.value = !known
+    if (known) { state.eligible = known.eligible; state.review = known.review }
+  }
+  let failed = false
   try {
     const { data } = await api.get(`/client/bookings/${props.bookingId}/review`)
+    if (id !== seq) return
     state.eligible = !!data.data?.eligible
     state.review = data.data?.review || null
+    cacheSet(key, { eligible: state.eligible, review: state.review })
   } catch {
-    state.eligible = false
-    state.review = null
+    if (id !== seq) return
+    failed = true
+    // A quiet refresh that fails keeps what is shown.
+    if (!opts.quiet && !cacheGet<ReviewState>(key)) {
+      state.eligible = false
+      state.review = null
+    }
   } finally {
-    loading.value = false
-    emit('loaded', { eligible: state.eligible, review: state.review })
+    if (id === seq) {
+      loading.value = false
+      if (!opts.quiet || !failed) emit('loaded', { eligible: state.eligible, review: state.review })
+    }
   }
 }
+
+// The venue replies to the review (or a moderator hides it): update quietly.
+useLiveRefresh(['review'], () => { if (!submitting.value) void load({ quiet: true }) })
 
 async function submit() {
   ratingTouched.value = true
@@ -158,6 +185,8 @@ async function submit() {
     const { data } = await api.post(`/client/bookings/${props.bookingId}/review`, payload)
     state.review = data.data
     state.eligible = false
+    cacheSet(cacheKey(), { eligible: false, review: data.data })
+    toast.success('Thanks! Your review was posted.')
     emit('submitted', data.data)
   } catch (e: any) {
     errors.value = e.response?.data?.errors || {}
@@ -167,7 +196,7 @@ async function submit() {
   }
 }
 
-watch(() => props.bookingId, load)
-onMounted(load)
+watch(() => props.bookingId, () => { void load() })
+onMounted(() => { void load() })
 defineExpose({ reload: load })
 </script>

@@ -96,29 +96,46 @@ export const useNotificationStore = defineStore('notifications', () => {
     }
   }
 
-  async function fetchAll(page = 1) {
-    loading.value = true
+  /** Paging info for the full list (kept here so the page shows instantly when reopened). */
+  const page = ref(1)
+  const lastPage = ref(1)
+  const total = ref(0)
+  /** True once the full list has been loaded at least once. */
+  const listLoaded = ref(false)
+  let fetchSeq = 0
+
+  async function fetchAll(targetPage = 1) {
+    const id = ++fetchSeq
+    // Only the very first load shows a loading state; later loads swap data in quietly.
+    if (!listLoaded.value) loading.value = true
     try {
       const { data } = await api.get('/notifications', {
         params: {
-          page,
+          page: targetPage,
           per_page: 30,
           exclude_types: ['chat_message'],
         },
       })
-      if (page === 1) {
+      // A newer page-1 load started meanwhile: let that one win.
+      if (targetPage === 1 && id !== fetchSeq) return data.data
+      if (targetPage === 1) {
         notifications.value = data.data.data
         unreadCount.value = Number(data.counts?.general ?? data.unread_count ?? 0)
         bookingUnreadCount.value = Number(data.counts?.booking ?? 0)
         if (notifications.value.length) {
-          lastEventId.value = Math.max(...notifications.value.map(notification => notification.id))
+          lastEventId.value = Math.max(lastEventId.value, ...notifications.value.map(notification => notification.id))
         }
       } else {
-        notifications.value.push(...data.data.data)
+        const known = new Set(notifications.value.map(n => n.id))
+        notifications.value.push(...(data.data.data as AppNotification[]).filter(n => !known.has(n.id)))
       }
+      page.value = Number(data.data.current_page ?? targetPage)
+      lastPage.value = Number(data.data.last_page ?? page.value)
+      total.value = Number(data.data.total ?? notifications.value.length)
+      listLoaded.value = true
       return data.data
     } finally {
-      loading.value = false
+      if (id === fetchSeq || targetPage !== 1) loading.value = false
     }
   }
 
@@ -180,45 +197,76 @@ export const useNotificationStore = defineStore('notifications', () => {
     }
 
     if (!inserted) return
+    if (listLoaded.value) total.value++
 
+    showInAppToast(notification)
     showBrowserNotification(notification)
     if (!document.hasFocus()) {
       soundService.playNotification()
     }
   }
 
+  function adjustUnread(n: AppNotification, delta: number) {
+    unreadCount.value = Math.max(0, unreadCount.value + delta)
+    if (isBookingNotification(n.type)) bookingUnreadCount.value = Math.max(0, bookingUnreadCount.value + delta)
+  }
+
+  /**
+   * Optimistic: the item turns read at once; if the server refuses it turns back and the
+   * error is re-thrown so the caller can show a toast. Several can run at the same time.
+   */
   async function markRead(id: number) {
-    await api.patch(`/notifications/${id}/read`)
     const notification = notifications.value.find(item => item.id === id)
-    if (notification && !notification.is_read) {
+    const changed = !!notification && !notification.is_read
+    if (notification && changed) {
       notification.is_read = true
-      unreadCount.value = Math.max(0, unreadCount.value - 1)
-      if (isBookingNotification(notification.type)) {
-        bookingUnreadCount.value = Math.max(0, bookingUnreadCount.value - 1)
+      adjustUnread(notification, -1)
+    }
+    try {
+      await api.patch(`/notifications/${id}/read`)
+    } catch (e) {
+      if (notification && changed && notification.is_read) {
+        notification.is_read = false
+        adjustUnread(notification, +1)
       }
+      throw e
     }
   }
 
   async function markAllRead() {
-    await api.post('/notifications/read-all')
-    notifications.value.forEach(notification => {
-      notification.is_read = true
-    })
+    const changed = notifications.value.filter(n => !n.is_read)
+    const prevUnread = unreadCount.value
+    const prevBooking = bookingUnreadCount.value
+    changed.forEach(n => { n.is_read = true })
     unreadCount.value = 0
     bookingUnreadCount.value = 0
+    try {
+      await api.post('/notifications/read-all')
+    } catch (e) {
+      changed.forEach(n => { n.is_read = false })
+      unreadCount.value = prevUnread
+      bookingUnreadCount.value = prevBooking
+      throw e
+    }
   }
 
   async function remove(id: number) {
-    await api.delete(`/notifications/${id}`)
     const index = notifications.value.findIndex(item => item.id === id)
-    if (index !== -1) {
-      if (!notifications.value[index].is_read) {
-        unreadCount.value = Math.max(0, unreadCount.value - 1)
-        if (isBookingNotification(notifications.value[index].type)) {
-          bookingUnreadCount.value = Math.max(0, bookingUnreadCount.value - 1)
-        }
-      }
+    const removed = index !== -1 ? notifications.value[index] : null
+    if (removed) {
       notifications.value.splice(index, 1)
+      if (!removed.is_read) adjustUnread(removed, -1)
+      total.value = Math.max(0, total.value - 1)
+    }
+    try {
+      await api.delete(`/notifications/${id}`)
+    } catch (e) {
+      if (removed && !notifications.value.some(n => n.id === removed.id)) {
+        notifications.value.splice(Math.min(index, notifications.value.length), 0, removed)
+        if (!removed.is_read) adjustUnread(removed, +1)
+        total.value++
+      }
+      throw e
     }
   }
 
@@ -244,6 +292,38 @@ export const useNotificationStore = defineStore('notifications', () => {
     } catch (error) {
       console.warn('Browser notification failed:', error)
     }
+  }
+
+  /** A small toast for a new notification, with a button that opens it. Not used for chat. */
+  function showInAppToast(notification: AppNotification) {
+    if (notification.type === 'chat_message' || notification.type === 'session_revoked') return
+    const color = colorForType(notification.type)
+    const show = color === 'success' ? toast.success
+      : color === 'danger' ? toast.error
+      : color === 'warning' ? toast.warning
+      : color === 'info' ? toast.info
+      : toast
+    show(notification.title || 'New notification', {
+      id: `notif-${notification.id}`,
+      description: notification.body ? (notification.body.length > 120 ? notification.body.slice(0, 120) + '…' : notification.body) : undefined,
+      duration: 6000,
+      action: {
+        label: 'View',
+        onClick: () => { void openNotification(notification) },
+      },
+    })
+  }
+
+  /** Mark a notification read (quietly) and go to the page it points to. */
+  async function openNotification(notification: AppNotification) {
+    toast.dismiss(`notif-${notification.id}`)
+    const role = useAuthStore().user?.role
+    const prefix = role === 'admin' ? '/support' : role === 'store_owner' ? '/shop' : '/customer'
+    const to = linkFor(notification, role) || `${prefix}/notifications`
+    const current = notifications.value.find(n => n.id === notification.id) || notification
+    if (!current.is_read) markRead(current.id).catch(() => { /* the store puts it back to unread */ })
+    const { default: router } = await import('@/router')
+    await router.push(to)
   }
 
   function chatLinkFor(chatId: number): string {
@@ -415,6 +495,10 @@ export const useNotificationStore = defineStore('notifications', () => {
     bookingUnreadCount,
     linkFor,
     loading,
+    page,
+    lastPage,
+    total,
+    listLoaded,
     unread,
     fetchUnread,
     fetchAll,
@@ -429,6 +513,8 @@ export const useNotificationStore = defineStore('notifications', () => {
     requestBrowserPermission,
     desktopPermission,
     showBrowserNotification,
+    openNotification,
+    handleIncomingNotification,
     showChatMessageNotification,
     notifyChatMessage,
     dismissChatToast,

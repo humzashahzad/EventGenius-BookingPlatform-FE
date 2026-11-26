@@ -64,7 +64,7 @@
               </FormField>
             </div>
 
-            <div v-if="personalMsg" :class="personalMsg.ok ? 'alert-success' : 'alert-danger'" role="status">
+            <div v-if="personalMsg && !personalMsg.ok" class="alert-danger" role="alert">
               <AppIcon :icon="personalMsg.ok ? 'circle-check' : 'alert-circle'" class="w-5 h-5 shrink-0" />
               <p>{{ personalMsg.text }}</p>
             </div>
@@ -75,7 +75,7 @@
                 {{ savingPersonal ? 'Saving…' : 'Save changes' }}
               </button>
               <button v-if="personalDirty" type="button" class="btn-ghost" @click="resetPersonal">Discard</button>
-              <span v-if="!personalDirty && !personalMsg" class="text-sm text-ink-muted">No unsaved changes</span>
+              <span v-if="!personalDirty" class="text-sm text-ink-muted">No unsaved changes</span>
             </div>
           </form>
         </section>
@@ -121,7 +121,7 @@
               />
             </div>
 
-            <div v-if="pwMsg" :class="pwMsg.ok ? 'alert-success' : 'alert-danger'" role="status">
+            <div v-if="pwMsg && !pwMsg.ok" class="alert-danger" role="alert">
               <AppIcon :icon="pwMsg.ok ? 'circle-check' : 'alert-circle'" class="w-5 h-5 shrink-0" />
               <p>{{ pwMsg.text }}</p>
             </div>
@@ -140,6 +140,7 @@
 <script setup lang="ts">
 import { FormField, TextInput, PhoneInput } from '@/components/forms'
 import { ref, reactive, computed, onMounted } from 'vue'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -163,7 +164,8 @@ function onAvatarUpdate(_urlOrPath: string | null) {
   // Auth store already updated by AvatarUpload
 }
 
-const loading = ref(true)
+// The signed-in user is already known, so the form shows at once and refreshes quietly.
+const loading = ref(!authStore.user)
 const loadError = ref('')
 const createdAt = ref<string | null>(null)
 
@@ -221,15 +223,20 @@ function resetPersonal() {
   serverErrors.value = {}
 }
 
-function applyUser(user: any) {
+function applyUser(user: any, opts: { keepEdits?: boolean } = {}) {
+  // A background refresh must not overwrite what the user is typing.
+  const keep = opts.keepEdits && personalDirty.value
   saved.name = user?.name || ''
   saved.email = user?.email || ''
   saved.phone = user?.phone || ''
-  form.name = saved.name
   form.email = saved.email
-  form.phone = saved.phone
+  if (!keep) {
+    form.name = saved.name
+    form.phone = saved.phone
+  }
   createdAt.value = user?.created_at || createdAt.value
 }
+if (authStore.user) applyUser(authStore.user)
 
 async function savePersonal() {
   touched.name = touched.phone = true
@@ -242,11 +249,11 @@ async function savePersonal() {
     authStore.user = data.data
     applyUser(data.data)
     touched.name = touched.phone = false
-    personalMsg.value = { ok: true, text: 'Your details were saved.' }
-    setTimeout(() => { if (personalMsg.value?.ok) personalMsg.value = null }, 3500)
+    toast.success('Your details were saved.')
   } catch (e: any) {
     serverErrors.value = e.response?.data?.errors || {}
     personalMsg.value = { ok: false, text: e.response?.data?.message || 'Update failed. Please try again.' }
+    toast.error(personalMsg.value.text)
   } finally { savingPersonal.value = false }
 }
 
@@ -268,22 +275,24 @@ async function savePassword() {
     authStore.user = data.data
     pw.current_password = pw.password = pw.password_confirmation = ''
     Object.assign(pwTouched, { current: false, password: false, confirm: false, submit: false })
-    pwMsg.value = { ok: true, text: 'Your password was updated.' }
-    setTimeout(() => { if (pwMsg.value?.ok) pwMsg.value = null }, 3500)
+    toast.success('Your password was updated.')
   } catch (e: any) {
     pwServerErrors.value = e.response?.data?.errors || {}
     pwMsg.value = { ok: false, text: e.response?.data?.message || 'Could not update your password. Please try again.' }
+    toast.error(pwMsg.value.text)
   } finally { savingPassword.value = false }
 }
 
 async function loadProfile() {
-  loading.value = true
-  loadError.value = ''
+  const quiet = !loading.value && !loadError.value
+  if (!quiet) loadError.value = ''
   try {
     const { data } = await api.get('/client/profile')
-    applyUser(data.data)
+    applyUser(data.data, { keepEdits: quiet })
+    loadError.value = ''
   } catch (e: any) {
-    loadError.value = e?.response?.data?.message || 'Please check your connection and try again.'
+    // Quiet refresh failed: keep the form as it is.
+    if (!quiet) loadError.value = e?.response?.data?.message || 'Please check your connection and try again.'
   } finally { loading.value = false }
 }
 
