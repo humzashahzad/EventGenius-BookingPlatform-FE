@@ -21,7 +21,7 @@
         <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
         <p class="empty-state-title">Couldn't load the dashboard</p>
         <p class="empty-state-desc">{{ loadError }}</p>
-        <div class="empty-state-actions"><button class="btn-primary" @click="load">Try again</button></div>
+        <div class="empty-state-actions"><button class="btn-primary" @click="load()">Try again</button></div>
       </div>
     </div>
 
@@ -233,7 +233,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '@/lib/axios'
 import { formatPKR } from '@/lib/format'
@@ -242,6 +242,7 @@ import { statusBadgeClass, statusLabel } from '@/lib/status'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import KpiTile from '@/components/dashboard/KpiTile.vue'
 import TrendBars from '@/components/dashboard/TrendBars.vue'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { compactNumber, compactPKR, pctDelta, dayBuckets, monthBuckets, fillBuckets, sumBetween, timeAgo, initials } from '@/components/dashboard/metrics'
 
 const authStore = useAuthStore()
@@ -326,34 +327,49 @@ const actions = computed(() => [
 ])
 const pendingTotal = computed(() => stats.pending_stores + (reviewHealth.value.flagged ?? 0))
 
-async function load() {
-  loading.value = true
-  loadError.value = ''
+// First load shows skeletons; every later update (realtime event, tab shown again) is
+// quiet: numbers and lists change in place and a failed refresh keeps what is shown.
+const loadedOnce = ref(false)
+let seq = 0
+let lastRun = 0
+
+async function load(quiet = false) {
+  const id = ++seq
+  if (!quiet || !loadedOnce.value) {
+    loading.value = !loadedOnce.value
+    loadError.value = ''
+  }
+  lastRun = Date.now()
   try {
     const { data } = await api.get('/admin/dashboard')
+    if (id !== seq) return
     Object.assign(stats, data.data.stats)
     recentBookings.value = data.data.recent_bookings ?? []
     recentStores.value = data.data.recent_stores ?? []
     charts.value = data.data.charts ?? {}
     statusCounts.value = data.data.bookings_by_status ?? {}
     activityFeed.value = data.data.recent_activity ?? []
+    loadedOnce.value = true
   } catch (e: any) {
-    loadError.value = e.response?.data?.message || 'Please check your connection and try again.'
+    if (id !== seq) return
+    if (!loadedOnce.value) loadError.value = e.response?.data?.message || 'Please check your connection and try again.'
     return
-  } finally { loading.value = false }
+  } finally { if (id === seq) loading.value = false }
   loadExtras()
 }
 
 function loadExtras() {
   // All bookings once, for 30-day deltas and the 12-month trend.
-  bookingsLoading.value = true
+  const first = bookingsLoading.value
   api.get('/admin/bookings', { params: { per_page: 5000 } })
     .then(({ data }) => { bookings.value = data.data?.data ?? [] })
-    .catch(() => { bookings.value = [] })
+    .catch(() => { if (first) bookings.value = [] })
     .finally(() => { bookingsLoading.value = false })
   if (stats.pending_stores) {
     api.get('/admin/stores', { params: { status: 'pending', per_page: 5 } })
       .then(({ data }) => { pendingStoresList.value = data.data?.data ?? [] }).catch(() => {})
+  } else {
+    pendingStoresList.value = []
   }
   // Review health: AI insights when available, otherwise the hidden-review count.
   api.get('/admin/reviews/insights', { params: { limit: 1 } })
@@ -365,8 +381,20 @@ function loadExtras() {
     })
     .catch(() => api.get('/admin/reviews', { params: { approved: 0, per_page: 1 } })
       .then(({ data }) => { reviewHealth.value = { loading: false, flagged: null, hidden: data.data?.total ?? 0 } })
-      .catch(() => { reviewHealth.value = { loading: false, flagged: null, hidden: 0 } }))
+      .catch(() => { if (reviewHealth.value.loading) reviewHealth.value = { loading: false, flagged: null, hidden: 0 } }))
 }
 
-onMounted(load)
+function refreshQuietly() { if (loadedOnce.value) load(true) }
+
+// New bookings, payments, store sign-ups and reviews update the overview in place.
+useLiveRefresh(['booking', 'payment', 'store', 'review'], refreshQuietly, 800)
+
+function onVisible() {
+  if (document.visibilityState === 'visible' && Date.now() - lastRun > 60_000) refreshQuietly()
+}
+onMounted(() => {
+  load()
+  document.addEventListener('visibilitychange', onVisible)
+})
+onBeforeUnmount(() => document.removeEventListener('visibilitychange', onVisible))
 </script>

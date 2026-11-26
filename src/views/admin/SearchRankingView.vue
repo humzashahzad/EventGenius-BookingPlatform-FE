@@ -165,6 +165,7 @@ async function save() {
     showToast('Ranking weights saved — live for all customers.')
   } catch (e) {
     saveError.value = apiError(e, 'Could not save settings.')
+    sonner.error(saveError.value)
   } finally {
     saving.value = false
   }
