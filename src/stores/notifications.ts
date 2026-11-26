@@ -1,4 +1,5 @@
 import { computed, markRaw, ref } from 'vue'
+import { emitDataChanged } from '@/composables/useLiveRefresh'
 import { defineStore } from 'pinia'
 import { toast } from 'vue-sonner'
 import type { Channel } from 'laravel-echo'
@@ -149,6 +150,9 @@ export const useNotificationStore = defineStore('notifications', () => {
   }
 
   function handleIncomingNotification(notification: AppNotification) {
+    // Tell open pages their data changed so they can refresh quietly (see useLiveRefresh).
+    if (notification.type !== 'chat_message') emitDataChanged(notification.type, notification.data)
+
     if (notification.type === 'session_revoked') {
       window.dispatchEvent(new CustomEvent('auth:session-expired'))
     }

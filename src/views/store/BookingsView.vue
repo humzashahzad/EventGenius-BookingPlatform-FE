@@ -59,7 +59,7 @@
         <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
         <p class="empty-state-title">Couldn't load bookings</p>
         <p class="empty-state-desc">{{ loadError }}</p>
-        <div class="empty-state-actions"><button class="btn-primary" @click="loadBookings">Try again</button></div>
+        <div class="empty-state-actions"><button class="btn-primary" @click="list.load()">Try again</button></div>
       </div>
 
       <!-- Empty -->
@@ -91,8 +91,8 @@
               <span class="ml-auto whitespace-nowrap">{{ formatDate(b.event_date) }} · {{ b.expected_guests }} guests</span>
             </div>
             <div v-if="b.status === 'pending'" class="mt-3 grid grid-cols-2 gap-2">
-              <button class="btn-primary btn-sm" :disabled="acting" @click="doConfirm(b.id)"><AppIcon icon="check" class="w-4 h-4" />Confirm</button>
-              <button class="btn-secondary btn-sm" :disabled="acting" @click="openReject(b)">Reject</button>
+              <button class="btn-primary btn-sm" :disabled="actions.isPending(b.id)" :aria-busy="actions.isPending(b.id, 'confirm')" @click="doConfirm(b)"><AppIcon :icon="actions.isPending(b.id, 'confirm') ? 'loader' : 'check'" :class="actions.isPending(b.id, 'confirm') ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Confirm</button>
+              <button class="btn-secondary btn-sm" :disabled="actions.isPending(b.id)" @click="openReject(b)">Reject</button>
             </div>
           </li>
         </ul>
@@ -138,8 +138,8 @@
                 <td class="cell-actions">
                   <div class="inline-flex items-center gap-1.5">
                     <template v-if="b.status === 'pending'">
-                      <button class="btn-primary btn-sm" :disabled="acting" @click="doConfirm(b.id)">Confirm</button>
-                      <button class="btn-secondary btn-sm" :disabled="acting" @click="openReject(b)">Reject</button>
+                      <button class="btn-primary btn-sm" :disabled="actions.isPending(b.id)" :aria-busy="actions.isPending(b.id, 'confirm')" @click="doConfirm(b)"><AppIcon v-if="actions.isPending(b.id, 'confirm')" icon="loader" class="w-4 h-4 animate-spin" />Confirm</button>
+                      <button class="btn-secondary btn-sm" :disabled="actions.isPending(b.id)" @click="openReject(b)">Reject</button>
                     </template>
                     <RouterLink v-else :to="`/shop/bookings/${b.id}`" class="btn-ghost btn-sm">View</RouterLink>
                   </div>
@@ -166,8 +166,8 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showRejectDialog = false">Cancel</button>
-          <button class="btn-danger" :disabled="acting" @click="submitReject">
-            <AppIcon v-if="acting" icon="loader" class="w-4 h-4 animate-spin" />
+          <button class="btn-danger" :disabled="rejectSubmitting" @click="submitReject">
+            <AppIcon v-if="rejectSubmitting" icon="loader" class="w-4 h-4 animate-spin" />
             Confirm rejection
           </button>
         </div>
@@ -179,6 +179,9 @@
 <script setup lang="ts">
 import { FormField, TextInput, SelectInput, DateRangePicker, TextareaInput } from '@/components/forms'
 import { ref, computed, watch, onMounted } from 'vue'
+import { useSilentList } from '@/composables/useSilentList'
+import { useRowActions } from '@/composables/useRowActions'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
@@ -193,10 +196,20 @@ import { humanize } from '@/components/dashboard/metrics'
 const route = useRoute()
 const router = useRouter()
 
-const bookings = ref<any[]>([])
-const loading = ref(false)
-const loadError = ref('')
-const acting = ref(false)
+// Loaded once with a skeleton, then refreshed quietly in place (no flicker after actions).
+const list = useSilentList<any>(async () => {
+  // One request for the whole list so tabs show counts and filters are instant.
+  const { data } = await api.get('/store/bookings', { params: { per_page: 1000 } })
+  return data.data.data
+})
+const bookings = list.items
+const loading = list.loading
+const loadError = list.error
+// Per-row pending state: several bookings can be confirmed one after another.
+const actions = useRowActions()
+const rejectSubmitting = ref(false)
+// New requests, cancellations and payments from other users appear without a reload.
+useLiveRefresh(['booking', 'payment'], () => list.refresh())
 const rejectTarget = ref<any>(null)
 const rejectReason = ref('')
 const rejectError = ref('')
@@ -303,27 +316,16 @@ function paymentBadge(b: any): { cls: string; label: string } | null {
 }
 
 // ── Data + actions (same API calls as before) ──────────────────────────────
-async function loadBookings() {
-  loading.value = true
-  loadError.value = ''
-  try {
-    // One request for the whole list so tabs show counts and filters are instant.
-    const { data } = await api.get('/store/bookings', { params: { per_page: 1000 } })
-    bookings.value = data.data.data
-  } catch (e: any) {
-    loadError.value = e.response?.data?.message || 'Please check your connection and try again.'
-  } finally { loading.value = false }
-}
-
-async function doConfirm(id: number) {
-  acting.value = true
-  try {
-    await api.patch(`/store/bookings/${id}/confirm`)
-    toast.success('Booking confirmed — the customer can now pay.')
-    await loadBookings()
-  } catch (e: any) {
-    toast.error(e.response?.data?.message || 'Could not confirm this booking.')
-  } finally { acting.value = false }
+function doConfirm(b: any) {
+  const prev = { status: b.status, confirmed_at: b.confirmed_at }
+  actions.run(b.id, {
+    apply: () => { b.status = 'confirmed'; b.confirmed_at = new Date().toISOString() },
+    request: () => api.patch(`/store/bookings/${b.id}/confirm`),
+    rollback: () => Object.assign(b, prev),
+    success: 'Booking confirmed — the customer can now pay.',
+    error: 'Could not confirm this booking.',
+    after: () => list.refresh(),
+  }, 'confirm')
 }
 
 function openReject(b: any) {
@@ -335,16 +337,23 @@ function openReject(b: any) {
 
 async function submitReject() {
   if (!rejectReason.value.trim()) { rejectError.value = 'Reason is required.'; return }
-  acting.value = true
-  try {
-    await api.patch(`/store/bookings/${rejectTarget.value.id}/reject`, { reason: rejectReason.value })
-    showRejectDialog.value = false
-    rejectTarget.value = null
-    toast.success('Booking rejected.')
-    await loadBookings()
-  } catch (e: any) {
-    rejectError.value = e.response?.data?.message || 'Could not reject this booking.'
-  } finally { acting.value = false }
+  const b = rejectTarget.value
+  const reason = rejectReason.value.trim()
+  const prev = { status: b.status, rejection_reason: b.rejection_reason }
+  rejectSubmitting.value = true
+  rejectError.value = ''
+  // Close the dialog straight away; the row updates instantly and rolls back if the server refuses.
+  showRejectDialog.value = false
+  rejectTarget.value = null
+  rejectSubmitting.value = false
+  await actions.run(b.id, {
+    apply: () => { b.status = 'rejected'; b.rejection_reason = reason },
+    request: () => api.patch(`/store/bookings/${b.id}/reject`, { reason }),
+    rollback: () => Object.assign(b, prev),
+    success: 'Booking rejected.',
+    error: 'Could not reject this booking.',
+    after: () => list.refresh(),
+  }, 'reject')
 }
 
 function exportCsv() {
@@ -359,7 +368,7 @@ function exportCsv() {
   URL.revokeObjectURL(url)
 }
 
-onMounted(loadBookings)
+onMounted(() => list.load())
 </script>
 
 <style scoped>

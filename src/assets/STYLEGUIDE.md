@@ -278,3 +278,27 @@ Always set `object-cover`, explicit aspect ratio (`aspect-[4/3]`), and `alt`.
 - Visible focus: global `:focus-visible` ring — don't remove outlines.
 - Icon-only buttons need `aria-label`. Status is never colour-only (badges carry text and a dot).
 - One `h1` per page, headings in order.
+
+## Smooth updates (no reloads, no flicker)
+
+Every action must update the screen in place. Never reload a list with its loading
+state after an action, and never block unrelated buttons.
+
+- **Lists and pages:** `useSilentList(loader)` (or `useSilentResource` for one object).
+  `loading` is true only for the first load — show skeletons only for that. After an
+  action call `list.refresh()`: it swaps in fresh data quietly, merges overlapping
+  refreshes and ignores stale responses. It also refreshes quietly when the tab is
+  shown again or the device comes back online.
+- **Row actions:** `useRowActions()`. `actions.run(id, { apply, request, rollback,
+  success, error, after })` changes the row instantly, sends the request, shows a
+  toast, and rolls back with an error toast if the server refuses. Use
+  `actions.isPending(id[, kind])` to disable or spin only that row's buttons, so
+  people can act on one row after another without waiting.
+- **Dialogs** (reject reason, confirm delete): close the dialog as soon as the input
+  is valid, then run the row action — the row shows the change straight away.
+- **Data changed elsewhere:** `useLiveRefresh(['booking', 'payment'], () => list.refresh())`
+  refreshes quietly when a realtime notification of that kind arrives.
+- **Feedback:** use `toast` from `vue-sonner` for results (short, specific); keep
+  inline errors for form fields.
+
+Reference: `src/views/store/BookingsView.vue`.
