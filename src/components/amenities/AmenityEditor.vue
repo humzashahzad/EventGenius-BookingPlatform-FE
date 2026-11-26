@@ -60,6 +60,8 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { isAboutVenue } from '@/lib/liveData'
 import { useRowActions } from '@/composables/useRowActions'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { FormField, TextInput, SwitchInput, CurrencyInput } from '@/components/forms'
@@ -162,6 +164,11 @@ function remove(a: Amenity) {
     error: 'Failed to remove amenity.',
   }, 'delete')
 }
+
+// Amenities changed on another device: refresh quietly unless a row is being edited.
+useLiveRefresh(['venue_amenity'], () => {
+  if (editingId.value === null && !busy.value && !actions.pending.size) void load()
+}, { debounceMs: 500, match: (_t, d) => isAboutVenue(d, props.venueId) })
 
 watch(() => props.venueId, load)
 onMounted(load)

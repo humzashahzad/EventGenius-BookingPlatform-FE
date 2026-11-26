@@ -87,6 +87,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { statusBadgeClass, statusLabel } from '@/lib/status'
 import { useAuthStore } from '@/stores/auth'
 import ProfileAvatarUpload from '@/components/profile/AvatarUpload.vue'
@@ -120,16 +121,23 @@ const avatarUrl = computed(() => getAvatarUrl(storeUserAvatar.value))
 
 function onAvatarUpdate() {}
 
-async function load() {
-  loading.value = true
+// What was last loaded, to tell whether the owner has started editing.
+let loaded = ''
+const snapshot = () => JSON.stringify(form)
+
+async function load(opts: { quiet?: boolean } = {}) {
+  const quiet = !!opts.quiet && !loading.value
+  if (!quiet) loading.value = true
   try {
     const { data } = await api.get('/store/profile')
     const { user, store } = data.data
     authStore.user = { ...authStore.user!, ...user }
+    if (store?.status) storeStatus.value = store.status
+    // A background refresh never overwrites what the owner is typing.
+    if (quiet && (saving.value || snapshot() !== loaded)) return
     form.name        = user.name  || ''
     form.phone       = user.phone || ''
     if (store) {
-      storeStatus.value  = store.status      || 'pending'
       form.store_name    = store.name        || ''
       form.description   = store.description || ''
       form.city          = store.city        || ''
@@ -139,6 +147,9 @@ async function load() {
       form.store_email   = store.email       || ''
       form.website       = (store.website || '').replace(/^https?:\/\//, '')
     }
+    loaded = snapshot()
+  } catch {
+    // Quiet refresh failed: keep the form as it is.
   } finally {
     loading.value = false
   }
@@ -156,6 +167,7 @@ async function save() {
     const { user, store } = data?.data ?? {}
     if (user && authStore.user) authStore.user = { ...authStore.user, ...user }
     if (store?.status) storeStatus.value = store.status
+    loaded = snapshot()
     successMsg.value = 'Profile saved successfully!'
     toast.success('Profile saved.')
     setTimeout(() => (successMsg.value = ''), 3500)
@@ -168,5 +180,8 @@ async function save() {
   }
 }
 
-onMounted(load)
+onMounted(() => load())
+
+// Support approved or suspended the shop, or it was edited on another device.
+useLiveRefresh(['store', 'user.'], () => { void load({ quiet: true }) }, 500)
 </script>

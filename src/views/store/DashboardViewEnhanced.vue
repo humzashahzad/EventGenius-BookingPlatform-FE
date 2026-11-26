@@ -470,7 +470,11 @@ function retry() {
 }
 
 // New requests, payments and reviews from customers appear without a reload.
-useLiveRefresh(['booking', 'payment', 'review'], () => { if (data.value?.has_store) refreshAll() })
+useLiveRefresh(['booking', 'payment', 'review', 'venue', 'store'], (type) => {
+  if (data.value?.has_store) refreshAll()
+  // The shop was just approved: load the parts that only exist with a store.
+  else if (type.startsWith('store') || type === '*') void load()
+})
 
 // ── Accept / reject (same calls as the bookings page) ────────────────────
 // Per-row pending state: owners can accept one request after another without waiting.
