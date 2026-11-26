@@ -33,7 +33,7 @@
         <div class="empty-state-icon"><AppIcon icon="alert-circle" class="w-5 h-5" /></div>
         <p class="empty-state-title">Couldn't load your venues</p>
         <p class="empty-state-desc">{{ loadError }}</p>
-        <div class="empty-state-actions"><button class="btn-primary" @click="load">Try again</button></div>
+        <div class="empty-state-actions"><button class="btn-primary" @click="list.load()">Try again</button></div>
       </div>
     </div>
 
@@ -97,13 +97,25 @@
           </dl>
           <p class="text-xs text-ink-muted mt-3 num">{{ venue.total_bookings ?? 0 }} bookings · {{ venue.total_reviews ?? 0 }} reviews · {{ venue.images?.length ?? 0 }} photos</p>
 
-          <div class="flex gap-2 mt-4 pt-4 border-t border-line">
+          <div class="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-line">
+            <SwitchInput
+              :id="`venue-active-${venue.id}`"
+              :model-value="venue.status === 'active'"
+              size="sm"
+              label="Listed for booking"
+              :disabled="actions.isPending(venue.id)"
+              @update:model-value="(v: boolean) => toggleStatus(venue, v)"
+            />
+            <AppIcon v-if="actions.isPending(venue.id, 'status')" icon="loader" class="w-4 h-4 animate-spin text-ink-muted shrink-0" aria-hidden="true" />
+          </div>
+
+          <div class="flex gap-2 mt-3">
             <RouterLink :to="`/shop/venues/${venue.id}/edit`" class="btn-secondary btn-sm flex-1"><AppIcon icon="edit" class="w-4 h-4" />Edit</RouterLink>
             <RouterLink :to="`/shop/venues/${venue.id}/gallery`" class="btn-secondary btn-sm flex-1"><AppIcon icon="image" class="w-4 h-4" />Gallery</RouterLink>
             <a v-if="venue.slug" :href="`/venues/${venue.slug}`" target="_blank" rel="noopener" class="btn-icon btn-icon-sm" :aria-label="`View ${venue.name} public page`" title="View public page">
               <AppIcon icon="external-link" class="w-4 h-4" />
             </a>
-            <button class="btn-icon btn-icon-sm hover:!text-danger-text" :aria-label="`Delete ${venue.name}`" title="Delete venue" @click="confirmDelete(venue)">
+            <button class="btn-icon btn-icon-sm hover:!text-danger-text" :disabled="actions.isPending(venue.id)" :aria-label="`Delete ${venue.name}`" title="Delete venue" @click="confirmDelete(venue)">
               <AppIcon icon="trash" class="w-4 h-4" />
             </button>
           </div>
@@ -123,10 +135,7 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <button class="btn-secondary" @click="showDeleteModal = false">Cancel</button>
-          <button class="btn-danger" :disabled="acting" @click="doDelete">
-            <AppIcon v-if="acting" icon="loader" class="w-4 h-4 animate-spin" />
-            Delete venue
-          </button>
+          <button class="btn-danger" @click="doDelete">Delete venue</button>
         </div>
       </template>
     </VuexyModal>
@@ -134,10 +143,11 @@
 </template>
 
 <script setup lang="ts">
-import { TextInput, SegmentedControl } from '@/components/forms'
+import { TextInput, SegmentedControl, SwitchInput } from '@/components/forms'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { toast } from 'vue-sonner'
+import { useSilentList } from '@/composables/useSilentList'
+import { useRowActions } from '@/composables/useRowActions'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
 import { statusBadgeClass, statusLabel } from '@/lib/status'
@@ -145,10 +155,15 @@ import VuexyModal from '@/components/ui/VuexyModal.vue'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { compactPKR } from '@/components/dashboard/metrics'
 
-const venues = ref<any[]>([])
-const loading = ref(false)
-const loadError = ref('')
-const acting = ref(false)
+// Loaded once with a skeleton, then updated in place (no reloads after actions).
+const list = useSilentList<any>(async () => {
+  const { data } = await api.get('/store/venues')
+  return data.data.data
+})
+const venues = list.items
+const loading = list.loading
+const loadError = list.error
+const actions = useRowActions()
 const deleteTarget = ref<any>(null)
 const showDeleteModal = ref(false)
 const search = ref('')
@@ -172,35 +187,44 @@ const filteredVenues = computed(() => {
   })
 })
 
-async function load() {
-  loading.value = true
-  loadError.value = ''
-  try {
-    const { data } = await api.get('/store/venues')
-    venues.value = data.data.data
-  } catch (e: any) {
-    loadError.value = e.response?.data?.message || 'Please check your connection and try again.'
-  } finally { loading.value = false }
-}
-
 function confirmDelete(venue: any) {
   deleteTarget.value = venue
   showDeleteModal.value = true
 }
 
-async function doDelete() {
-  if (!deleteTarget.value) return
-  acting.value = true
-  try {
-    await api.delete(`/store/venues/${deleteTarget.value.id}`)
-    venues.value = venues.value.filter(v => v.id !== deleteTarget.value.id)
-    toast.success('Venue deleted.')
-    deleteTarget.value = null
-    showDeleteModal.value = false
-  } catch (e: any) {
-    toast.error(e.response?.data?.message || 'Could not delete this venue.')
-  } finally { acting.value = false }
+function doDelete() {
+  const venue = deleteTarget.value
+  if (!venue) return
+  // Close straight away; the card disappears and comes back if the server refuses.
+  showDeleteModal.value = false
+  deleteTarget.value = null
+  let index = -1
+  actions.run(venue.id, {
+    apply: () => {
+      index = venues.value.findIndex(v => v.id === venue.id)
+      if (index !== -1) venues.value.splice(index, 1)
+    },
+    request: () => api.delete(`/store/venues/${venue.id}`),
+    rollback: () => {
+      if (!venues.value.some(v => v.id === venue.id)) venues.value.splice(Math.max(0, Math.min(index, venues.value.length)), 0, venue)
+    },
+    success: `${venue.name} deleted.`,
+    error: 'Could not delete this venue.',
+  }, 'delete')
 }
 
-onMounted(load)
+function toggleStatus(venue: any, on: boolean) {
+  const prev = venue.status
+  const next = on ? 'active' : 'inactive'
+  actions.run(venue.id, {
+    apply: () => { venue.status = next },
+    request: () => api.put(`/store/venues/${venue.id}`, { status: next }),
+    rollback: () => { venue.status = prev },
+    onSuccess: (res: any) => { if (res?.data?.data?.status) venue.status = res.data.data.status },
+    success: on ? `${venue.name} is listed for booking.` : `${venue.name} is hidden from customers.`,
+    error: 'Could not change this venue\'s status.',
+  }, 'status')
+}
+
+onMounted(() => list.load())
 </script>

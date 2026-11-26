@@ -85,6 +85,7 @@
 import { FormField, TextInput, TextareaInput, PhoneInput, FormActions } from '@/components/forms'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import { statusBadgeClass, statusLabel } from '@/lib/status'
 import { useAuthStore } from '@/stores/auth'
@@ -144,16 +145,23 @@ async function load() {
 }
 
 async function save() {
+  if (saving.value) return
   saving.value     = true
   successMsg.value = ''
   errorMsg.value   = ''
   try {
     const payload = { ...form, website: form.website ? `https://${form.website.replace(/^https?:\/\//, '')}` : '' }
-    await api.put('/store/profile', payload)
+    const { data } = await api.put('/store/profile', payload)
+    // Update what's shown (sidebar name, status) from the saved values; the form stays put.
+    const { user, store } = data?.data ?? {}
+    if (user && authStore.user) authStore.user = { ...authStore.user, ...user }
+    if (store?.status) storeStatus.value = store.status
     successMsg.value = 'Profile saved successfully!'
+    toast.success('Profile saved.')
     setTimeout(() => (successMsg.value = ''), 3500)
   } catch (e: any) {
     errorMsg.value = e.response?.data?.message || 'Failed to save. Please try again.'
+    toast.error(errorMsg.value)
     setTimeout(() => (errorMsg.value = ''), 4000)
   } finally {
     saving.value = false
