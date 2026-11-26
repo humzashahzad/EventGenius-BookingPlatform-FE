@@ -238,6 +238,7 @@ import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import { useCachedResource, cacheGet } from '@/composables/usePageCache'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { isAboutBooking } from '@/lib/liveData'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import ReviewForm from '@/components/reviews/ReviewForm.vue'
 import { formatTimeRange, formatPKR, formatAddress } from '@/lib/format'
@@ -347,8 +348,8 @@ function formatZar(n: number | string) {
 }
 
 // The venue confirms or declines, or a payment lands: update this page quietly.
-useLiveRefresh(['booking', 'payment'], (_type, data) => {
-  if (!data?.booking_id || String(data.booking_id) === String(route.params.id)) void res.refresh()
+useLiveRefresh(['booking', 'payment'], () => { void res.refresh() }, {
+  match: (_t, data) => isAboutBooking(data, route.params.id as string),
 })
 
 // Opening another booking from a notification reuses this page.

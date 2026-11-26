@@ -232,6 +232,21 @@ export function storeIdOf(data: any): string | null {
   return null
 }
 
+/** The booking a payload is about (its own id for booking events). */
+export function bookingIdOf(data: any): string | null {
+  if (!data || typeof data !== 'object') return null
+  if (data.booking_id != null) return String(data.booking_id)
+  if (data.entity === 'booking' && data.id != null) return String(data.id)
+  return null
+}
+
+/** True unless the payload is clearly about a different booking. */
+export function isAboutBooking(data: any, bookingId: number | string | null | undefined): boolean {
+  if (bookingId == null || bookingId === '') return true
+  const b = bookingIdOf(data)
+  return b === null || b === String(bookingId)
+}
+
 /** True unless the payload is clearly about a different venue. */
 export function isAboutVenue(data: any, venueId: number | string | null | undefined): boolean {
   if (venueId == null || venueId === '') return true

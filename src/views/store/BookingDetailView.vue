@@ -214,6 +214,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useSilentResource } from '@/composables/useSilentList'
 import { useRowActions } from '@/composables/useRowActions'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { isAboutBooking } from '@/lib/liveData'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import { formatDate, formatPKR, formatTimeRange, formatAddress } from '@/lib/format'
@@ -245,9 +246,8 @@ const rejectReason = ref('')
 const rejectError = ref('')
 
 // Payments, cancellations and changes made elsewhere show up quietly.
-useLiveRefresh(['booking', 'payment'], (_type, payload) => {
-  const id = payload?.booking_id ?? payload?.booking?.id ?? payload?.id
-  if (!id || String(id) === bookingKey) res.refresh()
+useLiveRefresh(['booking', 'payment'], () => { if (!acting.value) res.refresh() }, {
+  match: (_t, payload) => (payload?.booking?.id != null ? String(payload.booking.id) === bookingKey : isAboutBooking(payload, bookingKey)),
 })
 
 /** Shallow ref: replace the object so the page re-renders with the change. */

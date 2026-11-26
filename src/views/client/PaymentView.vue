@@ -38,7 +38,7 @@
         <p class="empty-state-title mt-3">We couldn't start the payment</p>
         <p class="empty-state-desc">{{ error }}</p>
         <div class="empty-state-actions">
-          <button type="button" class="btn-primary" @click="loadPaymentData"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button>
+          <button type="button" class="btn-primary" @click="loadPaymentData()"><AppIcon icon="refresh" class="w-4 h-4" />Try again</button>
           <RouterLink :to="`/customer/bookings/${route.params.id}`" class="btn-secondary">Back to booking</RouterLink>
         </div>
       </div>
@@ -118,6 +118,8 @@ import { formatPKR, formatTimeRange } from '@/lib/format'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { isAboutBooking } from '@/lib/liveData'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { venueImage, onImageError, formatEventDate } from '@/components/client/bookingUtils'
 
@@ -144,9 +146,12 @@ function formatZar(n: number | string) {
   return Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-async function loadPaymentData() {
-  loading.value = true
-  error.value = ''
+async function loadPaymentData(opts: { quiet?: boolean } = {}) {
+  const quiet = !!opts.quiet && !!booking.value
+  if (!quiet) {
+    loading.value = true
+    error.value = ''
+  }
   try {
     const bookingRes = await api.get(`/client/bookings/${route.params.id}`)
     booking.value = bookingRes.data.data
@@ -155,6 +160,7 @@ async function loadPaymentData() {
     const paymentRes = await api.get(`/client/bookings/${route.params.id}/payment-data`)
     paymentData.value = paymentRes.data.data
   } catch (err: any) {
+    if (quiet) return
     error.value = err.response?.data?.message || 'Failed to load payment details. Please try again.'
   } finally {
     loading.value = false
@@ -165,5 +171,10 @@ function formatDate(d: string) {
   return formatEventDate(d, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-onMounted(loadPaymentData)
+onMounted(() => loadPaymentData())
+
+// Paid on another device, or the venue cancelled: show the new state without a reload.
+useLiveRefresh(['booking', 'payment'], () => { void loadPaymentData({ quiet: true }) }, {
+  match: (_t, data) => isAboutBooking(data, route.params.id as string),
+})
 </script>

@@ -95,6 +95,7 @@ import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import { cacheGet, cacheSet } from '@/composables/usePageCache'
 import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { isAboutBooking } from '@/lib/liveData'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { FormField, RatingInput, TextInput, TextareaInput } from '@/components/forms'
 
@@ -169,7 +170,10 @@ async function load(opts: { quiet?: boolean } = {}) {
 }
 
 // The venue replies to the review (or a moderator hides it): update quietly.
-useLiveRefresh(['review'], () => { if (!submitting.value) void load({ quiet: true }) })
+// A completed booking makes it reviewable.
+useLiveRefresh(['review', 'booking'], () => { if (!submitting.value) void load({ quiet: true }) }, {
+  match: (_t, d) => isAboutBooking(d, props.bookingId),
+})
 
 async function submit() {
   ratingTouched.value = true

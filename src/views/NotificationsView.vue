@@ -125,6 +125,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { useAuthStore } from '@/stores/auth'
@@ -284,6 +285,9 @@ function removeNotif(id: number) {
     error: 'Could not delete this notification.',
   })
 }
+
+// New ones arrive through the store; after a dropped connection, catch up quietly.
+useLiveRefresh([], () => { void refresh() }, 600)
 
 onMounted(() => {
   // First visit: shows the skeleton. Coming back: the list is already there and refreshes quietly.
