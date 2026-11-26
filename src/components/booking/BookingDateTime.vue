@@ -241,7 +241,10 @@ function removeDay(i: number) {
   if (active.value >= next.length) active.value = next.length - 1
   else if (i < active.value) active.value = active.value - 1
 }
-const canAddDay = computed(() => days.value.length < 7 && days.value.every(d => d.date && d.start_time && d.end_time))
+// The booking API stores one date per request (extra `slots` days are not saved yet),
+// so adding more days stays off until the backend books every day.
+const MULTI_DAY_ENABLED = false
+const canAddDay = computed(() => MULTI_DAY_ENABLED && days.value.length < 7 && days.value.every(d => d.date && d.start_time && d.end_time))
 
 function onPickDate(iso: string | null) {
   if (!iso) return
