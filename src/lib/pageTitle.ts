@@ -30,6 +30,7 @@ const TITLES: Record<string, string> = {
   'customer-payment': 'Payment',
   'customer-payment-success': 'Payment successful',
   'customer-payment-cancel': 'Payment cancelled',
+  'customer-booking-invoice': 'Invoice',
 
   'shop-login': 'Shop sign in',
   'shop-register': 'Register your shop',
