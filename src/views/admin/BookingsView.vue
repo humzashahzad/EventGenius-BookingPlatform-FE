@@ -61,6 +61,7 @@
             <button v-if="b.status === 'confirmed' && (b.payment_status === 'unpaid' || actions.isPending(b.id))" class="btn-secondary btn-sm mt-3" :disabled="actions.isPending(b.id)" :aria-busy="actions.isPending(b.id)" @click="askMarkPaid(b)">
               <AppIcon :icon="actions.isPending(b.id) ? 'loader' : 'banknote'" :class="actions.isPending(b.id) ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Mark paid (demo)
             </button>
+            <InvoiceDownloadButton v-if="hasInvoice(b)" audience="admin" :booking-id="b.id" :booking-number="b.booking_number" label="Download invoice" variant="btn-secondary btn-sm mt-3" />
           </li>
         </ul>
 
@@ -101,6 +102,7 @@
                   <button v-if="b.status === 'confirmed' && (b.payment_status === 'unpaid' || actions.isPending(b.id))" class="btn-ghost btn-sm" :disabled="actions.isPending(b.id)" :aria-busy="actions.isPending(b.id)" title="Demo only — no PayFast charge" @click="askMarkPaid(b)">
                     <AppIcon :icon="actions.isPending(b.id) ? 'loader' : 'banknote'" :class="actions.isPending(b.id) ? 'w-4 h-4 animate-spin' : 'w-4 h-4'" />Mark paid
                   </button>
+                  <InvoiceDownloadButton v-if="hasInvoice(b)" audience="admin" :booking-id="b.id" :booking-number="b.booking_number" label="Invoice" busy-label="Invoice" variant="btn-ghost btn-sm" />
                 </td>
               </tr>
             </tbody>
@@ -128,6 +130,8 @@ import AppIcon from '@/components/ui/AppIcon.vue'
 import DataToolbar from '@/components/admin/DataToolbar.vue'
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue'
 import ListBody from '@/components/admin/ListBody.vue'
+import InvoiceDownloadButton from '@/components/invoice/InvoiceDownloadButton.vue'
+import { hasInvoice } from '@/lib/invoice'
 import TablePager from '@/components/dashboard/TablePager.vue'
 import { humanize } from '@/components/dashboard/metrics'
 import { useRowActions } from '@/composables/useRowActions'

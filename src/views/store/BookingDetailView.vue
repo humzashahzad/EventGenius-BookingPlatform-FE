@@ -40,6 +40,7 @@
             <RouterLink :to="{ path: '/shop/messages', query: { with: booking.client_id } }" class="btn-secondary">
               <AppIcon icon="message" class="w-4 h-4" />Message
             </RouterLink>
+            <InvoiceDownloadButton v-if="hasInvoice(booking)" audience="store" :booking-id="booking.id" :booking-number="booking.booking_number" label="Download invoice" />
             <template v-if="booking.status === 'pending'">
               <button class="btn-secondary" :disabled="acting" @click="openReject">
                 <AppIcon icon="x" class="w-4 h-4" />Reject
@@ -222,6 +223,8 @@ import { getStorageUrl } from '@/lib/storageUrl'
 import { statusBadgeClass, statusLabel } from '@/lib/status'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import VuexyModal from '@/components/ui/VuexyModal.vue'
+import InvoiceDownloadButton from '@/components/invoice/InvoiceDownloadButton.vue'
+import { hasInvoice } from '@/lib/invoice'
 import { humanize, initials } from '@/components/dashboard/metrics'
 
 const route = useRoute()

@@ -293,6 +293,7 @@
 </template>
 
 <script setup lang="ts">
+import { usePageTitle } from '@/lib/pageTitle'
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
@@ -321,6 +322,7 @@ const STEP_SHORT = ['Date', 'Details', 'Review']
 const REQ_MAX = 1000
 
 const venue = ref<any>(null)
+usePageTitle(() => venue.value?.name ? `Book ${venue.value.name}` : null)
 const loading = ref(true)
 const submitting = ref(false)
 const checking = ref(false)

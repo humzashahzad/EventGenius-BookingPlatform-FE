@@ -345,6 +345,7 @@
 </template>
 
 <script setup lang="ts">
+import { usePageTitle } from '@/lib/pageTitle'
 import { formatPKR, formatAddress } from '@/lib/format'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
@@ -369,6 +370,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const venue = ref<any>(null)
+usePageTitle(() => venue.value?.name)
 const loading = ref(true)
 const loadError = ref(false)
 const categories = ref<CategoryLike[]>([])

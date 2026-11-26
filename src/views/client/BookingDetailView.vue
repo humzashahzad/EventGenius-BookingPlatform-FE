@@ -212,6 +212,7 @@
                   <div v-if="booking.payment?.refunded_at" class="dl-row"><dt>Refunded</dt><dd>{{ formatDateTime(booking.payment.refunded_at) }}</dd></div>
                   <div v-if="booking.payment?.transaction_id" class="dl-row"><dt>Transaction</dt><dd class="ref min-w-0 break-all">{{ booking.payment.transaction_id }}</dd></div>
                 </dl>
+                <div class="mt-4 grid grid-cols-2 gap-2"><RouterLink :to="`/customer/bookings/${booking.id}/invoice`" class="btn-secondary"><AppIcon icon="receipt" class="w-4 h-4" />Invoice</RouterLink><InvoiceDownloadButton :booking-id="booking.id" :booking-number="booking.booking_number" label="PDF" busy-label="PDF" /></div>
               </template>
               <template v-else-if="canPay">
                 <p class="text-sm text-ink-secondary">The venue confirmed your booking. Pay securely with PayFast to lock in the date.</p>
@@ -241,6 +242,7 @@ import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { isAboutBooking } from '@/lib/liveData'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import ReviewForm from '@/components/reviews/ReviewForm.vue'
+import InvoiceDownloadButton from '@/components/invoice/InvoiceDownloadButton.vue'
 import { formatTimeRange, formatPKR, formatAddress } from '@/lib/format'
 import { statusBadgeClass, statusLabel } from '@/lib/status'
 import {
