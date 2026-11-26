@@ -25,7 +25,7 @@
       ref="panelRef"
       class="cw-panel"
       :class="{ 'cw-panel-phone': isPhone }"
-      :style="isPhone ? undefined : panelStyle"
+      :style="isPhone ? sheetStyle : panelStyle"
       role="dialog"
       :aria-modal="isPhone ? 'true' : undefined"
       aria-label="Messages"
@@ -105,12 +105,48 @@ const launcherLabel = computed(() => {
 })
 
 // ── Phone layout ─────────────────────────────────────────────────────
-const phoneQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639.98px)') : null
+// Phones (and phones in landscape, where a floating panel would be too short) get a full-screen sheet.
+const phoneQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 639.98px), (max-height: 499.98px) and (pointer: coarse), (max-height: 419.98px)') : null
 const isPhone = ref(phoneQuery?.matches ?? false)
 const onPhoneChange = (e: MediaQueryListEvent) => { isPhone.value = e.matches }
 
+// Keep the sheet (and so the composer) inside the visible area when the on-screen keyboard opens.
+const viewport = ref<{ top: number; height: number } | null>(null)
+let viewportRaf = 0
+function readViewport() {
+  viewportRaf = 0
+  const vv = window.visualViewport
+  if (!vv) { viewport.value = null; return }
+  // Only override while something (the keyboard) actually shrinks the visible area.
+  const shrunk = window.innerHeight - vv.height > 1 || vv.offsetTop > 1
+  viewport.value = shrunk ? { top: Math.max(0, Math.round(vv.offsetTop)), height: Math.round(vv.height) } : null
+}
+function onViewportChange() {
+  if (!viewportRaf) viewportRaf = requestAnimationFrame(readViewport)
+}
+function startViewportTracking() {
+  const vv = typeof window !== 'undefined' ? window.visualViewport : null
+  if (!vv) return
+  vv.addEventListener('resize', onViewportChange)
+  vv.addEventListener('scroll', onViewportChange)
+  readViewport()
+}
+function stopViewportTracking() {
+  const vv = typeof window !== 'undefined' ? window.visualViewport : null
+  vv?.removeEventListener('resize', onViewportChange)
+  vv?.removeEventListener('scroll', onViewportChange)
+  if (viewportRaf) cancelAnimationFrame(viewportRaf)
+  viewportRaf = 0
+  viewport.value = null
+}
+const sheetStyle = computed(() => (viewport.value
+  ? { top: `${viewport.value.top}px`, height: `${viewport.value.height}px`, bottom: 'auto' }
+  : undefined))
+
 watch(() => isPhone.value && widget.open && widget.available, (lock) => {
   document.documentElement.classList.toggle('cw-scroll-lock', lock)
+  if (lock) startViewportTracking()
+  else stopViewportTracking()
 }, { immediate: true })
 
 // ── Keep clear of fixed bottom bars (e.g. the booking page's action bar on phones) ──
@@ -148,10 +184,8 @@ watch(() => route.fullPath, scheduleMeasure)
 const launcherStyle = computed(() => ({
   bottom: `calc(var(--cw-gap) + env(safe-area-inset-bottom, 0px) + ${bottomObstacle.value}px)`,
 }))
-const panelStyle = computed(() => ({
-  bottom: `calc(var(--cw-gap) + env(safe-area-inset-bottom, 0px) + ${bottomObstacle.value}px + 4.25rem)`,
-  maxHeight: `calc(100vh - var(--cw-gap) - env(safe-area-inset-bottom, 0px) - ${bottomObstacle.value}px - 5.5rem)`,
-}))
+// The panel sits just above the launcher, so the launcher never covers the composer.
+const panelStyle = computed(() => ({ '--cw-obstacle': `${bottomObstacle.value}px` }))
 
 // ── Conversation list readiness (cached list counts as ready) ────────
 // Show the cached list right away; the API refresh from App.vue replaces it.
@@ -250,6 +284,7 @@ onBeforeUnmount(() => {
   removeGuard?.()
   phoneQuery?.removeEventListener('change', onPhoneChange)
   window.removeEventListener('resize', scheduleMeasure)
+  stopViewportTracking()
   measureTimers.forEach(clearTimeout)
   obstacleObserver?.disconnect()
   chatStore.setWidgetViewing(false)
@@ -288,13 +323,20 @@ onBeforeUnmount(() => {
 }
 
 .cw-panel {
+  --cw-obstacle: 0px;
+  /* Space taken below the panel: gap + safe area + any fixed bottom bar + launcher (3.5rem) + 0.75rem. */
+  --cw-below: calc(var(--cw-gap) + env(safe-area-inset-bottom, 0px) + var(--cw-obstacle) + 4.25rem);
   position: fixed;
   right: calc(var(--cw-gap) + env(safe-area-inset-right, 0px));
+  bottom: var(--cw-below);
   z-index: 45;
   display: flex;
   flex-direction: column;
-  width: min(380px, calc(100vw - 2rem));
+  width: min(380px, calc(100vw - 2 * var(--cw-gap) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
   height: 560px;
+  min-height: min(320px, calc(100vh - var(--cw-below) - 0.75rem));
+  max-height: calc(100vh - var(--cw-below) - 0.75rem);
+  max-height: calc(100dvh - var(--cw-below) - 0.75rem);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -303,16 +345,26 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-xl);
   animation: cw-in .16s ease-out;
 }
+/* Larger screens: a little more room for the conversation. */
+@media (min-width: 1280px) and (min-height: 820px) {
+  .cw-panel { width: 400px; height: 620px; }
+}
 .cw-panel:focus { outline: none; }
 .cw-panel-phone {
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   max-height: none;
   border: 0;
   border-radius: 0;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  overscroll-behavior: contain;
 }
 @keyframes cw-in {
   from { opacity: 0; transform: translateY(8px); }

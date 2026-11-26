@@ -59,24 +59,42 @@
       </div>
 
       <template v-for="(msg, idx) in list" :key="msg.id">
-        <div v-if="newDay(idx)" class="cwc-day"><span>{{ dayLabel(msg.created_at) }}</span></div>
+        <div v-if="newDay(idx)" class="cwc-day" role="separator"><span>{{ dayLabel(msg.created_at) }}</span></div>
         <div
           class="cwc-row"
-          :class="[mine(msg) ? 'cwc-row-own' : 'cwc-row-other', { 'cwc-row-pending': msg.id < 0 }]"
+          :class="[
+            mine(msg) ? 'cwc-row-own' : 'cwc-row-other',
+            { 'cwc-row-first': firstOfRun(idx), 'cwc-row-pending': msg.id < 0 },
+          ]"
           :data-message-id="msg.id"
         >
-          <div class="cwc-bubble-wrap">
-            <p v-if="isGroup && !mine(msg) && firstOfRun(idx)" class="cwc-sender">{{ msg.sender?.name }}</p>
-            <div v-if="msg.reply_to && !msg.is_deleted" class="cwc-reply">
-              <span class="font-semibold">{{ msg.reply_to.sender_name }}</span>
-              <span class="truncate">{{ msg.reply_to.body || 'Attachment' }}</span>
-            </div>
+          <!-- Other person: small avatar on the first message of a run, a spacer after it -->
+          <span v-if="!mine(msg)" class="cwc-row-avatar" aria-hidden="true">
+            <template v-if="firstOfRun(idx)">
+              <img v-if="senderAvatar(msg)" :src="getStorageUrl(senderAvatar(msg)!)" alt="" class="avatar" />
+              <span v-else class="avatar">{{ initial(senderName(msg)) }}</span>
+            </template>
+          </span>
 
-            <div class="cwc-bubble" :class="{ 'cwc-bubble-deleted': msg.is_deleted }">
+          <div class="cwc-bubble-wrap">
+            <p v-if="isGroup && !mine(msg) && firstOfRun(idx)" class="cwc-sender">{{ senderName(msg) }}</p>
+
+            <div
+              class="cwc-bubble"
+              :class="{
+                'cwc-bubble-deleted': msg.is_deleted,
+                'cwc-bubble-media': !msg.is_deleted && !msg.body && onlyVisualMedia(msg),
+              }"
+            >
+              <span class="sr-only">{{ mine(msg) ? 'You' : senderName(msg) }}:</span>
               <template v-if="msg.is_deleted">
-                <span class="cwc-deleted"><AppIcon icon="ban" class="w-3.5 h-3.5" /> This message was deleted</span>
+                <span class="cwc-deleted"><AppIcon icon="ban" class="w-3.5 h-3.5 shrink-0" /> This message was deleted</span>
               </template>
               <template v-else>
+                <div v-if="msg.reply_to" class="cwc-reply">
+                  <span class="cwc-reply-name">{{ msg.reply_to.sender_id === myId ? 'You' : msg.reply_to.sender_name }}</span>
+                  <span class="cwc-reply-text">{{ msg.reply_to.body || 'Attachment' }}</span>
+                </div>
                 <div v-if="msg.attachments?.length" class="cwc-atts">
                   <template v-for="att in msg.attachments" :key="att.path">
                     <a v-if="att.mime?.startsWith('image/')" :href="getStorageUrl(att.path)" target="_blank" rel="noopener" class="cwc-att-img">
@@ -301,7 +319,18 @@ const statusText = computed(() => {
 })
 
 function initial(n: string) { return (n || '?').trim().charAt(0).toUpperCase() }
-function mine(m: ChatMessage) { return m.sender_id === myId.value }
+/** Same rule as the messages page: a message is "mine" when its sender is the signed-in user. */
+function mine(m: ChatMessage) { return myId.value != null && Number(m.sender_id) === Number(myId.value) }
+function senderName(m: ChatMessage) {
+  if (mine(m)) return 'You'
+  return m.sender?.name || (isGroup.value ? 'Someone' : name.value) || 'Someone'
+}
+function senderAvatar(m: ChatMessage) {
+  return m.sender?.avatar || (!isGroup.value ? other.value?.avatar : null) || null
+}
+function onlyVisualMedia(m: ChatMessage) {
+  return !!m.attachments?.length && m.attachments.every(a => a.mime?.startsWith('image/') || a.mime?.startsWith('video/'))
+}
 function time(iso: string) {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? '' : format(d, 'HH:mm')
@@ -316,8 +345,13 @@ function newDay(idx: number) {
   if (idx === 0) return true
   return !isSameDay(new Date(list.value[idx - 1].created_at), new Date(list.value[idx].created_at))
 }
+/** A run is consecutive messages from one sender on the same day, less than 10 minutes apart. */
 function firstOfRun(idx: number) {
-  return idx === 0 || list.value[idx - 1].sender_id !== list.value[idx].sender_id
+  if (idx === 0 || newDay(idx)) return true
+  const prev = list.value[idx - 1]
+  const curr = list.value[idx]
+  if (Number(prev.sender_id) !== Number(curr.sender_id)) return true
+  return new Date(curr.created_at).getTime() - new Date(prev.created_at).getTime() > 10 * 60_000
 }
 
 // ── Scrolling ────────────────────────────────────────────────────────
@@ -550,13 +584,25 @@ async function remove(msg: ChatMessage) {
   if (!ok) toast.error('Could not delete this message.')
 }
 
+// When the message area changes size (on-screen keyboard, rotation, composer growing),
+// stay pinned to the newest message if the user was already there.
+let resizeObserver: ResizeObserver | null = null
+
 onMounted(() => {
   document.addEventListener('click', onDocClick)
   restoreScroll()
   nextTick(autoSize)
+  if (typeof ResizeObserver !== 'undefined' && scrollRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      const el = scrollRef.value
+      if (el && restored && widget.atBottom) el.scrollTop = el.scrollHeight
+    })
+    resizeObserver.observe(scrollRef.value)
+  }
 })
 
 onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
   document.removeEventListener('click', onDocClick)
   chatStore.stopTyping(props.chatId)
   // Remember the unsent text (unless it is an edit of an old message).
@@ -580,78 +626,110 @@ onBeforeUnmount(() => {
 
 .cwc-scroll {
   flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
-  padding: 0.75rem 0.75rem 0.5rem; background: var(--canvas);
-  display: flex; flex-direction: column; gap: 0.25rem;
+  padding: 0.5rem 0.75rem 0.75rem; background: var(--canvas);
+  display: flex; flex-direction: column;
+  /* Bubbles: ~78% of the row, never wider than a comfortable reading width on wide panels. */
+  --cwc-bubble-max: min(78%, 26rem);
+  --cwc-radius: 1rem;
+  --cwc-tail: 0.3125rem;
+  --cwc-avatar: 1.75rem;
 }
 .cwc-scroll:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .cwc-older { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.25rem; font-size: 0.75rem; color: var(--ink-muted); }
 .cwc-skel { display: flex; padding: 0.25rem 0; }
 
-.cwc-day { display: flex; justify-content: center; margin: 0.5rem 0 0.25rem; }
+.cwc-day { display: flex; justify-content: center; margin: 0.75rem 0 0.25rem; }
 .cwc-day span {
   padding: 0.125rem 0.625rem; border-radius: 9999px; border: 1px solid var(--line);
-  background: var(--surface); font-size: 0.6875rem; font-weight: 600; color: var(--ink-muted);
+  background: var(--surface); font-size: 0.6875rem; font-weight: 600; line-height: 1.125rem; color: var(--ink-muted);
 }
 
-.cwc-row { position: relative; display: flex; align-items: flex-start; gap: 0.25rem; min-width: 0; }
+/* ── Rows: other person on the left, the signed-in user on the right ── */
+.cwc-row { position: relative; display: flex; align-items: flex-start; gap: 0.375rem; width: 100%; min-width: 0; margin-top: 0.125rem; }
+.cwc-row-first { margin-top: 0.625rem; }
+.cwc-day + .cwc-row { margin-top: 0.375rem; }
 .cwc-row-own { flex-direction: row-reverse; }
 .cwc-row-pending { opacity: 0.7; }
-.cwc-bubble-wrap { display: flex; flex-direction: column; max-width: 80%; min-width: 0; }
+.cwc-row-avatar { flex: 0 0 var(--cwc-avatar); width: var(--cwc-avatar); }
+.cwc-row-avatar .avatar { width: var(--cwc-avatar); height: var(--cwc-avatar); font-size: 0.6875rem; object-fit: cover; }
+
+.cwc-bubble-wrap { display: flex; flex-direction: column; align-items: flex-start; max-width: var(--cwc-bubble-max); min-width: 0; }
 .cwc-row-own .cwc-bubble-wrap { align-items: flex-end; }
-.cwc-sender { margin: 0.25rem 0 0.125rem 0.25rem; font-size: 0.6875rem; font-weight: 600; color: var(--ink-muted); }
+.cwc-sender { margin: 0 0 0.125rem 0.625rem; max-width: 100%; font-size: 0.6875rem; font-weight: 600; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .cwc-bubble {
-  position: relative; min-width: 0; max-width: 100%;
-  padding: 0.4375rem 0.625rem 0.3125rem; border-radius: 0.875rem;
-  font-size: 0.875rem; line-height: 1.35rem; overflow-wrap: anywhere;
+  position: relative; display: flex; flex-direction: column; min-width: 0; max-width: 100%;
+  padding: 0.375rem 0.6875rem 0.3125rem; border-radius: var(--cwc-radius);
+  font-size: 0.875rem; line-height: 1.3125rem; overflow-wrap: anywhere; word-break: break-word;
 }
-.cwc-row-other .cwc-bubble { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 0.25rem; }
-.cwc-row-own .cwc-bubble { background: var(--brand-strong); color: var(--on-brand); border-bottom-right-radius: 0.25rem; }
-.cwc-bubble-deleted { background: transparent !important; color: var(--ink-muted) !important; border: 1px dashed var(--line) !important; }
-.cwc-deleted { display: inline-flex; align-items: center; gap: 0.375rem; font-style: italic; }
+.cwc-row-other .cwc-bubble { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.cwc-row-own .cwc-bubble { background: var(--brand-strong); color: var(--on-brand); border: 1px solid transparent; }
+/* "Tail": the corner on the sender's side is squared on the first message of a run. */
+.cwc-row-other.cwc-row-first .cwc-bubble { border-top-left-radius: var(--cwc-tail); }
+.cwc-row-own.cwc-row-first .cwc-bubble { border-top-right-radius: var(--cwc-tail); }
+.cwc-bubble-deleted { background: transparent !important; color: var(--ink-muted) !important; border: 1px dashed var(--line-strong) !important; }
+.cwc-deleted { display: inline-flex; align-items: center; gap: 0.375rem; font-style: italic; font-size: 0.8125rem; }
 .cwc-text { white-space: pre-wrap; margin: 0; }
-.cwc-meta { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; margin-top: 0.0625rem; font-size: 0.6875rem; line-height: 1rem; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.cwc-meta {
+  display: flex; align-items: center; gap: 0.25rem; margin-top: 0.0625rem;
+  font-size: 0.6875rem; line-height: 1rem; opacity: 0.75; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.cwc-row-own .cwc-meta { align-self: flex-end; }
+.cwc-row-other .cwc-meta { align-self: flex-start; }
 .cwc-tick-read { opacity: 1; color: #bfdbfe; }
-.cwc-row-other .cwc-tick-read { color: var(--brand-text); }
+
+/* Image / video only: the media fills the bubble with a thin frame. */
+.cwc-bubble-media { padding: 0.1875rem; }
+.cwc-bubble-media .cwc-atts { margin-bottom: 0; }
+.cwc-bubble-media .cwc-meta { padding: 0.125rem 0.4375rem 0.0625rem; }
 
 .cwc-reply {
-  display: flex; flex-direction: column; max-width: 100%; margin-bottom: 0.125rem; padding: 0.25rem 0.5rem;
+  display: flex; flex-direction: column; min-width: 0; max-width: 100%; margin: 0.125rem 0 0.3125rem; padding: 0.25rem 0.5rem;
   border-left: 3px solid var(--brand); border-radius: 0.375rem; background: var(--surface-sunken);
-  font-size: 0.75rem; color: var(--ink-secondary); min-width: 0;
+  font-size: 0.75rem; line-height: 1.0625rem; color: var(--ink-secondary);
 }
+.cwc-row-own .cwc-reply { border-left-color: currentColor; background: rgba(255, 255, 255, 0.16); color: inherit; }
+.cwc-reply-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cwc-reply-text { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.9; }
 
-.cwc-atts { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 0.25rem; }
-.cwc-att-img img { display: block; max-width: 100%; max-height: 220px; border-radius: 0.5rem; object-fit: cover; }
-.cwc-att-media { max-width: 100%; max-height: 220px; border-radius: 0.5rem; }
-.cwc-att-audio { width: 220px; max-width: 100%; height: 36px; }
+.cwc-atts { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; margin-bottom: 0.25rem; }
+.cwc-att-img { display: block; min-width: 0; }
+.cwc-att-img img { display: block; width: 100%; max-width: 100%; min-width: 7.5rem; max-height: 15rem; border-radius: calc(var(--cwc-radius) - 0.25rem); object-fit: cover; background: var(--surface-sunken); }
+.cwc-att-media { display: block; width: 100%; max-width: 100%; max-height: 15rem; border-radius: calc(var(--cwc-radius) - 0.25rem); background: #000; }
+.cwc-att-audio { display: block; width: 13.75rem; max-width: 100%; height: 2.25rem; }
 .cwc-att-file {
-  display: flex; align-items: center; gap: 0.375rem; min-width: 0; padding: 0.375rem 0.5rem; border-radius: 0.5rem;
+  display: flex; align-items: center; gap: 0.375rem; min-width: 0; max-width: 100%; padding: 0.375rem 0.5rem; border-radius: 0.5rem;
   background: rgba(0, 0, 0, 0.06); color: inherit; text-decoration: underline; text-underline-offset: 2px;
 }
 .cwc-row-own .cwc-att-file { background: rgba(255, 255, 255, 0.16); }
+.cwc-att-img:focus-visible, .cwc-att-file:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-.cwc-reactions { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.1875rem; }
+.cwc-reactions { display: flex; flex-wrap: wrap; gap: 0.25rem; max-width: 100%; margin-top: 0.1875rem; padding: 0 0.25rem; }
+.cwc-row-own .cwc-reactions { justify-content: flex-end; }
 .cwc-reaction {
   display: inline-flex; align-items: center; gap: 0.125rem; height: 1.5rem; padding: 0 0.4375rem;
   border: 1px solid var(--line); border-radius: 9999px; background: var(--surface); font-size: 0.75rem; color: var(--ink-secondary);
 }
+.cwc-reaction:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .cwc-reaction-own { border-color: var(--brand-strong); background: var(--brand-soft); color: var(--brand-text); }
 
+/* The options button sits beside the bubble, on the inner side. */
 .cwc-actions { position: relative; flex-shrink: 0; align-self: center; }
 .cwc-more { opacity: 0; color: var(--ink-muted); }
-.cwc-row:hover .cwc-more, .cwc-more:focus-visible, .cwc-more[aria-expanded='true'] { opacity: 1; }
+.cwc-row:hover .cwc-more, .cwc-row:focus-within .cwc-more, .cwc-more[aria-expanded='true'] { opacity: 1; }
 @media (hover: none) { .cwc-more { opacity: 0.6; } }
-.cwc-menu { position: absolute; z-index: 5; top: 100%; width: 13rem; padding: 0.25rem 0; }
+.cwc-menu { position: absolute; z-index: 5; top: 100%; width: 13rem; max-width: calc(100vw - 2rem); padding: 0.25rem 0; }
 .cwc-menu-own { right: 0; }
 .cwc-menu-other { left: 0; }
 .cwc-row:last-of-type .cwc-menu, .cwc-row:nth-last-of-type(2) .cwc-menu { top: auto; bottom: 100%; }
 .cwc-quick { display: flex; justify-content: space-between; padding: 0.25rem 0.375rem; border-bottom: 1px solid var(--line); }
 .cwc-quick-btn { width: 1.875rem; height: 1.875rem; border-radius: 9999px; font-size: 1rem; }
 .cwc-quick-btn:hover { background: var(--surface-hover); }
+.cwc-quick-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .cwc-danger { color: var(--danger-text); }
 .cwc-danger:hover { color: var(--danger-text); }
 
-.cwc-typing { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.25rem 0; font-size: 0.75rem; color: var(--ink-muted); }
+.cwc-typing { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; padding: 0 0.25rem 0 calc(var(--cwc-avatar) + 0.375rem); font-size: 0.75rem; color: var(--ink-muted); }
 .cwc-dots { display: inline-flex; gap: 3px; }
 .cwc-dots i { width: 5px; height: 5px; border-radius: 9999px; background: var(--ink-muted); animation: cwc-blink 1.2s infinite ease-in-out; }
 .cwc-dots i:nth-child(2) { animation-delay: .15s; }
