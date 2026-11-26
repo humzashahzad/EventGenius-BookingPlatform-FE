@@ -514,6 +514,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     desktopPermission,
     showBrowserNotification,
     openNotification,
+    handleIncomingNotification,
     showChatMessageNotification,
     notifyChatMessage,
     dismissChatToast,
