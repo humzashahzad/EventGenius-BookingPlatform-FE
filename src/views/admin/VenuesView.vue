@@ -170,7 +170,7 @@ function doToggle() {
 }
 
 // Venues added or changed by shop owners show up quietly.
-useLiveRefresh(['venue'], () => table.refresh())
+useLiveRefresh(['venue.', 'venue_', 'store.', 'review.'], () => table.refresh())
 
 table.load()
 </script>

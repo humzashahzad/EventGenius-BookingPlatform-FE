@@ -196,7 +196,7 @@ function doToggle() {
 }
 
 // New sign-ups arrive as store / booking notifications; refresh quietly.
-useLiveRefresh(['store_', 'new_store', 'user'], () => table.refresh())
+useLiveRefresh(['store_', 'new_store', 'store.', 'user'], () => table.refresh())
 
 table.load()
 </script>

@@ -198,7 +198,7 @@ function doAction() {
 }
 
 // New store sign-ups and status changes made elsewhere show up quietly.
-useLiveRefresh(['store'], () => table.refresh())
+useLiveRefresh(['store', 'venue.created', 'venue.deleted'], () => table.refresh())
 
 table.load()
 </script>

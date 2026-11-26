@@ -387,7 +387,7 @@ function loadExtras() {
 function refreshQuietly() { if (loadedOnce.value) load(true) }
 
 // New bookings, payments, store sign-ups and reviews update the overview in place.
-useLiveRefresh(['booking', 'payment', 'store', 'review'], refreshQuietly, 800)
+useLiveRefresh(['booking', 'payment', 'store', 'review', 'venue.', 'user.', 'category.'], refreshQuietly, 800)
 
 function onVisible() {
   if (document.visibilityState === 'visible' && Date.now() - lastRun > 60_000) refreshQuietly()
