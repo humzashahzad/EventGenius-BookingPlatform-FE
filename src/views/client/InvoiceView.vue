@@ -45,6 +45,7 @@
 </template>
 
 <script setup lang="ts">
+import { setPageTitle } from '@/lib/pageTitle'
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -65,7 +66,7 @@ async function load() {
   notFound.value = false
   try {
     invoice.value = await fetchInvoice(bookingId)
-    document.title = `Invoice ${invoice.value.invoice_number} · EventGenius`
+    setPageTitle(`Invoice ${invoice.value.invoice_number}`)
   } catch (e: any) {
     invoice.value = null
     notFound.value = e?.response?.status === 404
