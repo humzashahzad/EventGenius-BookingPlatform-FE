@@ -1,6 +1,7 @@
 import { createRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { detectPortalFromPath } from '@/lib/portalToken'
+import { setPageTitle, titleForRoute } from '@/lib/pageTitle'
 import { createPortalHistory, setRouteMatcher, crossHostHref, cleanAddressBar } from '@/lib/portalHost'
 
 const router = createRouter({
@@ -395,6 +396,9 @@ router.beforeEach(async (to) => {
     return authStore.defaultRoute
   }
 })
+
+// Tab title: "EventGenius | {Page Title}" (detail pages refine it with their own name).
+router.afterEach(to => setPageTitle(titleForRoute(to.name)))
 
 router.isReady().then(() => cleanAddressBar(router.currentRoute.value.fullPath)).catch(() => {})
 
