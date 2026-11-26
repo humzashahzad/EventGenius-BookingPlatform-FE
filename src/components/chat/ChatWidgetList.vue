@@ -95,8 +95,10 @@
               <span v-else class="avatar">{{ initial(u.name) }}</span>
             </span>
             <span class="cwl-info">
-              <span class="cwl-name">{{ u.name }}</span>
-              <span class="cwl-preview">{{ startingId === u.id ? 'Opening…' : roleLabel(u.role) || 'Start a conversation' }}</span>
+              <span class="cwl-row"><span class="cwl-name">{{ u.name }}</span></span>
+              <span class="cwl-row">
+                <span class="cwl-preview">{{ startingId === u.id ? 'Opening…' : roleLabel(u.role) || 'Start a conversation' }}</span>
+              </span>
             </span>
           </button>
         </template>
@@ -243,9 +245,10 @@ onBeforeUnmount(() => { if (searchTimer) clearTimeout(searchTimer) })
 .cwl-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0.25rem 0; }
 
 .cwl-item {
-  display: flex; align-items: center; gap: 0.75rem; width: 100%; min-width: 0;
+  display: flex; align-items: center; gap: 0.75rem; width: 100%; min-width: 0; min-height: 4rem;
   padding: 0.625rem 0.875rem; text-align: left; transition: background-color .12s ease;
 }
+.cwl-item:disabled { opacity: 0.7; }
 .cwl-item:hover { background: var(--surface-hover); }
 .cwl-item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .cwl-avatar-wrap { position: relative; flex-shrink: 0; }
@@ -255,10 +258,11 @@ onBeforeUnmount(() => { if (searchTimer) clearTimeout(searchTimer) })
   background: var(--success); box-shadow: 0 0 0 2px var(--surface);
 }
 .cwl-info { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; flex: 1; }
-.cwl-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
-.cwl-name { font-size: 0.875rem; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.cwl-time { flex-shrink: 0; font-size: 0.75rem; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
-.cwl-preview { font-size: 0.8125rem; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cwl-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; height: 1.25rem; }
+.cwl-name { flex: 1; font-size: 0.875rem; font-weight: 600; line-height: 1.25rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cwl-time { flex-shrink: 0; font-size: 0.75rem; line-height: 1.25rem; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.cwl-preview { flex: 1; font-size: 0.8125rem; line-height: 1.25rem; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cwl-row .count-badge { flex-shrink: 0; margin-left: auto; }
 .cwl-item-unread .cwl-preview { color: var(--ink); font-weight: 500; }
 .cwl-item-unread .cwl-time { color: var(--brand-text); font-weight: 600; }
 .cwl-draft { color: var(--danger-text); font-weight: 600; }
