@@ -40,6 +40,12 @@ const router = createRouter({
     },
 
     {
+      path: '/shops',
+      name: 'shops',
+      component: () => import('@/views/public/ShopsView.vue'),
+      meta: { layout: 'public' },
+    },
+    {
       path: '/stores/:id',
       name: 'store-profile',
       component: () => import('@/views/public/StoreProfileView.vue'),
