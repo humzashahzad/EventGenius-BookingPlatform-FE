@@ -144,6 +144,7 @@ import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import ProfileAvatarUpload from '@/components/profile/AvatarUpload.vue'
 import PasswordField from '@/components/auth/PasswordField.vue'
 import PasswordStrength from '@/components/auth/PasswordStrength.vue'
@@ -297,4 +298,10 @@ async function loadProfile() {
 }
 
 onMounted(loadProfile)
+
+// Account changed elsewhere (another device, or support): refresh without touching edits.
+useLiveRefresh(['user.'], () => {
+  if (loading.value || savingPersonal.value) return
+  void loadProfile()
+}, { debounceMs: 500, match: (_t, d) => !d?.id || !authStore.user || String(d.id) === String(authStore.user.id) })
 </script>

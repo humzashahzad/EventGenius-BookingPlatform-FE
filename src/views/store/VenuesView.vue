@@ -147,6 +147,7 @@ import { TextInput, SegmentedControl, SwitchInput } from '@/components/forms'
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useSilentList } from '@/composables/useSilentList'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { useRowActions } from '@/composables/useRowActions'
 import api from '@/lib/axios'
 import { getStorageUrl } from '@/lib/storageUrl'
@@ -160,6 +161,8 @@ const list = useSilentList<any>(async () => {
   const { data } = await api.get('/store/venues')
   return data.data.data
 })
+// Support approved or suspended a venue, or a rating / booking count changed.
+useLiveRefresh(['venue', 'store', 'review'], () => list.refresh())
 const venues = list.items
 const loading = list.loading
 const loadError = list.error

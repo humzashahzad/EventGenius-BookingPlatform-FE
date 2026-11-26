@@ -189,6 +189,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import api from '@/lib/axios'
 import { cacheGet, cacheSet } from '@/composables/usePageCache'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { useLiveChannel, isAboutStore } from '@/lib/liveData'
 import { useChat } from '@/composables/useChat'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -290,6 +292,12 @@ function getInitials(name: string): string {
 }
 
 onMounted(fetchStoreProfile)
+
+// This shop, its venues or its landing page changed elsewhere: refresh quietly.
+useLiveChannel('catalog')
+useLiveRefresh(['store', 'venue', 'landing_page', 'review'], () => {
+  if (store.value && !loading.value) void fetchStoreProfile()
+}, { debounceMs: 500, match: (_t, d) => isAboutStore(d, store.value?.id ?? null) })
 </script>
 
 <style scoped>

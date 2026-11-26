@@ -70,7 +70,7 @@
       </template>
     </template>
 
-    <VenueControls v-if="tab === 'venues'" :venues="venues" :loading="venuesLoading" :error="venuesError" @reload="loadVenues" />
+    <VenueControls v-if="tab === 'venues'" :venues="venues" :loading="venuesLoading" :error="venuesError" @reload="loadVenues()" />
     <AnalyticsPanel v-if="tab === 'analytics'" />
 
   </div>
@@ -78,6 +78,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { toast as sonner } from 'vue-sonner'
 import api from '@/lib/axios'
@@ -190,13 +191,24 @@ const venuesLoading = ref(false)
 const venuesError = ref('')
 const cities = computed(() => [...new Set(venues.value.map(v => v.city).filter((c): c is string => !!c))].sort())
 
-async function loadVenues() {
-  venuesLoading.value = true
-  venuesError.value = ''
+async function loadVenues(opts: { quiet?: boolean } = {}) {
+  const quiet = !!opts.quiet && venues.value.length > 0
+  if (!quiet) {
+    venuesLoading.value = true
+    venuesError.value = ''
+  }
   try {
     const { data } = await api.get('/admin/search/venues')
-    venues.value = data.data || []
+    const fresh: AdminSearchVenue[] = data.data || []
+    if (quiet) {
+      // Patch rows in place so the table keeps its order, filter and focus.
+      const known = new Map(venues.value.map(v => [v.id, v]))
+      venues.value = fresh.map(f => { const row = known.get(f.id); return row ? Object.assign(row, f) : f })
+    } else {
+      venues.value = fresh
+    }
   } catch (e) {
+    if (quiet) return
     venuesError.value = apiError(e, 'Could not load venues.')
   } finally {
     venuesLoading.value = false
@@ -215,6 +227,11 @@ onBeforeRouteLeave(() => {
   if (dirty.value) return window.confirm('You have unsaved ranking weight changes. Leave without saving?')
   return true
 })
+
+// Venues added, approved, re-rated or boosted elsewhere: refresh the list quietly.
+useLiveRefresh(['venue', 'store', 'review'], () => {
+  if (venues.value.length && !venuesLoading.value) void loadVenues({ quiet: true })
+}, 600)
 
 onMounted(() => {
   loadSettings()

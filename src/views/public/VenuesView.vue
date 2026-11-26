@@ -104,7 +104,7 @@
           <div class="empty-state-icon"><AppIcon icon="alert-triangle" class="w-5 h-5" /></div>
           <p class="empty-state-title">We couldn't load venues</p>
           <p class="empty-state-desc">Check your connection and try again.</p>
-          <div class="empty-state-actions"><button type="button" class="btn-primary" @click="loadVenues">Try again</button></div>
+          <div class="empty-state-actions"><button type="button" class="btn-primary" @click="loadVenues()">Try again</button></div>
         </div>
       </div>
 
@@ -198,6 +198,8 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { cacheGet, cacheSet } from '@/composables/usePageCache'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { useLiveChannel } from '@/lib/liveData'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import SmartSearchBox from '@/components/search/SmartSearchBox.vue'
 import { Combobox, SelectInput } from '@/components/forms'
@@ -322,14 +324,18 @@ function showCachedResults(): boolean {
   return true
 }
 
-async function loadVenues() {
+async function loadVenues(opts: { quiet?: boolean } = {}) {
+  const quiet = !!opts.quiet && loadedOnce.value
   const id = ++requestId
-  loading.value = true
-  loadFailed.value = false
+  if (!quiet) {
+    loading.value = true
+    loadFailed.value = false
+  }
   try {
     // track=1: this page is a real search even with no text or filters, so the backend logs it
-    // (background lists such as the city look-up below are not logged).
-    const params: Record<string, any> = { per_page: PER_PAGE, page: filters.page, sort_by: filters.sort_by, track: 1 }
+    // (background lists such as the city look-up below are not logged, nor are quiet refreshes).
+    const params: Record<string, any> = { per_page: PER_PAGE, page: filters.page, sort_by: filters.sort_by }
+    if (!quiet) params.track = 1
     if (filters.sort_by === 'price_per_head') params.sort_dir = 'asc'
     if (filters.sort_by === 'avg_rating') params.sort_dir = 'desc'
     if (filters.sort_by === 'created_at') params.sort_dir = 'desc'
@@ -349,13 +355,15 @@ async function loadVenues() {
       total: data.data.total,
     }
     const search = data.search ?? null
-    understood.value = normalizeUnderstood(search?.understood)
-    resultSort.value = search?.sort ?? filters.sort_by
-    if (filters.page === 1 || !searchId) searchId = search?.search_id ?? null
+    if (!quiet || search) {
+      understood.value = normalizeUnderstood(search?.understood)
+      resultSort.value = search?.sort ?? filters.sort_by
+    }
+    if (!quiet && (filters.page === 1 || !searchId)) searchId = search?.search_id ?? null
     loadedOnce.value = true
     cacheSet(key, { venues: venues.value, meta: meta.value, understood: understood.value, resultSort: resultSort.value })
   } catch (e) {
-    if (id !== requestId) return
+    if (id !== requestId || quiet) return
     loadFailed.value = true
     venues.value = []
     meta.value = { current_page: 1, last_page: 1, total: 0 }
@@ -608,6 +616,12 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => clearTimeout(geoMessageTimer))
+
+// Venues approved, edited, re-rated or removed elsewhere: refresh these results quietly.
+useLiveChannel('catalog')
+useLiveRefresh(['venue', 'store', 'category'], () => {
+  if (route.path === '/venues' && !loading.value) void loadVenues({ quiet: true })
+}, 500)
 </script>
 
 <style scoped>

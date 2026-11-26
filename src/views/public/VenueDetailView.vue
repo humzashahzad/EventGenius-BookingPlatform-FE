@@ -351,6 +351,8 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import api from '@/lib/axios'
 import { cacheGet, cacheSet } from '@/composables/usePageCache'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { useLiveChannel, isAboutVenue } from '@/lib/liveData'
 import { useAuthStore } from '@/stores/auth'
 import { getStorageUrl } from '@/lib/storageUrl'
 import ImageLightbox from '@/components/gallery/ImageLightbox.vue'
@@ -415,6 +417,12 @@ onMounted(() => {
   api.get('/categories').then(r => { categories.value = r.data?.data ?? [] }).catch(() => {})
 })
 watch(() => route.params.id, (id, old) => { if (id && id !== old && route.name === 'venue-detail') loadVenue() })
+
+// Details, photos, amenities, rating and review summary changed elsewhere: refresh quietly.
+useLiveChannel(() => (route.name === 'venue-detail' && route.params.id ? `venue.${route.params.id}` : null))
+useLiveRefresh(['venue', 'review', 'store'], () => {
+  if (route.name === 'venue-detail' && venue.value) void loadVenue()
+}, { debounceMs: 400, match: (_t, d) => isAboutVenue(d, route.params.id as string) })
 
 // ─── Photos ──────────────────────────────────────────────────────────────────
 const images = computed<any[]>(() => {

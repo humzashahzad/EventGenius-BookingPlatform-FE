@@ -307,7 +307,9 @@ import BookingStepper from '@/components/booking/BookingStepper.vue'
 import BookingDateTime from '@/components/booking/BookingDateTime.vue'
 import BookingMobileBar from '@/components/booking/BookingMobileBar.vue'
 import BookingPriceBreakdown from '@/components/booking/BookingPriceBreakdown.vue'
-import { type DaySlot, durationLabel, firstBookableISO, formatDay, operatingWindow, timeRange, toTime } from '@/components/booking/bookingTime'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { useLiveChannel, isAboutVenue } from '@/lib/liveData'
+import { type DaySlot, findConflict, durationLabel, firstBookableISO, formatDay, operatingWindow, timeRange, toTime } from '@/components/booking/bookingTime'
 import { calcPricing, fmt } from '@/components/booking/bookingPricing'
 
 const route = useRoute()
@@ -576,6 +578,41 @@ onMounted(() => {
   loadVenue()
   categoriesStore.fetchCategories()
 })
+
+// ── Changes made by others while the customer is here ─────────────────
+useLiveChannel(() => (route.name === 'venue-booking' && route.params.id ? `venue.${route.params.id}` : null))
+const isThisVenue = (_t: string, d: any) => isAboutVenue(d, route.params.id as string)
+
+// Venue details (price, add-ons, hours) changed: swap them in without touching the form.
+useLiveRefresh(['venue', 'store'], async (type) => {
+  if (!venue.value || submitting.value || submitSuccess.value || type.startsWith('venue_image')) return
+  try {
+    const { data } = await api.get(`/venues/${route.params.id}`)
+    if (!data?.data || data.data.id !== venue.value?.id) return
+    venue.value = data.data
+    const paidIds = paidAmenities.value.map((a: any) => a.id)
+    selectedAmenityIds.value = selectedAmenityIds.value.filter(id => paidIds.includes(id))
+  } catch { /* keep what is shown */ }
+}, { debounceMs: 500, match: isThisVenue })
+
+// On the later steps the calendar is not on screen: if the chosen time was just taken,
+// go back to it so the clash message shows there.
+useLiveRefresh(['booking'], async () => {
+  if (step.value === 0 || !venue.value || submitting.value || submitSuccess.value) return
+  const chosen = days.value.filter(d => d.date && d.start_time && d.end_time)
+  for (const d of chosen) {
+    try {
+      const { data } = await api.get(`/venues/${venue.value.id}/availability`, { params: { date: d.date } })
+      const booked = (data?.data?.booked_slots || []).map((b: any) => ({ ...b, start_time: String(b.start_time).slice(0, 5), end_time: String(b.end_time).slice(0, 5) }))
+      if (findConflict(d.start_time, d.end_time, booked)) {
+        activeDay.value = days.value.indexOf(d)
+        reached.value = 0
+        goStep(0, true)
+        return
+      }
+    } catch { /* checked again on submit */ }
+  }
+}, { debounceMs: 350, match: isThisVenue })
 </script>
 
 <style scoped>

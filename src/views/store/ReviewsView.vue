@@ -248,6 +248,11 @@ async function loadSummary() {
     .catch(() => { if (awaiting.value === null) awaiting.value = 0 })
 }
 
+// Review analysis finished for one of the venues: refresh the insights only.
+useLiveRefresh(['venue.updated'], () => { insightsRef.value?.reload() }, {
+  debounceMs: 800, match: (_t, d) => Array.isArray(d?.fields) && d.fields.includes('review_insights'),
+})
+
 // New reviews (and admin moderation) appear quietly.
 useLiveRefresh(['review'], () => {
   loadSummary()

@@ -109,6 +109,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notifications'
 import { setPageCacheScope } from '@/composables/usePageCache'
+import { setLiveUser } from '@/lib/liveData'
+import { useLiveRefresh, RESYNC } from '@/composables/useLiveRefresh'
+import api from '@/lib/axios'
 import { useRouter } from 'vue-router'
 import { soundService } from '@/services/soundService'
 import PublicNavbar from '@/components/layout/PublicNavbar.vue'
@@ -194,6 +197,8 @@ watch(
   () => (authStore.user && authStore.token ? authStore.user.id : null),
   async (userId) => {
     setPageCacheScope(userId)
+    // Before chat/notifications open the socket, so their instance binds our channels too.
+    setLiveUser(userId && authStore.user ? { id: authStore.user.id, role: authStore.user.role } : null)
     if (userId) {
       // System notification permission is only requested from a click (messages page).
       chatStore.connect()
@@ -209,6 +214,22 @@ watch(
   },
   { immediate: true }
 )
+
+// The signed-in account was changed elsewhere (by support, or on another device): pick up
+// the new details; a deactivated account or revoked session signs out through the API.
+useLiveRefresh(['user.', 'session.'], async (type, data) => {
+  const me = authStore.user
+  if (!me || !authStore.token) return
+  if (type.startsWith('session.')) { void authStore.verifySession(); return }
+  if (type !== RESYNC && data?.id != null && String(data.id) !== String(me.id)) return
+  try {
+    const { data: res } = await api.get('/auth/me')
+    if (res?.data && authStore.user?.id === res.data.id) authStore.user = { ...authStore.user, ...res.data }
+  } catch { /* 401 is handled by the API client */ }
+}, 800)
+
+// Socket came back after a drop: catch up on unread counts that may have been missed.
+useLiveRefresh([], () => { if (authStore.user) void notifStore.fetchUnread() }, 600)
 
 // Route changes keep the current page on screen until the next one is ready; a thin bar
 // shows only if that takes longer than a moment.

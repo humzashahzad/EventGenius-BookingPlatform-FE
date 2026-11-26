@@ -119,6 +119,7 @@ import ConfirmDialog from '@/components/admin/ConfirmDialog.vue'
 import SortTh from '@/components/dashboard/SortTh.vue'
 import { formatDate } from '@/lib/format'
 import { useRowActions } from '@/composables/useRowActions'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 
 const store = useCategoriesStore()
 const actions = useRowActions()
@@ -314,6 +315,9 @@ async function quietRefresh() {
     store.categories = [...fresh.map(c => (actions.isPending(c.id) ? local.get(c.id) ?? c : c)), ...pendingNew]
   } catch { /* keep what is on screen */ }
 }
+
+// Categories changed by another admin: re-sync quietly.
+useLiveRefresh(['category'], () => { void quietRefresh() }, 500)
 
 onMounted(() => {
   if (store.categories.length) quietRefresh()

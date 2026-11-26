@@ -130,6 +130,8 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { isAboutVenue } from '@/lib/liveData'
 import { getStorageUrl } from '@/lib/storageUrl'
 import { useRowActions } from '@/composables/useRowActions'
 import VuexyModal from '@/components/ui/VuexyModal.vue'
@@ -188,6 +190,11 @@ async function loadVenue() {
     if (id === loadSeq) loading.value = false
   }
 }
+
+// Photos changed on another device (or by support): refresh quietly, not mid-action.
+useLiveRefresh(['venue_image', 'venue.'], () => {
+  if (!actions.pending.size) void loadVenue()
+}, { debounceMs: 500, match: (_t, d) => isAboutVenue(d, venueId) })
 
 async function handleUpload(event: Event) {
   const input = event.target as HTMLInputElement

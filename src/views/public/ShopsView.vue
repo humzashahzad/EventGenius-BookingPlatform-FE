@@ -80,7 +80,7 @@
         <AppIcon icon="alert-triangle" class="w-6 h-6" />
         <p class="shops-empty-title">We couldn't load shops</p>
         <p class="shops-empty-text">Check your connection and try again.</p>
-        <button type="button" class="btn-secondary btn-sm mt-3" @click="load">Try again</button>
+        <button type="button" class="btn-secondary btn-sm mt-3" @click="load()">Try again</button>
       </div>
 
       <!-- Empty -->
@@ -173,6 +173,8 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
 import { cacheGet, cacheSet } from '@/composables/usePageCache'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { useLiveChannel, isAboutStore } from '@/lib/liveData'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { getStorageUrl } from '@/lib/storageUrl'
 import { formatPKR } from '@/lib/format'
@@ -298,10 +300,13 @@ function showCachedResults() {
   loadedOnce.value = true
 }
 
-async function load() {
+async function load(opts: { quiet?: boolean } = {}) {
+  const quiet = !!opts.quiet && loadedOnce.value
   const id = ++requestId
-  loading.value = true
-  loadFailed.value = false
+  if (!quiet) {
+    loading.value = true
+    loadFailed.value = false
+  }
   try {
     const params: Record<string, string | number> = { page: filters.page, per_page: PER_PAGE, sort: filters.sort }
     if (filters.q.trim()) params.q = filters.q.trim()
@@ -316,7 +321,7 @@ async function load() {
     loadedOnce.value = true
     cacheSet(key, { shops: shops.value, meta: meta.value })
   } catch {
-    if (id !== requestId) return
+    if (id !== requestId || quiet) return
     shops.value = []
     loadFailed.value = true
   } finally {
@@ -357,6 +362,12 @@ onMounted(() => {
   api.get('/stores/cities').then(r => { cities.value = r.data?.data ?? [] }).catch(() => {})
   api.get('/categories').then(r => { categories.value = (r.data?.data ?? []).filter((c: any) => c.is_active !== false) }).catch(() => {})
 })
+
+// Shops approved, suspended or edited (and their venues) elsewhere: refresh the list quietly.
+useLiveChannel('catalog')
+useLiveRefresh(['store', 'venue', 'category'], () => {
+  if (route.name === 'shops' && !loading.value) void load({ quiet: true })
+}, 500)
 </script>
 
 <style scoped>

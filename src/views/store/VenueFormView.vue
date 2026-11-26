@@ -240,6 +240,8 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import api from '@/lib/axios'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { isAboutVenue } from '@/lib/liveData'
 import { toast } from 'vue-sonner'
 import { useCategoriesStore } from '@/stores/categories'
 import AppIcon from '@/components/ui/AppIcon.vue'
@@ -580,6 +582,34 @@ function observeSections() {
 const snapshot = ref('')
 const dirty = computed(() => !!snapshot.value && JSON.stringify(form) !== snapshot.value)
 function takeSnapshot() { snapshot.value = JSON.stringify(form) }
+
+/**
+ * Changed elsewhere (support set the status, or another device saved): take the server's
+ * values for every field the owner has not touched; fields being edited stay as typed.
+ */
+async function mergeFromServer() {
+  if (!isEdit.value || saving.value || !snapshot.value) return
+  try {
+    const { data } = await api.get(`/store/venues/${route.params.id}`)
+    const fresh = data?.data
+    if (!fresh || saving.value) return
+    const base = JSON.parse(snapshot.value) as Record<string, unknown>
+    const current = form as unknown as Record<string, unknown>
+    for (const key of Object.keys(fresh)) {
+      const untouched = JSON.stringify(current[key]) === JSON.stringify(base[key])
+      if (untouched && JSON.stringify(current[key]) !== JSON.stringify(fresh[key])) current[key] = fresh[key]
+      base[key] = fresh[key]
+    }
+    // Keep the edited fields marked as unsaved.
+    const next = JSON.parse(JSON.stringify(form)) as Record<string, unknown>
+    for (const key of Object.keys(next)) if (key in base) next[key] = base[key]
+    snapshot.value = JSON.stringify(next)
+  } catch { /* keep the form as it is */ }
+}
+useLiveRefresh(['venue.', 'store.'], () => { void mergeFromServer() }, {
+  debounceMs: 500,
+  match: (type, d) => type.startsWith('store.') || isAboutVenue(d, route.params.id as string),
+})
 
 onMounted(async () => {
   await nextTick()

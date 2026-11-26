@@ -163,6 +163,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { toast } from 'vue-sonner'
 import api from '@/lib/axios'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
 import { getStorageUrl } from '@/lib/storageUrl'
 import AppIcon from '@/components/ui/AppIcon.vue'
 
@@ -194,21 +195,43 @@ function addTestimonial() {
   form.testimonials.push({ name: '', quote: '', rating: 5 })
 }
 
-async function loadLanding() {
-  loading.value = true
+// The last values loaded from (or saved to) the server, per field.
+let base: Record<string, string> = {}
+const fieldJson = () => Object.fromEntries(Object.entries(form).map(([k, v]) => [k, JSON.stringify(v)]))
+
+function fromServer(d: any) {
+  return {
+    hero_image: d.hero_image || '',
+    tagline: d.tagline || '',
+    about_text: d.about_text || '',
+    services: d.services || [],
+    faq: d.faq || [],
+    testimonials: d.testimonials || [],
+    social_links: d.social_links || { facebook: '', instagram: '', twitter: '', website: '' },
+    gallery: d.gallery || [],
+  }
+}
+
+async function loadLanding(opts: { quiet?: boolean } = {}) {
+  const quiet = !!opts.quiet && !loading.value
+  if (!quiet) loading.value = true
   try {
     const { data } = await api.get('/store/landing')
     if (data.data) {
-      Object.assign(form, {
-        hero_image: data.data.hero_image || '',
-        tagline: data.data.tagline || '',
-        about_text: data.data.about_text || '',
-        services: data.data.services || [],
-        faq: data.data.faq || [],
-        testimonials: data.data.testimonials || [],
-        social_links: data.data.social_links || { facebook: '', instagram: '', twitter: '', website: '' },
-        gallery: data.data.gallery || [],
-      })
+      const fresh = fromServer(data.data) as Record<string, unknown>
+      if (!quiet) {
+        Object.assign(form, fresh)
+      } else {
+        // Changed elsewhere: only fields the owner hasn't touched take the new values.
+        const now = fieldJson()
+        const target = form as unknown as Record<string, unknown>
+        for (const [k, v] of Object.entries(fresh)) {
+          if (base[k] === undefined || now[k] === base[k]) target[k] = v
+        }
+      }
+      base = Object.fromEntries(Object.entries(fresh).map(([k, v]) => [k, JSON.stringify(v)]))
+    } else if (!quiet) {
+      base = fieldJson()
     }
   } catch {
     // No landing page yet — that's fine
@@ -216,6 +239,11 @@ async function loadLanding() {
     loading.value = false
   }
 }
+
+// Saved on another device: merge quietly without touching what is being typed.
+useLiveRefresh(['landing_page'], () => { if (!saving.value && !heroUploading.value) void loadLanding({ quiet: true }) }, 500)
+// Support approved or suspended the shop: the public link appears or goes.
+useLiveRefresh(['store'], () => { void loadStoreId() }, 500)
 
 async function save() {
   if (saving.value) return
@@ -231,6 +259,7 @@ async function save() {
       testimonials: form.testimonials.filter(t => t.name.trim()),
       social_links: form.social_links,
     })
+    base = fieldJson()
     successMsg.value = 'Landing page saved!'
     toast.success('Landing page saved.')
     setTimeout(() => (successMsg.value = ''), 3500)

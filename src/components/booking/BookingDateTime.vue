@@ -189,6 +189,8 @@
  */
 import { computed, nextTick, reactive, ref, useId, watch } from 'vue'
 import api from '@/lib/axios'
+import { useLiveRefresh } from '@/composables/useLiveRefresh'
+import { isAboutVenue } from '@/lib/liveData'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { DatePicker, FormField, SelectInput, TimePicker, MONTHS_LONG, type DayMeta } from '@/components/forms'
 import { formatTime } from '@/lib/format'
@@ -303,18 +305,32 @@ function jumpTo(ym: string) {
 const dayBooked = reactive<Record<string, BookedSlot[]>>({})
 const dayStatus = reactive<Record<string, 'loading' | 'ready' | 'error'>>({})
 
-async function loadDay(iso: string, force = false) {
+async function loadDay(iso: string, force = false, quiet = false) {
   if (!iso || iso < firstBookable) return
   if (!force && dayStatus[iso] === 'ready') return
-  dayStatus[iso] = 'loading'
+  // A quiet re-check keeps the current times on screen while it runs.
+  const keep = quiet && dayStatus[iso] === 'ready'
+  if (!keep) dayStatus[iso] = 'loading'
   try {
     const { data } = await api.get(`/venues/${props.venueId}/availability`, { params: { date: iso } })
     dayBooked[iso] = (data?.data?.booked_slots || []).map((b: BookedSlot) => ({ ...b, start_time: hhmm(b.start_time), end_time: hhmm(b.end_time) }))
     dayStatus[iso] = 'ready'
   } catch {
-    dayStatus[iso] = 'error'
+    if (!keep) dayStatus[iso] = 'error'
   }
 }
+
+// Someone else booked (or freed) a time at this venue: re-check the month and the chosen days.
+// If the chosen time is now taken, the usual clash message appears under the start time.
+useLiveRefresh(['booking', 'venue'], () => {
+  if (shownMonth.value) void onMonthChange(shownMonth.value)
+  const checked = new Set<string>()
+  for (const d of days.value) {
+    if (d.date && !checked.has(d.date)) { checked.add(d.date); void loadDay(d.date, true, true) }
+  }
+  // Other days looked at earlier are re-checked when opened again.
+  for (const iso of Object.keys(dayStatus)) if (!checked.has(iso) && dayStatus[iso] === 'ready') delete dayStatus[iso]
+}, { debounceMs: 350, match: (_t, d) => isAboutVenue(d, props.venueId) })
 // Restored drafts: check every chosen day.
 for (const d of days.value) if (d.date) loadDay(d.date)
 
