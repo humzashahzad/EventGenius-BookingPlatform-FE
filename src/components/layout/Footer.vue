@@ -60,6 +60,7 @@
       <nav class="footer-col" aria-label="Customers">
         <h3 class="footer-heading">Customers</h3>
         <ul>
+          <li><RouterLink to="/shops" class="footer-link">Browse venue shops</RouterLink></li>
           <li><RouterLink to="/customer/sign-up" class="footer-link">Create an account</RouterLink></li>
           <li><RouterLink to="/customer/sign-in" class="footer-link">Sign in</RouterLink></li>
           <li><RouterLink to="/customer/bookings" class="footer-link">My bookings</RouterLink></li>
