@@ -10,6 +10,10 @@
         </nav>
         <h1 class="heading-1 mt-2">{{ pageTitle }}</h1>
         <p class="mt-1 text-[0.9375rem] text-ink-muted">Search in plain words — city, occasion, guest count and budget are picked up automatically.</p>
+        <RouterLink :to="{ path: '/ask', query: filters.q.trim() ? { q: filters.q.trim() } : {} }" class="link mt-2 inline-flex items-center gap-1.5 text-sm font-medium">
+          <AppIcon icon="message-circle" class="w-4 h-4" />
+          Prefer to chat? Ask EventGenius
+        </RouterLink>
       </div>
     </header>
 

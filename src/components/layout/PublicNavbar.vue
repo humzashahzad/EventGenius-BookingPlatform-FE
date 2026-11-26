@@ -78,6 +78,7 @@ const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/venues', label: 'Venues' },
   { to: '/shops', label: 'Shops' },
+  { to: '/ask', label: 'Ask EventGenius' },
   { to: '/shop/sign-up', label: 'For Shop Owners' },
 ]
 

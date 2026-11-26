@@ -27,6 +27,12 @@ const router = createRouter({
       meta: { layout: 'public' },
     },
     {
+      path: '/ask',
+      name: 'ask',
+      component: () => import('@/views/public/AskView.vue'),
+      meta: { layout: 'public' },
+    },
+    {
       path: '/venues/:id/book',
       name: 'venue-booking',
       component: () => import('@/views/public/VenueBookingView.vue'),

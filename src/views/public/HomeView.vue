@@ -23,6 +23,10 @@
               @select="heroSelect"
             />
           </div>
+          <RouterLink :to="{ path: '/ask', query: heroQuery.trim() ? { q: heroQuery.trim() } : {} }" class="link mt-3 inline-flex items-center gap-1.5 text-sm font-medium">
+            <AppIcon icon="message-circle" class="w-4 h-4" />
+            Not sure what to search? Ask EventGenius
+          </RouterLink>
 
           <div class="mt-4 flex flex-wrap items-center gap-2 max-w-xl">
             <span class="text-[0.8125rem] text-ink-muted">Popular:</span>
