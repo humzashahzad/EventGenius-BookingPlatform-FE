@@ -235,6 +235,10 @@ function doRemove() {
 
 // New reviews and replies arrive quietly in the table and the insights.
 useLiveRefresh(['review'], () => { table.refresh(); insightsRef.value?.reload() })
+// Review analysis finished: refresh the insights only.
+useLiveRefresh(['venue.updated'], () => { insightsRef.value?.reload() }, {
+  debounceMs: 800, match: (_t, d) => Array.isArray(d?.fields) && d.fields.includes('review_insights'),
+})
 
 table.load()
 </script>
