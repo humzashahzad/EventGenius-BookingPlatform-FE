@@ -1,6 +1,7 @@
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import { useChatWidgetStore } from '@/stores/chatWidget'
 
 export function useChat() {
   const chatStore = useChatStore()
@@ -9,6 +10,12 @@ export function useChat() {
 
   async function startConversation(otherUserId: number) {
     const chat = await chatStore.getOrCreateChat(otherUserId)
+    // The chat widget is on this page: open the conversation there instead of leaving.
+    const widget = useChatWidgetStore()
+    if (chat && widget.available) {
+      widget.openChat(chat.id)
+      return true
+    }
     if (chat) {
       await chatStore.selectChat(chat.id)
       const role = authStore.user?.role

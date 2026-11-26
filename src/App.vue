@@ -80,6 +80,7 @@
       <RouterView />
     </template>
 
+    <ChatWidget v-if="authStore.isLoggedIn" />
     <Toaster position="top-right" rich-colors close-button :duration="3200" :theme="toastTheme" />
   </div>
 </template>
@@ -99,6 +100,7 @@ import Footer from '@/components/layout/Footer.vue'
 import TopBar from '@/components/layout/TopBar.vue'
 import StoreSidebar from '@/components/layout/StoreSidebar.vue'
 import AdminSidebar from '@/components/layout/AdminSidebar.vue'
+import ChatWidget from '@/components/chat/ChatWidget.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()

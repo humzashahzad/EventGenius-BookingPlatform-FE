@@ -584,7 +584,7 @@
                     type="button"
                     role="menuitem"
                     class="emoji-choice"
-                    @click="messageText += e; showEmojiPicker = false; messageInputRef?.focus()"
+                    @click="messageText += e; onInputChange(); showEmojiPicker = false; messageInputRef?.focus()"
                   >{{ e }}</button>
                 </div>
               </div>
@@ -749,6 +749,7 @@ import { toast } from 'vue-sonner'
 import AppIcon from '@/components/ui/AppIcon.vue'
 import { useNotificationStore } from '@/stores/notifications'
 import { soundService } from '@/services/soundService'
+import { useChatDrafts } from '@/composables/useChatDrafts'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
@@ -931,6 +932,13 @@ const showUserProfile = ref(false)
 
 const canSend = computed(() => messageText.value.trim() || selectedFiles.value.length > 0)
 
+// Unsent text is kept per conversation (shared with the chat widget, survives reloads).
+const chatDrafts = useChatDrafts()
+watch(() => chatStore.currentChatId, (id) => {
+  if (!editingMessage.value) messageText.value = chatDrafts.getDraft(id)
+  nextTick(autoResizeTextarea)
+}, { immediate: true })
+
 const currentChatName = computed(() => {
   const c = chatStore.currentChat
   return c ? chatName(c) : ''
@@ -958,16 +966,28 @@ async function handleSend() {
   replyingTo.value = null
   resetTextarea()
 
+  const chatId = chatStore.currentChatId
   if (editingMessage.value) {
     const ok = await chatStore.editMessage(editingMessage.value.id, body)
     if (!ok) toast.error('Failed to edit message.')
     editingMessage.value = null
+    if (!messageText.value) messageText.value = chatDrafts.getDraft(chatId)
   } else {
-    const sent = await chatStore.sendMessage(chatStore.currentChatId, body, {
+    const sent = await chatStore.sendMessage(chatId, body, {
       replyToId: replyId,
       files: files.length > 0 ? files : undefined,
     })
-    if (!sent) toast.error('Failed to send message.')
+    if (sent) {
+      if (!chatDrafts.getDraft(chatId) || chatDrafts.getDraft(chatId) === body) chatDrafts.clearDraft(chatId)
+    } else {
+      // Keep what was typed: back in the box (if still on this chat) and in the saved draft.
+      if (chatStore.currentChatId === chatId && !messageText.value.trim()) {
+        messageText.value = body
+        if (!selectedFiles.value.length) selectedFiles.value = files
+      }
+      if (body && !chatDrafts.getDraft(chatId)) chatDrafts.setDraft(chatId, body)
+      toast.error('Message not sent. Your text is kept, try again.')
+    }
   }
 
   nextTick(() => scrollToBottom())
@@ -982,6 +1002,7 @@ function onInputKeydown(e: KeyboardEvent) {
 
 function onInputChange() {
   autoResizeTextarea()
+  if (!editingMessage.value) chatDrafts.setDraft(chatStore.currentChatId, messageText.value)
   if (chatStore.currentChatId) {
     chatStore.emitTyping(chatStore.currentChatId)
   }
@@ -1207,7 +1228,7 @@ function startEdit() {
 
 function cancelEditing() {
   editingMessage.value = null
-  messageText.value = ''
+  messageText.value = chatDrafts.getDraft(chatStore.currentChatId)
   selectedFiles.value = []
   resetTextarea()
 }
